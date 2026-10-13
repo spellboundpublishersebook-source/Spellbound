@@ -26,22 +26,23 @@ export default function Header({ session, view, onNavigate, onLogout }) {
               alt="SpellBound Logo"
               className="h-12 w-auto sm:h-[130px] md:h-[140px] object-contain block"
             />
-            <div className="hidden sm:flex flex-col items-center">
-              <span style={{
-                color: "#DC2626", fontWeight: "900", fontSize: "56px", letterSpacing: "normal", WebkitTextStroke: "1px #DC2626", textTransform: "uppercase", lineHeight: "1", ...fontBody,
-              }}>
+            <div className="flex flex-col items-center text-center">
+              <span
+                className="text-[22px] sm:text-[56px] font-black text-[#DC2626] uppercase leading-none tracking-normal"
+                style={{
+                  WebkitTextStroke: "1px #DC2626",
+                  ...fontBody,
+                }}
+              >
                 SpellBound
               </span>
-              <span style={{
-                color: "#000000", fontWeight: "600", fontSize: "18px", fontStyle: "italic", textTransform: "uppercase", marginTop: "5px", lineHeight: "1", letterSpacing: "normal", ...fontDisplay
-              }}>
+              <span
+                className="text-[9px] sm:text-[18px] font-semibold text-[#000000] italic uppercase mt-0.5 sm:mt-[5px] leading-none tracking-tight sm:tracking-normal whitespace-nowrap"
+                style={fontDisplay}
+              >
                 Publishers &amp; Distributors
               </span>
             </div>
-            {/* Mobile: compact "SpellBound" title */}
-            <span className="sm:hidden text-2xl font-black text-red-600 tracking-tight" style={fontBody}>
-              SpellBound
-            </span>
           </button>
 
           {/* DESKTOP NAV */}
