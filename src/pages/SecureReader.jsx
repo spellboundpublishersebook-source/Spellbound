@@ -6,6 +6,7 @@ import Button from "../components/Button";
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
+import BookLoader from "../components/BookLoader";
 
 // Set up pdf.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -263,14 +264,29 @@ export default function SecureReader({ book, session, onBack }) {
               <Document 
                 file={book.pdfUrl} 
                 onLoadSuccess={({ numPages }) => setNumPdfPages(numPages)}
-                loading={<div className="p-20">Loading secure PDF...</div>}
-                error={<div className="p-20 text-red-500">Error loading PDF. Make sure storage buckets are public.</div>}
+                loading={
+                  <div className="py-20 px-8 flex items-center justify-center">
+                    <BookLoader book={book} message="Loading secure PDF document..." size="md" />
+                  </div>
+                }
+                error={
+                  <div className="p-16 text-center flex flex-col items-center">
+                    <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-3 font-bold text-lg">!</div>
+                    <p className="text-red-600 font-semibold mb-1">Unable to load document</p>
+                    <p className="text-xs text-gray-500 max-w-sm">Please verify your internet connection or check storage bucket configuration.</p>
+                  </div>
+                }
               >
                 <Page 
                   pageNumber={pdfPageNumber} 
                   renderTextLayer={false} 
                   renderAnnotationLayer={false}
                   width={600}
+                  loading={
+                    <div className="flex items-center justify-center min-h-[480px] w-full">
+                      <BookLoader size="sm" message={`Rendering page ${pdfPageNumber}...`} />
+                    </div>
+                  }
                 />
               </Document>
             </div>

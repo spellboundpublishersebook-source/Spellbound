@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { ChevronLeft, BookOpen, Calendar, ShieldCheck, Tag, Info, Quote, Copy } from "lucide-react";
 import { fontDisplay, fontBody } from "../theme";
+import BookLoader from "../components/BookLoader";
+import { Modal } from "../components/UI";
 
 const BookCover = ({ book, className = "" }) => {
   const hasCover = book.coverUrl && book.coverUrl !== "null" && book.coverUrl !== "undefined" && book.coverUrl.trim() !== "";
@@ -20,19 +22,35 @@ const BookCover = ({ book, className = "" }) => {
   );
 };
 
-import { useState } from "react";
-import { Modal } from "../components/UI";
-
 export default function BookDetailsPage({ book, onNavigate, session }) {
   React.useEffect(() => {
     window.scrollTo(0, 0);
   }, [book?.id]);
   const [showCite, setShowCite] = useState(false);
+  const [openingReader, setOpeningReader] = useState(false);
   
   if (!book) return null;
 
+  const handleOpenReader = () => {
+    setOpeningReader(true);
+    setTimeout(() => {
+      onNavigate("reading", book.id);
+    }, 650);
+  };
+
   return (
     <div className="bg-[#f8f9fa] min-h-screen text-[#131313]" style={fontBody}>
+      {/* Fullscreen Book Loading Animation when opening reader */}
+      {openingReader && (
+        <BookLoader 
+          fullScreen 
+          dark 
+          book={book} 
+          message="Opening Secure Reader..." 
+          subMessage="Decrypting and preparing digital edition..." 
+        />
+      )}
+
       {/* Header / Breadcrumb */}
       <div className="bg-white border-b border-gray-200 py-4 px-6">
         <div className="max-w-7xl mx-auto flex items-center gap-2 text-sm text-black">
@@ -61,8 +79,8 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
               {session ? (
                 (session.role === "admin" || session.role === "uploader" || session.bookIds === "all" || session.bookIds?.includes(book.id)) ? (
                   <button 
-                    onClick={() => onNavigate("reading", book.id)} 
-                    className="w-full bg-[#FDD132] text-black font-bold py-3 rounded-md hover:bg-yellow-400 transition-colors mb-3 flex items-center justify-center gap-2"
+                    onClick={handleOpenReader} 
+                    className="w-full bg-[#FDD132] text-black font-bold py-3 rounded-md hover:bg-yellow-400 transition-colors mb-3 flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-[0.99]"
                   >
                     <BookOpen size={18} /> {book.pdfUrl ? "View PDF" : "Read Book"}
                   </button>
