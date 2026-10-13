@@ -661,7 +661,7 @@ export default function App() {
   const openBook = openBookId ? availableBooks.find((b) => b.id === openBookId) : null;
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden relative">
+    <div className="min-h-screen w-full relative">
       <Header session={session} view={view} onNavigate={navigate} onLogout={handleLogout} />
 
       {view === "catalog" && <CatalogPage books={availableBooks} onNavigate={navigate} />}

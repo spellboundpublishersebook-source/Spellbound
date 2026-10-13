@@ -186,7 +186,7 @@ export default function CatalogPage({ books, onNavigate }) {
   }, [books, homepageConfig]);
 
   return (
-    <div className="bg-[#f8f9fa] min-h-screen text-[#131313] w-full max-w-full overflow-x-hidden" style={fontBody}>
+    <div className="bg-[#f8f9fa] min-h-screen text-[#131313] w-full" style={fontBody}>
       
       {/* HERO SECTION */}
       <section className="bg-[#F9FAFB] text-black py-8 sm:py-12 md:py-20 px-4 sm:px-6 relative z-20 overflow-hidden w-full max-w-full">
