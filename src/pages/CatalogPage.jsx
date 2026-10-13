@@ -83,6 +83,9 @@ export default function CatalogPage({ books, onNavigate }) {
     setOpenFilters(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const resetFilters = () => {
     setGenre("All");
     setSelectedAuthor("All");
@@ -92,6 +95,7 @@ export default function CatalogPage({ books, onNavigate }) {
     setDateTo("");
     setQuery("");
     setAlphaFilter("All");
+    setCurrentPage(1);
   };
 
   useEffect(() => {
@@ -147,6 +151,42 @@ export default function CatalogPage({ books, onNavigate }) {
       return matchesGenre && matchesAuthor && matchesPubType && matchesDate && matchesAlpha && matchesQuery;
     });
   }, [books, genre, selectedAuthor, selectedPubType, dateFilter, dateFrom, dateTo, alphaFilter, query]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [genre, selectedAuthor, selectedPubType, dateFilter, dateFrom, dateTo, alphaFilter, query, pageSize]);
+
+  const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+
+  const paginatedBooks = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, currentPage, pageSize]);
+
+  const startItem = filtered.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endItem = Math.min(currentPage * pageSize, filtered.length);
+
+  const pageNumbers = useMemo(() => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    if (currentPage <= 4) {
+      return [1, 2, 3, 4, 5, '...', totalPages];
+    }
+    if (currentPage >= totalPages - 3) {
+      return [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+    return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+  }, [totalPages, currentPage]);
+
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > totalPages || newPage === currentPage) return;
+    setCurrentPage(newPage);
+    const target = document.getElementById("results-section");
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
   const homepageConfig = useMemo(() => getHomepageConfig(), [books]);
 
@@ -731,16 +771,32 @@ export default function CatalogPage({ books, onNavigate }) {
 
           {/* RIGHT CONTENT - RESULTS */}
           <div className="lg:w-3/4">
-            <div className="mb-6 flex justify-between items-center bg-white p-3 rounded">
-              <span className="text-sm text-black">Showing <span className="font-bold text-black">{filtered.length}</span> results</span>
+            <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white p-3.5 rounded-lg border border-gray-200 shadow-sm">
+              <span className="text-sm text-gray-700">
+                Showing <span className="font-bold text-black">{startItem}–{endItem}</span> of{" "}
+                <span className="font-bold text-black">{filtered.length}</span> results
+              </span>
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                <span className="font-medium">Show:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
+                  aria-label="Books per page"
+                  className="bg-gray-50 border border-gray-300 rounded px-2.5 py-1 text-black font-semibold text-xs focus:outline-none focus:border-black cursor-pointer hover:bg-gray-100 transition-colors"
+                >
+                  <option value={10}>10 per page</option>
+                  <option value={20}>20 per page</option>
+                  <option value={50}>50 per page</option>
+                </select>
+              </div>
             </div>
             
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6">
-              {filtered.map(b => (
+              {paginatedBooks.map(b => (
                 <div 
                   key={b.id} 
                   onClick={() => onNavigate("book-details", b.id)}
-                  className="book-card group/card flex flex-col p-3 bg-white border border-black rounded-xl"
+                  className="book-card group/card flex flex-col p-3 bg-white border border-black rounded-xl cursor-pointer hover:shadow-lg transition-shadow"
                 >
                   <div className="w-full aspect-[2/3] rounded-md mb-4 overflow-hidden shadow-sm">
                     <BookCover book={b} className="w-full h-full transition-transform duration-300 group-hover/card:scale-105" />
@@ -766,6 +822,63 @@ export default function CatalogPage({ books, onNavigate }) {
                 </div>
               )}
             </div>
+
+            {/* PAGINATION CONTROLS */}
+            {totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t border-gray-200">
+                <span className="text-xs text-gray-500 order-2 sm:order-1">
+                  Page <span className="font-semibold text-black">{currentPage}</span> of{" "}
+                  <span className="font-semibold text-black">{totalPages}</span>
+                </span>
+
+                <div className="flex items-center gap-1.5 order-1 sm:order-2 flex-wrap justify-center">
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    aria-label="Previous page"
+                    className="h-9 px-3 flex items-center justify-center gap-1 rounded-md border border-gray-300 text-black text-xs font-semibold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors cursor-pointer bg-white shadow-sm"
+                  >
+                    <ChevronLeft size={16} />
+                    <span className="hidden sm:inline">Prev</span>
+                  </button>
+
+                  {pageNumbers.map((page, idx) => {
+                    if (page === '...') {
+                      return (
+                        <span key={`ellipsis-${idx}`} className="w-8 h-9 flex items-center justify-center text-gray-400 text-xs">
+                          …
+                        </span>
+                      );
+                    }
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => handlePageChange(page)}
+                        aria-label={`Page ${page}`}
+                        aria-current={currentPage === page ? "page" : undefined}
+                        className={`min-w-9 h-9 px-2.5 flex items-center justify-center rounded-md text-xs font-bold transition-all cursor-pointer ${
+                          currentPage === page
+                            ? "bg-black text-white shadow-sm"
+                            : "border border-gray-300 bg-white text-gray-800 hover:bg-gray-100 hover:text-black"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    aria-label="Next page"
+                    className="h-9 px-3 flex items-center justify-center gap-1 rounded-md border border-gray-300 text-black text-xs font-semibold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors cursor-pointer bg-white shadow-sm"
+                  >
+                    <span className="hidden sm:inline">Next</span>
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
         </div>
