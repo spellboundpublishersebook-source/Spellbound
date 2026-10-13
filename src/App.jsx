@@ -597,13 +597,14 @@ export default function App() {
       
       const { error, data } = await supabase.from('books').update(dbBook).eq('id', id).select();
       if (!error && (!data || data.length === 0)) {
-        alert("Database update succeeded but returned no rows. Make sure the book ID exists in the database.");
+        // Fallback: If book was not yet in the Supabase table, insert it so it persists
+        const { error: insertErr } = await supabase.from('books').insert([{ id, ...dbBook, uploaded_by: session?.id || null, status: "published" }]);
+        if (insertErr) console.error("Insert fallback error:", insertErr);
       }
       if (error) {
         console.error("Supabase update error:", error);
         alert("Failed to update book in Supabase: " + error.message);
       } else {
-        console.log("Update successful, data:", data);
         setBooks((prev) => prev.map(b => b.id === id ? { ...b, ...updatedBook, pdfUrl: pdfurl, coverUrl: coverurl } : b));
       }
     } catch (err) {

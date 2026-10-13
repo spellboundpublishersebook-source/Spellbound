@@ -63,6 +63,7 @@ export default function AdminPanel({
           <UploaderPanel 
             books={books} 
             onAddBook={onAddBook} 
+            onEditBook={onEditBook}
             onDeleteBook={onDeleteBook} 
             embedded={true}
             dbStatus={dbStatus}

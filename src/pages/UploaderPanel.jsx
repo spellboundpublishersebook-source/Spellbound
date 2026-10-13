@@ -33,6 +33,12 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
 
   function handleEditClick(book) {
     setEditingId(book.id);
+    let parsedCustomFields = {};
+    if (book.description && book.description.includes("\n\n__CUSTOM_FILTERS__:")) {
+      try {
+        parsedCustomFields = JSON.parse(book.description.split("\n\n__CUSTOM_FILTERS__:")[1]);
+      } catch (e) {}
+    }
     setForm({
       title: book.title || "",
       author: book.author || "",
@@ -52,7 +58,7 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
       coverImage: null,
       pdfUrl: book.pdfUrl,
       coverUrl: book.coverUrl,
-      customFields: {}
+      customFields: parsedCustomFields
     });
     setShowForm(true);
   }
