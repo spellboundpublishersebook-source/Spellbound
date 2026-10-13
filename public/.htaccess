@@ -1,0 +1,72 @@
+# ====================================================================
+# SPELLBOUND / ATHENAEUM PLATFORM - HOSTINGER APACHE / LITESPEED CONFIG
+# ====================================================================
+
+# 1. SINGLE PAGE APPLICATION (SPA) ROUTING REWRITE RULES
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # HTTPS redirection if SSL is active on Hostinger
+  # RewriteCond %{HTTPS} off
+  # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # If the requested physical file or directory exists, serve directly
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Otherwise, route all requests to index.html for client-side React router
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# 2. GZIP & DEFLATE PERFORMANCE COMPRESSION
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css
+  AddOutputFilterByType DEFLATE application/javascript application/x-javascript text/javascript
+  AddOutputFilterByType DEFLATE application/json application/xml application/xhtml+xml
+  AddOutputFilterByType DEFLATE image/svg+xml font/ttf font/otf font/woff font/woff2
+</IfModule>
+
+# 3. STATIC ASSET BROWSER CACHING (Vite content-hashed assets)
+<IfModule mod_expires.c>
+  ExpiresActive On
+
+  # Application Shell: Never cache HTML to ensure instant updates
+  ExpiresByType text/html "access plus 0 seconds"
+
+  # CSS and JavaScript: Cache for 1 year (safely version-hashed by Vite)
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType text/javascript "access plus 1 year"
+
+  # Images and Icons
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType image/x-icon "access plus 1 year"
+
+  # Web Fonts
+  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType font/woff "access plus 1 year"
+  ExpiresByType font/ttf "access plus 1 year"
+</IfModule>
+
+# 4. ESSENTIAL SECURITY HEADERS
+<IfModule mod_headers.c>
+  # Prevent MIME-type sniffing
+  Header set X-Content-Type-Options "nosniff"
+
+  # Allow iframe only from same origin for secure reader protection
+  Header set X-Frame-Options "SAMEORIGIN"
+
+  # Cross-Site Scripting Protection
+  Header set X-XSS-Protection "1; mode=block"
+
+  # Strict Referrer Policy
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# 5. PREVENT DIRECTORY BROWSING
+Options -Indexes

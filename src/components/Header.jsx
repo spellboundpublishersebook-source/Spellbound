@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { motion } from "framer-motion";
 import { LogOut, Menu, X, Home, LayoutDashboard, FlaskConical, ShieldCheck, User } from "lucide-react";
 import { fontDisplay, fontBody } from "../theme";
 import AnimatedSweepButton from "./AnimatedSweepButton";
@@ -156,6 +157,49 @@ export default function Header({ session, view, onNavigate, onLogout }) {
   );
 }
 
+function AnimatedNavItem({ label, icon: Icon, isActive, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`group/nav relative px-3.5 py-1.5 rounded-lg text-sm font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer select-none ${
+        isActive 
+          ? "text-black font-extrabold" 
+          : "text-gray-600 hover:text-black hover:-translate-y-0.5"
+      }`}
+    >
+      {/* Animation 1: Ambient Capsule Hover Glow */}
+      <span className="absolute inset-0 rounded-lg bg-gray-100/90 scale-95 opacity-0 group-hover/nav:scale-100 group-hover/nav:opacity-100 transition-all duration-200 -z-10 pointer-events-none" />
+
+      {/* Interactive Micro-Icon on Hover */}
+      {Icon && (
+        <Icon 
+          size={16} 
+          className={`transition-transform duration-200 group-hover/nav:scale-110 ${
+            isActive ? "text-black" : "text-gray-500 group-hover/nav:text-black"
+          }`} 
+        />
+      )}
+
+      {/* Navigation Label */}
+      <span className="relative z-10 tracking-tight">{label}</span>
+
+      {/* Animation 2: Active Sliding Indicator Bar (glides seamlessly between Home & Dashboard) */}
+      {isActive && (
+        <motion.span
+          layoutId="activeNavIndicator"
+          className="absolute bottom-0 left-2 right-2 h-[2.5px] bg-[#111111] rounded-full shadow-sm"
+          transition={{ type: "spring", stiffness: 450, damping: 32 }}
+        />
+      )}
+
+      {/* Non-active Expanding Gold Hover Line (blossoms outward from center on hover) */}
+      {!isActive && (
+        <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-[2px] bg-[#FDD132] rounded-full group-hover/nav:w-2/3 transition-all duration-300 ease-out pointer-events-none" />
+      )}
+    </button>
+  );
+}
+
 function NavLinks({ session, view, onNavigate, onLogout }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef(null);
@@ -176,33 +220,28 @@ function NavLinks({ session, view, onNavigate, onLogout }) {
     };
   }, [profileOpen]);
 
-  const btn = (isActive) => ({
-    color: isActive ? "#111111" : "#6B7280",
-    fontWeight: "600", fontSize: "14px",
-    background: "none", border: "none", cursor: "pointer", transition: "color 0.15s",
-  });
+  const isHomeActive = view === "catalog";
+  const isDashboardActive = ["reader-dashboard", "admin", "uploader"].includes(view);
+  const isTrialActive = view === "trial";
 
   return (
-    <>
-      <button
-        style={btn(view === "catalog")}
-        onClick={() => { onNavigate("catalog"); window.scrollTo(0, 0); }}
-        onMouseEnter={e => { if (view !== "catalog") e.target.style.color = "#111111"; }}
-        onMouseLeave={e => { if (view !== "catalog") e.target.style.color = "#6B7280"; }}
-      >
-        Home
-      </button>
+    <div className="flex items-center gap-2 sm:gap-3">
+      {/* Home Navigation with Animated Sliding Indicator & Hover Sweep */}
+      <AnimatedNavItem
+        label="Home"
+        icon={Home}
+        isActive={isHomeActive}
+        onClick={() => { onNavigate("catalog"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+      />
 
       {!session && (
         <>
-          <button
-            style={btn(view === "trial")}
+          <AnimatedNavItem
+            label="Free Trial"
+            icon={FlaskConical}
+            isActive={isTrialActive}
             onClick={() => onNavigate("trial")}
-            onMouseEnter={e => { if (view !== "trial") e.target.style.color = "#111111"; }}
-            onMouseLeave={e => { if (view !== "trial") e.target.style.color = "#6B7280"; }}
-          >
-            Free Trial
-          </button>
+          />
           <AnimatedSweepButton
             onClick={() => onNavigate("login-admin")}
             variant="yellow-outline"
@@ -222,14 +261,13 @@ function NavLinks({ session, view, onNavigate, onLogout }) {
 
       {session && (
         <>
-          <button
-            style={btn(["reader-dashboard","admin","uploader"].includes(view))}
+          {/* Dashboard Navigation with Animated Sliding Indicator & Hover Sweep */}
+          <AnimatedNavItem
+            label="Dashboard"
+            icon={LayoutDashboard}
+            isActive={isDashboardActive}
             onClick={() => onNavigate(session.role === "reader" ? "reader-dashboard" : session.role)}
-            onMouseEnter={e => { e.target.style.color = "#111111"; }}
-            onMouseLeave={e => { e.target.style.color = ["reader-dashboard","admin","uploader"].includes(view) ? "#111111" : "#6B7280"; }}
-          >
-            Dashboard
-          </button>
+          />
           
           {/* PROFILE DROPDOWN */}
           <div className="relative ml-2 flex items-center" ref={profileRef}>
@@ -280,7 +318,7 @@ function NavLinks({ session, view, onNavigate, onLogout }) {
           </div>
         </>
       )}
-    </>
+    </div>
   );
 }
 
