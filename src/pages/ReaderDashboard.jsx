@@ -1,8 +1,12 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
-import { Clock, AlertTriangle, BookOpen, ChevronRight, ChevronLeft, X, User, Mail, Building2 } from "lucide-react";
+import { 
+  Clock, AlertTriangle, BookOpen, ChevronRight, ChevronLeft, X, 
+  User, Mail, Building2, ArrowUpDown, LayoutGrid, List, Check 
+} from "lucide-react";
 import { fontDisplay, fontBody } from "../theme";
 import { daysUntil } from "../data/mockData";
 
+// Carousel row for the multi-category dashboard view
 function CategoryCarouselRow({ genre, books, onOpenBook, onSelectGenre }) {
   const scrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -135,7 +139,7 @@ function CategoryCarouselRow({ genre, books, onOpenBook, onSelectGenre }) {
         )}
       </div>
 
-      {/* View All Button at bottom right */}
+      {/* View All Button below the row on the right */}
       <div className="flex justify-end mt-4 pr-1">
         <button
           onClick={() => onSelectGenre(genre)}
@@ -155,9 +159,33 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showAuthorModal, setShowAuthorModal] = useState(false);
   const [showYearModal, setShowYearModal] = useState(false);
-  const [typeFilter, setTypeFilter] = useState(true); // eBook checked by default
+  
+  // Type filters
+  const [typeFilter, setTypeFilter] = useState(true); // eBook
   const [collectionFilter, setCollectionFilter] = useState(false);
   const [tokenFilter, setTokenFilter] = useState(false);
+
+  // Sorting and Display Modes
+  const [viewMode, setViewMode] = useState("grid"); // "grid" | "list"
+  const [sortBy, setSortBy] = useState("title-asc");
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [expandedDesc, setExpandedDesc] = useState({});
+
+  const pageSize = 12;
+
+  const toggleDesc = (id) => {
+    setExpandedDesc(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const sortOptions = [
+    { id: "title-asc", label: "A - Z by title" },
+    { id: "title-desc", label: "Z - A by title" },
+    { id: "author-asc", label: "A - Z by author" },
+    { id: "author-desc", label: "Z - A by author" },
+    { id: "date-desc", label: "Latest - oldest by published date" },
+    { id: "date-asc", label: "Oldest - latest by published date" },
+  ];
 
   const myBooksRaw = useMemo(() => {
     return session.bookIds === "all"
@@ -202,6 +230,12 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
     return Array.from(new Set(myBooksRaw.map((b) => b.author).filter(Boolean))).sort();
   }, [myBooksRaw]);
 
+  // Check if any specific filter is active
+  const isFilteredView = useMemo(() => {
+    return selectedGenres.length > 0 || selectedAuthors.length > 0 || selectedYears.length > 0 || tokenFilter || collectionFilter;
+  }, [selectedGenres, selectedAuthors, selectedYears, tokenFilter, collectionFilter]);
+
+  // Filtered books
   const myBooks = useMemo(() => {
     return myBooksRaw.filter((b) => {
       const matchesG = selectedGenres.length === 0 || selectedGenres.includes(b.genre);
@@ -212,11 +246,42 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
     });
   }, [myBooksRaw, selectedGenres, selectedAuthors, selectedYears]);
 
+  // Sorted books
+  const sortedBooks = useMemo(() => {
+    const list = [...myBooks];
+    switch (sortBy) {
+      case "title-asc":
+        return list.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+      case "title-desc":
+        return list.sort((a, b) => (b.title || "").localeCompare(a.title || ""));
+      case "author-asc":
+        return list.sort((a, b) => (a.author || "").localeCompare(b.author || ""));
+      case "author-desc":
+        return list.sort((a, b) => (b.author || "").localeCompare(a.author || ""));
+      case "date-desc":
+        return list.sort((a, b) => (b.firstPublish || "").localeCompare(a.firstPublish || ""));
+      case "date-asc":
+        return list.sort((a, b) => (a.firstPublish || "").localeCompare(b.firstPublish || ""));
+      default:
+        return list;
+    }
+  }, [myBooks, sortBy]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedGenres, selectedAuthors, selectedYears, sortBy, viewMode]);
+
+  const totalPages = Math.ceil(sortedBooks.length / pageSize) || 1;
+  const paginatedBooks = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedBooks.slice(start, start + pageSize);
+  }, [sortedBooks, currentPage, pageSize]);
+
   const displayedCategories = useMemo(() => {
-    if (selectedGenres.length > 0) return selectedGenres;
     const genresWithBooks = Array.from(new Set(myBooks.map((b) => b.genre).filter(Boolean))).sort();
     return genresWithBooks.length > 0 ? genresWithBooks : ["All Titles"];
-  }, [selectedGenres, myBooks]);
+  }, [myBooks]);
 
   const daysLeft = daysUntil(session.endDate);
   const expiringSoon = daysLeft <= 15 && daysLeft > 0;
@@ -227,6 +292,19 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
   }, [myBooksRaw]);
 
   const [curatedIndex, setCuratedIndex] = useState(0);
+
+  const handleClearAll = () => {
+    setSelectedGenres([]);
+    setSelectedAuthors([]);
+    setSelectedYears([]);
+    setTypeFilter(true);
+    setCollectionFilter(false);
+    setTokenFilter(false);
+    setCurrentPage(1);
+  };
+
+  const startItem = sortedBooks.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endItem = Math.min(currentPage * pageSize, sortedBooks.length);
 
   return (
     <div className="bg-white min-h-screen text-[#131313]" style={fontBody}>
@@ -287,8 +365,8 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
           </div>
         ) : (
           <>
-            {/* Curated For You */}
-            {curatedBooks.length > 0 && (
+            {/* Curated For You (Shown when no filter is isolating view) */}
+            {!isFilteredView && curatedBooks.length > 0 && (
               <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden mb-12 p-8 md:p-10 relative">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-6">
                   <div>
@@ -333,7 +411,7 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                             onClick={() => onOpenBook(b.id)}
                             className="bg-black text-white font-bold px-6 py-3 rounded hover:bg-gray-800 transition-colors cursor-pointer"
                           >
-                            Read Now
+                            Details
                           </button>
                         </div>
                       </div>
@@ -343,10 +421,22 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
               </div>
             )}
 
-            {/* Main Layout: Left Sidebar + Category Rows */}
+            {/* Main Layout: Left Sidebar + Right Content */}
             <div className="flex flex-col lg:flex-row gap-10 w-full items-start">
+              
               {/* LEFT SIDEBAR */}
-              <div className="w-full lg:w-64 flex-shrink-0 space-y-10">
+              <div className="w-full lg:w-64 flex-shrink-0 space-y-8">
+                
+                {/* CLEAR ALL BUTTON AT TOP */}
+                <div className="pb-2">
+                  <button
+                    onClick={handleClearAll}
+                    className="flex items-center gap-2 text-sm font-bold text-black uppercase tracking-wider hover:text-gray-600 transition-colors pl-2.5 border-l-2 border-black cursor-pointer"
+                  >
+                    Clear All
+                  </button>
+                </div>
+
                 {/* TYPE */}
                 <div>
                   <h3 className="font-bold text-sm tracking-wider uppercase mb-4 text-black" style={fontDisplay}>
@@ -406,7 +496,7 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                     Category
                   </h3>
                   <div className="space-y-3 mb-4">
-                    {allGenres.slice(0, 5).map((g) => (
+                    {allGenres.slice(0, 7).map((g) => (
                       <label key={g} className="flex items-center justify-between group cursor-pointer">
                         <div className="flex items-center gap-3 overflow-hidden">
                           <input
@@ -428,7 +518,7 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                       </label>
                     ))}
                   </div>
-                  {allGenres.length > 5 && (
+                  {allGenres.length > 7 && (
                     <button
                       onClick={() => setShowCategoryModal(true)}
                       className="text-xs font-bold uppercase tracking-wider text-black hover:underline cursor-pointer block"
@@ -517,23 +607,293 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                 )}
               </div>
 
-              {/* Right Content - Category Rows (One by One) */}
+              {/* RIGHT CONTENT */}
               <div className="flex-1 w-full min-w-0">
-                {myBooks.length === 0 ? (
-                  <div className="text-center py-20 bg-gray-50 rounded-xl border border-gray-200">
-                    <p className="text-black font-semibold mb-3">No books found matching your selected filters.</p>
-                    <button
-                      onClick={() => {
-                        setSelectedGenres([]);
-                        setSelectedAuthors([]);
-                        setSelectedYears([]);
-                      }}
-                      className="text-xs font-bold uppercase tracking-wider text-black underline cursor-pointer"
-                    >
-                      Clear All Filters
-                    </button>
+                {/* When a Category / Filter is Selected -> Filtered Products View with Sort, View Switcher & Tags */}
+                {isFilteredView ? (
+                  <div>
+                    {/* Top Control Bar */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-gray-200">
+                      <div>
+                        <h2 className="text-base font-bold text-black" style={fontDisplay}>
+                          Showing {startItem}-{endItem} of {sortedBooks.length} products
+                        </h2>
+                      </div>
+
+                      {/* Controls: Sort and Grid/List Switcher */}
+                      <div className="flex items-center gap-3 relative">
+                        {/* Sort Dropdown */}
+                        <div className="relative">
+                          <button
+                            onClick={() => setShowSortDropdown(!showSortDropdown)}
+                            className="flex items-center gap-2 px-3.5 py-1.5 border border-gray-300 bg-white hover:bg-gray-50 text-xs font-semibold text-black rounded transition-colors cursor-pointer"
+                          >
+                            <span>Sort</span>
+                            <ArrowUpDown size={13} />
+                          </button>
+
+                          {showSortDropdown && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-30"
+                                onClick={() => setShowSortDropdown(false)}
+                              />
+                              <div className="absolute right-0 top-full mt-1.5 w-64 bg-white border border-gray-200 rounded shadow-xl z-40 py-1">
+                                {sortOptions.map((opt) => (
+                                  <button
+                                    key={opt.id}
+                                    onClick={() => {
+                                      setSortBy(opt.id);
+                                      setShowSortDropdown(false);
+                                    }}
+                                    className={`w-full text-left px-4 py-2.5 text-xs font-medium flex items-center justify-between hover:bg-blue-50 transition-colors ${
+                                      sortBy === opt.id ? "text-blue-600 font-bold bg-blue-50/50" : "text-black"
+                                    }`}
+                                  >
+                                    <span>{opt.label}</span>
+                                    {sortBy === opt.id && <Check size={14} className="text-blue-600" />}
+                                  </button>
+                                ))}
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        {/* View Switcher: Grid vs List */}
+                        <div className="flex items-center border border-gray-300 rounded overflow-hidden">
+                          <button
+                            onClick={() => setViewMode("grid")}
+                            title="Grid View"
+                            className={`p-2 transition-colors cursor-pointer ${
+                              viewMode === "grid" ? "bg-gray-100 text-black font-bold" : "bg-white text-gray-500 hover:text-black"
+                            }`}
+                          >
+                            <LayoutGrid size={16} />
+                          </button>
+                          <button
+                            onClick={() => setViewMode("list")}
+                            title="List View"
+                            className={`p-2 border-l border-gray-300 transition-colors cursor-pointer ${
+                              viewMode === "list" ? "bg-gray-100 text-black font-bold" : "bg-white text-gray-500 hover:text-black"
+                            }`}
+                          >
+                            <List size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Filter Pills / Tags */}
+                    <div className="flex flex-wrap items-center gap-2 mb-8">
+                      {typeFilter && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#D9EEFA] text-[#1E5D88] rounded-full text-xs font-semibold">
+                          eBook
+                          <button onClick={() => setTypeFilter(false)} className="hover:text-black cursor-pointer"><X size={13} /></button>
+                        </span>
+                      )}
+                      {tokenFilter && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#D9EEFA] text-[#1E5D88] rounded-full text-xs font-semibold">
+                          Tokens
+                          <button onClick={() => setTokenFilter(false)} className="hover:text-black cursor-pointer"><X size={13} /></button>
+                        </span>
+                      )}
+                      {collectionFilter && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#D9EEFA] text-[#1E5D88] rounded-full text-xs font-semibold">
+                          Collection
+                          <button onClick={() => setCollectionFilter(false)} className="hover:text-black cursor-pointer"><X size={13} /></button>
+                        </span>
+                      )}
+                      {selectedGenres.map((g) => (
+                        <span key={g} className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#D9EEFA] text-[#1E5D88] rounded-full text-xs font-semibold">
+                          {g}
+                          <button onClick={() => setSelectedGenres(selectedGenres.filter((x) => x !== g))} className="hover:text-black cursor-pointer"><X size={13} /></button>
+                        </span>
+                      ))}
+                      {selectedAuthors.map((a) => (
+                        <span key={a} className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#D9EEFA] text-[#1E5D88] rounded-full text-xs font-semibold">
+                          Author: {a}
+                          <button onClick={() => setSelectedAuthors(selectedAuthors.filter((x) => x !== a))} className="hover:text-black cursor-pointer"><X size={13} /></button>
+                        </span>
+                      ))}
+                      {selectedYears.map((y) => (
+                        <span key={y} className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#D9EEFA] text-[#1E5D88] rounded-full text-xs font-semibold">
+                          Year: {y}
+                          <button onClick={() => setSelectedYears(selectedYears.filter((x) => x !== y))} className="hover:text-black cursor-pointer"><X size={13} /></button>
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Products Content */}
+                    {sortedBooks.length === 0 ? (
+                      <div className="text-center py-20 bg-gray-50 rounded-xl border border-gray-200">
+                        <p className="text-black font-semibold mb-3">No books found matching your selected filters.</p>
+                        <button
+                          onClick={handleClearAll}
+                          className="text-xs font-bold uppercase tracking-wider text-black underline cursor-pointer"
+                        >
+                          Clear All Filters
+                        </button>
+                      </div>
+                    ) : viewMode === "grid" ? (
+                      /* GRID VIEW (Screenshot 1) */
+                      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
+                        {paginatedBooks.map((b) => (
+                          <div key={b.id} className="flex flex-col bg-white">
+                            {/* Cover */}
+                            <div
+                              onClick={() => onOpenBook(b.id)}
+                              className="w-full aspect-[1/1.4] rounded bg-white shadow-sm border border-gray-200 overflow-hidden relative mb-3 cursor-pointer group/card"
+                            >
+                              <div
+                                className="w-full h-full bg-[length:100%_100%] bg-center bg-no-repeat transition-transform duration-300 group-hover/card:scale-105"
+                                style={{
+                                  backgroundColor: b.color || "#f3f4f6",
+                                  backgroundImage: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? `url(${b.coverUrl})` : "none"
+                                }}
+                              />
+                            </div>
+
+                            {/* Badges / Type */}
+                            <div className="flex items-center justify-between text-[11px] font-bold text-gray-800 uppercase tracking-wider mb-1">
+                              <span>{b.pubType?.toUpperCase() || "EBOOK"}</span>
+                              <BookOpen size={13} className="text-gray-700" />
+                            </div>
+
+                            {/* Title */}
+                            <h4
+                              onClick={() => onOpenBook(b.id)}
+                              className="text-sm font-bold text-black leading-snug line-clamp-2 min-h-[2.5rem] mb-1 cursor-pointer hover:underline"
+                              title={b.title}
+                              style={fontDisplay}
+                            >
+                              {b.title}
+                            </h4>
+
+                            {/* Author */}
+                            <p className="text-xs text-gray-600 truncate mb-1" title={b.author}>
+                              by {b.author || "Unknown"}
+                            </p>
+
+                            {/* Edition */}
+                            <p className="text-xs text-black font-medium mb-3">
+                              Edition : 1
+                            </p>
+
+                            {/* Details Button */}
+                            <button
+                              onClick={() => onOpenBook(b.id)}
+                              className="w-full mt-auto py-2 px-3 border border-black bg-white text-black hover:bg-black hover:text-white transition-colors text-xs font-semibold text-center rounded-none shadow-sm cursor-pointer"
+                            >
+                              Details
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      /* LIST VIEW (Screenshot 3) */
+                      <div className="space-y-8 mb-12">
+                        {paginatedBooks.map((b) => (
+                          <div
+                            key={b.id}
+                            className="flex flex-col sm:flex-row gap-6 p-6 bg-white border border-gray-200 rounded-sm shadow-sm"
+                          >
+                            {/* Left Cover */}
+                            <div
+                              onClick={() => onOpenBook(b.id)}
+                              className="w-36 sm:w-44 aspect-[1/1.4] bg-white rounded shadow-sm border border-gray-200 overflow-hidden flex-shrink-0 cursor-pointer group/card"
+                            >
+                              <div
+                                className="w-full h-full bg-[length:100%_100%] bg-center bg-no-repeat transition-transform duration-300 group-hover/card:scale-105"
+                                style={{
+                                  backgroundColor: b.color || "#f3f4f6",
+                                  backgroundImage: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? `url(${b.coverUrl})` : "none"
+                                }}
+                              />
+                            </div>
+
+                            {/* Right Info */}
+                            <div className="flex-1 flex flex-col min-w-0">
+                              <h3
+                                onClick={() => onOpenBook(b.id)}
+                                className="text-xl font-bold text-black mb-1 cursor-pointer hover:underline"
+                                style={fontDisplay}
+                              >
+                                {b.title}
+                              </h3>
+                              <p className="text-sm text-gray-700 mb-1">
+                                by {b.author || "Unknown"}
+                              </p>
+                              <p className="text-sm text-black font-medium mb-4">
+                                Edition : 1
+                              </p>
+
+                              <div className="mb-5">
+                                <button
+                                  onClick={() => onOpenBook(b.id)}
+                                  className="py-2 px-8 border border-black bg-white text-black hover:bg-black hover:text-white transition-colors text-xs font-semibold rounded-none cursor-pointer"
+                                >
+                                  Details
+                                </button>
+                              </div>
+
+                              {/* Description with ...Show More */}
+                              <div className="text-sm text-gray-800 leading-relaxed max-w-3xl">
+                                <p className={expandedDesc[b.id] ? "" : "line-clamp-3"}>
+                                  {b.description ||
+                                    "Presents a thorough overview of this subject matter, delivering essential insights and structured perspectives for researchers and avid readers."}
+                                </p>
+                                {b.description && b.description.length > 120 && (
+                                  <button
+                                    onClick={() => toggleDesc(b.id)}
+                                    className="text-blue-600 hover:underline text-xs font-semibold mt-1 cursor-pointer italic"
+                                  >
+                                    {expandedDesc[b.id] ? "Show Less" : "...Show More"}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* PAGINATION (As per inventory) */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-center gap-2 pt-6 pb-12 border-t border-gray-200">
+                        <button
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                          className="w-9 h-9 flex items-center justify-center rounded border border-gray-300 text-black disabled:opacity-30 hover:bg-gray-100 transition-colors cursor-pointer"
+                        >
+                          <ChevronLeft size={16} />
+                        </button>
+
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
+                          <button
+                            key={num}
+                            onClick={() => setCurrentPage(num)}
+                            className={`w-9 h-9 flex items-center justify-center rounded text-sm font-semibold transition-colors cursor-pointer ${
+                              currentPage === num
+                                ? "bg-black text-white"
+                                : "border border-gray-300 text-black hover:bg-gray-100"
+                            }`}
+                          >
+                            {num}
+                          </button>
+                        ))}
+
+                        <button
+                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                          className="w-9 h-9 flex items-center justify-center rounded border border-gray-300 text-black disabled:opacity-30 hover:bg-gray-100 transition-colors cursor-pointer"
+                        >
+                          <ChevronRight size={16} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ) : (
+                  /* MAIN DASHBOARD: One-by-One Category Carousels */
                   <div>
                     {displayedCategories.map((genre) => {
                       const booksInGenre =
@@ -547,13 +907,7 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                           genre={genre}
                           books={booksInGenre}
                           onOpenBook={onOpenBook}
-                          onSelectGenre={(g) => {
-                            if (selectedGenres.includes(g)) {
-                              setSelectedGenres(selectedGenres.filter((x) => x !== g));
-                            } else {
-                              setSelectedGenres([g]);
-                            }
-                          }}
+                          onSelectGenre={(g) => setSelectedGenres([g])}
                         />
                       );
                     })}
