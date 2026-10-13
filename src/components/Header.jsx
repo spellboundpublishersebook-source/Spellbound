@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { LogOut, Menu, X, Home, LayoutDashboard, FlaskConical, ShieldCheck, User } from "lucide-react";
 import { fontDisplay, fontBody } from "../theme";
 import AnimatedSweepButton from "./AnimatedSweepButton";
@@ -12,7 +12,7 @@ export default function Header({ session, view, onNavigate, onLogout }) {
     <>
       <header
         style={{ backgroundColor: "#FFFFFF", borderBottom: "1px solid #E5E7EB" }}
-        className="sticky top-0 z-30"
+        className="sticky top-0 z-[100] shadow-sm"
       >
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-auto py-1">
 
@@ -157,6 +157,25 @@ export default function Header({ session, view, onNavigate, onLogout }) {
 }
 
 function NavLinks({ session, view, onNavigate, onLogout }) {
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setProfileOpen(false);
+      }
+    }
+    if (profileOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [profileOpen]);
+
   const btn = (isActive) => ({
     color: isActive ? "#111111" : "#6B7280",
     fontWeight: "600", fontSize: "14px",
@@ -213,37 +232,51 @@ function NavLinks({ session, view, onNavigate, onLogout }) {
           </button>
           
           {/* PROFILE DROPDOWN */}
-          <div className="relative group ml-2 flex items-center">
-            {/* The hit area is extended slightly downward so hovering to the menu doesn't lose hover state */}
-            <div className="pb-4 absolute inset-0 -bottom-4 z-10" />
-            
-            <button className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-black hover:bg-gray-200 hover:text-black transition-colors border border-gray-200 relative z-20">
+          <div className="relative ml-2 flex items-center" ref={profileRef}>
+            <button
+              onClick={() => setProfileOpen(prev => !prev)}
+              aria-label="User menu"
+              aria-expanded={profileOpen}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors border cursor-pointer ${
+                profileOpen
+                  ? "bg-gray-200 text-black border-gray-300"
+                  : "bg-gray-100 text-black hover:bg-gray-200 border-gray-200"
+              }`}
+            >
               <User size={20} />
             </button>
             
             {/* Dropdown menu */}
-            <div className="absolute top-[100%] right-0 mt-1 w-56 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right scale-95 group-hover:scale-100 z-50">
-              <div className="px-4 py-3 border-b border-gray-100">
-                <p className="text-sm font-bold text-black truncate">{session.name}</p>
-                <p className="text-xs text-black capitalize">{session.role} Account</p>
+            {profileOpen && (
+              <div className="absolute top-full right-0 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-2xl z-[120]">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <p className="text-sm font-bold text-black truncate">{session.name}</p>
+                  <p className="text-xs text-gray-500 capitalize">{session.role} Account</p>
+                </div>
+                <div className="py-1 border-b border-gray-100">
+                  <button 
+                    onClick={() => {
+                      setProfileOpen(false);
+                      onNavigate(session.role === "reader" ? "reader-dashboard" : session.role);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm font-medium text-black hover:bg-gray-50 flex items-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <LayoutDashboard size={16} /> Dashboard
+                  </button>
+                </div>
+                <div className="py-1">
+                  <button 
+                    onClick={() => {
+                      setProfileOpen(false);
+                      onLogout();
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <LogOut size={16} /> Log out
+                  </button>
+                </div>
               </div>
-              <div className="py-1 border-b border-gray-100">
-                <button 
-                  onClick={() => onNavigate(session.role === "reader" ? "reader-dashboard" : session.role)}
-                  className="w-full text-left px-4 py-2 text-sm text-black hover:bg-gray-50 hover:text-black flex items-center gap-2 transition-colors cursor-pointer"
-                >
-                  <LayoutDashboard size={16} /> Dashboard
-                </button>
-              </div>
-              <div className="py-1">
-                <button 
-                  onClick={onLogout}
-                  className="w-full text-left px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors cursor-pointer"
-                >
-                  <LogOut size={16} /> Log out
-                </button>
-              </div>
-            </div>
+            )}
           </div>
         </>
       )}

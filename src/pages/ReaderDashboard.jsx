@@ -159,9 +159,10 @@ function CategoryCarouselRow({ genre, books, onOpenBook, onSelectGenre }) {
       <div className="flex justify-end mt-4 pr-1">
         <button
           onClick={() => onSelectGenre(genre)}
-          className="flex items-center gap-2 text-sm font-semibold text-black hover:text-gray-600 transition-colors pl-3 border-l-2 border-black cursor-pointer"
+          className="flex items-center gap-1.5 text-sm font-bold text-black hover:text-[#DC2626] transition-colors cursor-pointer group"
         >
-          View All
+          <span>View All</span>
+          <ChevronRight size={16} className="transition-transform group-hover:translate-x-0.5" />
         </button>
       </div>
     </div>
@@ -448,7 +449,7 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                 <div className="pb-2">
                   <button
                     onClick={handleClearAll}
-                    className="flex items-center gap-2 text-sm font-bold text-black uppercase tracking-wider hover:text-gray-600 transition-colors pl-2.5 border-l-2 border-black cursor-pointer"
+                    className="text-xs font-bold text-gray-500 hover:text-red-600 uppercase tracking-wider transition-colors cursor-pointer"
                   >
                     Clear All
                   </button>
@@ -643,10 +644,10 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                         <div className="relative">
                           <button
                             onClick={() => setShowSortDropdown(!showSortDropdown)}
-                            className="flex items-center gap-2 px-3.5 py-1.5 border border-gray-300 bg-white hover:bg-gray-50 text-xs font-semibold text-black rounded transition-colors cursor-pointer"
+                            className="h-9 flex items-center gap-2 px-3.5 border border-gray-300 bg-white hover:bg-gray-50 text-xs font-semibold text-black rounded-md transition-colors cursor-pointer shadow-sm"
                           >
                             <span>Sort</span>
-                            <ArrowUpDown size={13} />
+                            <ArrowUpDown size={14} className="text-gray-600" />
                           </button>
 
                           {showSortDropdown && (
@@ -655,7 +656,7 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                                 className="fixed inset-0 z-30"
                                 onClick={() => setShowSortDropdown(false)}
                               />
-                              <div className="absolute right-0 top-full mt-1.5 w-64 bg-white border border-gray-200 rounded shadow-xl z-40 py-1">
+                              <div className="absolute right-0 top-full mt-1.5 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-40 py-1">
                                 {sortOptions.map((opt) => (
                                   <button
                                     key={opt.id}
@@ -677,20 +678,21 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                         </div>
 
                         {/* View Switcher: Grid vs List */}
-                        <div className="flex items-center border border-gray-300 rounded overflow-hidden">
+                        <div className="h-9 flex items-center border border-gray-300 rounded-md overflow-hidden bg-white shadow-sm">
                           <button
                             onClick={() => setViewMode("grid")}
                             title="Grid View"
-                            className={`p-2 transition-colors cursor-pointer ${
+                            className={`h-full px-2.5 flex items-center justify-center transition-colors cursor-pointer ${
                               viewMode === "grid" ? "bg-gray-100 text-black font-bold" : "bg-white text-gray-500 hover:text-black"
                             }`}
                           >
                             <LayoutGrid size={16} />
                           </button>
+                          <div className="h-4 w-px bg-gray-200" />
                           <button
                             onClick={() => setViewMode("list")}
                             title="List View"
-                            className={`p-2 border-l border-gray-300 transition-colors cursor-pointer ${
+                            className={`h-full px-2.5 flex items-center justify-center transition-colors cursor-pointer ${
                               viewMode === "list" ? "bg-gray-100 text-black font-bold" : "bg-white text-gray-500 hover:text-black"
                             }`}
                           >
