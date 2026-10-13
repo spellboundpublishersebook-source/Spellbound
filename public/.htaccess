@@ -2,22 +2,17 @@
 # SPELLBOUND / ATHENAEUM PLATFORM - HOSTINGER APACHE / LITESPEED CONFIG
 # ====================================================================
 
+# Specify index.html as the primary directory index
+DirectoryIndex index.html
+
 # 1. SINGLE PAGE APPLICATION (SPA) ROUTING REWRITE RULES
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
-
-  # HTTPS redirection if SSL is active on Hostinger
-  # RewriteCond %{HTTPS} off
-  # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
-
-  # If the requested physical file or directory exists, serve directly
-  RewriteCond %{REQUEST_FILENAME} -f [OR]
-  RewriteCond %{REQUEST_FILENAME} -d
-  RewriteRule ^ - [L]
-
-  # Otherwise, route all requests to index.html for client-side React router
-  RewriteRule ^ index.html [L]
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
 </IfModule>
 
 # 2. GZIP & DEFLATE PERFORMANCE COMPRESSION
