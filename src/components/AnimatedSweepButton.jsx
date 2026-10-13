@@ -32,6 +32,14 @@ export default function AnimatedSweepButton({
       hoverTextColor = "text-[#FDD132]";
       break;
 
+    case "yellow-outline":
+      // Base: Transparent with yellow border & yellow text. Hover: Solid yellow fill with crisp black text.
+      baseClasses = "bg-transparent border border-[#FDD132] hover:border-[#FDD132] hover:ring-2 hover:ring-[#FDD132]/40";
+      baseTextColor = "text-[#FDD132]";
+      fillBg = "bg-[#FDD132]";
+      hoverTextColor = "text-[#111111]";
+      break;
+
     case "black":
       // Base: Solid black with white text. Hover: Vibrant gold fill with crisp black text.
       baseClasses = "bg-black border border-black hover:border-[#FDD132] hover:ring-2 hover:ring-[#FDD132]/60";
@@ -77,7 +85,7 @@ export default function AnimatedSweepButton({
       {...props}
     >
       {/* ── LAYER 1: BASE LAYER (Always stationary, visible at rest) ── */}
-      <span className={`inline-flex items-center justify-center gap-1.5 w-full h-full font-medium ${baseTextColor}`}>
+      <span className={`inline-flex items-center justify-center gap-1.5 w-full h-full ${baseTextColor}`}>
         {children}
       </span>
 
@@ -88,7 +96,7 @@ export default function AnimatedSweepButton({
       >
         {/* Counter-translated inner content: stays stationary relative to button boundaries */}
         <span 
-          className={`inline-flex items-center justify-center gap-1.5 w-full h-full font-medium ${hoverTextColor} translate-x-full group-hover/btn:translate-x-0 transition-transform duration-300 ease-out whitespace-nowrap`}
+          className={`inline-flex items-center justify-center gap-1.5 w-full h-full ${hoverTextColor} translate-x-full group-hover/btn:translate-x-0 transition-transform duration-300 ease-out whitespace-nowrap`}
         >
           {children}
         </span>

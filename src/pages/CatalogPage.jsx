@@ -281,20 +281,33 @@ export default function CatalogPage({ books, onNavigate }) {
 
           <div className="lg:w-1/2 flex flex-col items-center z-10 w-full mt-8 lg:mt-0">
             <h2 className="text-2xl mb-8 font-semibold self-center lg:self-start ml-0 lg:ml-12" style={fontDisplay}>Trending Now</h2>
-            <div className="flex gap-4 items-center justify-center min-h-[300px]">
+            <div className="flex gap-4 sm:gap-6 items-center justify-center min-h-[300px] py-4">
               {visibleTrending.map((b, i) => {
                 const isCenter = i === 1 && visibleTrending.length >= 3;
                 return (
                   <div 
                     key={`${b.id}-${i}`}
                     onClick={() => onNavigate("book-details", b.id)}
-                    className={`cursor-pointer transform transition-all duration-150 [will-change:transform] 
+                    className={`group/trending relative cursor-pointer select-none transition-all duration-300 ease-out [will-change:transform,box-shadow]
+                      hover:-translate-y-4 hover:z-30
                       ${isCenter 
-                        ? 'scale-110 z-20 shadow-2xl' 
-                        : 'scale-100 z-10'
+                        ? 'scale-110 z-20 hover:scale-[1.18]' 
+                        : 'scale-100 z-10 hover:scale-108'
                       }`}
                   >
-                    <BookCover book={b} className="w-24 h-36 sm:w-32 sm:h-48 md:w-44 md:h-64 rounded-md shadow-2xl" />
+                    {/* Glowing highlight border & deep 3D elevation container */}
+                    <div className="relative rounded-md overflow-hidden transition-all duration-300 ease-out group-hover/trending:shadow-[0_28px_50px_-12px_rgba(0,0,0,0.55),0_12px_24px_-6px_rgba(0,0,0,0.35)] group-hover/trending:ring-2 group-hover/trending:ring-[#FDD132] group-hover/trending:ring-offset-2 group-hover/trending:ring-offset-white">
+                      <BookCover 
+                        book={b} 
+                        className="w-24 h-36 sm:w-32 sm:h-48 md:w-44 md:h-64 rounded-md shadow-2xl transition-transform duration-300 ease-out group-hover/trending:scale-105" 
+                      />
+                      {/* Deep interactive feedback sheen with View Book pill */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent opacity-0 group-hover/trending:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-3 pointer-events-none">
+                        <span className="bg-black/90 text-[#FDD132] text-xs font-bold px-3 py-1 rounded-full border border-[#FDD132]/70 shadow-lg flex items-center gap-1.5 transform translate-y-2 group-hover/trending:translate-y-0 transition-transform duration-300">
+                          <BookOpen size={12} className="text-[#FDD132]" /> View Book
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 );
               })}
@@ -303,13 +316,15 @@ export default function CatalogPage({ books, onNavigate }) {
               <div className="flex gap-4 mt-10">
                 <button 
                   onClick={() => setTrendingIndex(prev => (prev - 1 + trendingPool.length) % trendingPool.length)}
-                  className="p-2 border border-gray-500 rounded-full hover:bg-white hover:text-black transition-colors text-black"
+                  aria-label="Previous trending title"
+                  className="p-2.5 border border-gray-400 bg-white/80 hover:bg-[#FDD132] hover:border-[#FDD132] text-black rounded-full hover:scale-110 active:scale-95 shadow-sm transition-all duration-200 cursor-pointer"
                 >
                   <ChevronLeft size={20} />
                 </button>
                 <button 
                   onClick={() => setTrendingIndex(prev => (prev + 1) % trendingPool.length)}
-                  className="p-2 border border-gray-500 rounded-full hover:bg-white hover:text-black transition-colors text-black"
+                  aria-label="Next trending title"
+                  className="p-2.5 border border-gray-400 bg-white/80 hover:bg-[#FDD132] hover:border-[#FDD132] text-black rounded-full hover:scale-110 active:scale-95 shadow-sm transition-all duration-200 cursor-pointer"
                 >
                   <ChevronRight size={20} />
                 </button>
@@ -347,12 +362,13 @@ export default function CatalogPage({ books, onNavigate }) {
                 <p className="text-sm text-black mt-1">by {resumeBook.author}</p>
               </div>
             </div>
-            <button 
+            <AnimatedSweepButton 
               onClick={() => onNavigate("book-details", resumeBook.id)}
-              className="bg-[#FDD132] text-black font-bold px-6 py-3 rounded text-sm hover:bg-yellow-400 transition-colors w-full md:w-auto"
+              variant="yellow"
+              className="font-bold px-6 py-3 rounded text-sm w-full md:w-auto"
             >
               Continue Reading
-            </button>
+            </AnimatedSweepButton>
           </div>
         </section>
       )}
@@ -907,13 +923,14 @@ export default function CatalogPage({ books, onNavigate }) {
                     className="w-full bg-gray-50 border border-gray-300 text-black rounded px-10 py-2.5 text-sm focus:outline-none focus:border-[#FDD132]"
                   />
                 </div>
-                <button 
+                <AnimatedSweepButton 
                   onClick={handleSubscribe} 
                   disabled={subscribeStatus === 'loading'}
-                  className="bg-[#FDD132] text-black font-bold py-2.5 rounded text-sm hover:bg-yellow-400 transition-colors w-full disabled:opacity-70"
+                  variant="yellow"
+                  className="font-bold py-2.5 rounded text-sm w-full"
                 >
                   {subscribeStatus === 'loading' ? 'Subscribing...' : subscribeStatus === 'success' ? 'Subscribed! ✓' : 'Subscribe'}
-                </button>
+                </AnimatedSweepButton>
                 {subscribeStatus === 'error' && <span className="text-red-400 text-xs">Please enter a valid email.</span>}
               </div>
             </div>

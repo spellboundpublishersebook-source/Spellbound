@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { LogOut, Menu, X, Home, LayoutDashboard, FlaskConical, ShieldCheck, User } from "lucide-react";
 import { fontDisplay, fontBody } from "../theme";
+import AnimatedSweepButton from "./AnimatedSweepButton";
 
 export default function Header({ session, view, onNavigate, onLogout }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -134,6 +135,12 @@ export default function Header({ session, view, onNavigate, onLogout }) {
                     active={view === "login-admin"}
                     onClick={() => { onNavigate("login-admin"); close(); }}
                   />
+                  <DrawerItem
+                    icon={<User size={16} />}
+                    label="Institution Login"
+                    active={view === "login-reader"}
+                    onClick={() => { onNavigate("login-reader"); close(); }}
+                  />
                 </>
               )}
 
@@ -195,22 +202,20 @@ function NavLinks({ session, view, onNavigate, onLogout }) {
           >
             Free Trial
           </button>
-          <button
+          <AnimatedSweepButton
             onClick={() => onNavigate("login-admin")}
-            style={{ backgroundColor: "transparent", color: "#FDD132", fontWeight: "700", fontSize: "14px", padding: "8px 16px", borderRadius: "6px", border: "1px solid #FDD132", cursor: "pointer" }}
-            onMouseEnter={e => { e.target.style.backgroundColor = "rgba(253, 209, 50, 0.1)"; }}
-            onMouseLeave={e => { e.target.style.backgroundColor = "transparent"; }}
+            variant="yellow-outline"
+            className="font-bold text-sm px-4 py-2 rounded-md"
           >
             Admin Login
-          </button>
-          <button
+          </AnimatedSweepButton>
+          <AnimatedSweepButton
             onClick={() => onNavigate("login-reader")}
-            style={{ backgroundColor: "#FDD132", color: "#111111", fontWeight: "700", fontSize: "14px", padding: "8px 20px", borderRadius: "6px", border: "none", cursor: "pointer" }}
-            onMouseEnter={e => { e.target.style.backgroundColor = "#f5c800"; }}
-            onMouseLeave={e => { e.target.style.backgroundColor = "#FDD132"; }}
+            variant="yellow"
+            className="font-bold text-sm px-5 py-2 rounded-md"
           >
             Institution Login
-          </button>
+          </AnimatedSweepButton>
         </>
       )}
 
