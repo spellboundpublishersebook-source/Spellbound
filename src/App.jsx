@@ -131,6 +131,7 @@ export default function App() {
   const [featuredAuthors, setFeaturedAuthors] = useState([]);
   const [readers, setReaders] = useState([]);
   const [subscribers, setSubscribers] = useState([]);
+  const [activeReadingSessions, setActiveReadingSessions] = useState([]);
   const [dbStatus, setDbStatus] = useState("checking");
 
   async function fetchAllData() {
@@ -192,6 +193,11 @@ export default function App() {
       if (authData && authData.length > 0) {
         setFeaturedAuthors(authData.map(a => ({ ...a, photoUrl: a.photo_url })));
       }
+
+      // Fetch active reading sessions (last 15 minutes) for traffic spike telemetry
+      const fifteenMinsAgo = new Date(Date.now() - 15 * 60000).toISOString();
+      const { data: sessData } = await supabase.from('reading_sessions').select('*').gte('last_active', fifteenMinsAgo);
+      if (sessData) setActiveReadingSessions(sessData);
     } catch (err) {
       console.error("Error fetching data from Supabase. Falling back to mock data.", err);
       setDbStatus("error");
@@ -202,6 +208,17 @@ export default function App() {
     fetchAllData();
 
     if (!supabase) return;
+
+    const fetchActiveSessions = async () => {
+      try {
+        const fifteenMinsAgo = new Date(Date.now() - 15 * 60000).toISOString();
+        const { data: sessData } = await supabase.from('reading_sessions').select('*').gte('last_active', fifteenMinsAgo);
+        if (sessData) setActiveReadingSessions(sessData);
+      } catch (err) {
+        console.warn("Telemetry refresh error:", err);
+      }
+    };
+    const sessionInterval = setInterval(fetchActiveSessions, 30000);
 
     // --- REAL-TIME SUBSCRIPTIONS ---
     const channel = supabase.channel('global-changes')
@@ -257,9 +274,13 @@ export default function App() {
           setLicenses(prev => prev.filter(l => l.id !== payload.old.id));
         }
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reading_sessions' }, () => {
+        fetchActiveSessions();
+      })
       .subscribe();
 
     return () => {
+      clearInterval(sessionInterval);
       supabase.removeChannel(channel);
     };
   }, []);
@@ -399,6 +420,23 @@ export default function App() {
     if (session && session.id === id) {
       setSession(prev => ({ ...prev, bookIds }));
     }
+  }
+
+  async function handleRotateSemesterPassword(id, newPassword) {
+    try {
+      const { error } = await supabase.from('licenses').update({ password: newPassword }).eq('id', id);
+      if (error) {
+        console.error("Error updating semester password in DB:", error);
+        alert("Database error rotating semester password: " + error.message);
+        return false;
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error rotating password: " + e.message);
+      return false;
+    }
+    setLicenses((prev) => prev.map(l => l.id === id ? { ...l, password: newPassword } : l));
+    return true;
   }
   
   async function handleEditTrialAccess(id, bookIds) {
@@ -805,9 +843,9 @@ export default function App() {
       {view === "admin" && session?.role === "admin" && (
         <AdminPanel
           books={books} licenses={licenses} uploaders={uploaders} trialRequests={trialRequests} readers={readers} subscribers={subscribers} emailTemplates={emailTemplates}
-          featuredAuthors={featuredAuthors}
+          featuredAuthors={featuredAuthors} activeReadingSessions={activeReadingSessions}
           onCreateLicense={handleCreateLicense} onRevokeLicense={handleRevokeLicense} onToggleLicenseStatus={handleToggleLicenseStatus}
-          onEditInstitutionAccess={handleEditInstitutionAccess}
+          onEditInstitutionAccess={handleEditInstitutionAccess} onRotateSemesterPassword={handleRotateSemesterPassword}
           onCreateReader={handleCreateReader} onRevokeReader={handleRevokeReader} onToggleReaderStatus={handleToggleReaderStatus}
           onEditReaderAccess={handleEditReaderAccess} onResendReaderEmail={handleResendReaderEmail}
           onAddUploader={handleAddUploader} onRemoveUploader={handleRemoveUploader}

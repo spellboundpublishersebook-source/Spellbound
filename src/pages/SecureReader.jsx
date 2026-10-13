@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { ChevronLeft, ChevronRight, ArrowLeft, ShieldAlert, Volume2, VolumeX } from "lucide-react";
 import { palette, fontDisplay, fontBody } from "../theme";
 import { supabase } from "../supabaseClient";
@@ -18,8 +18,15 @@ export default function SecureReader({ book, session, onBack }) {
   const [warning, setWarning] = useState(false);
   const [isFocused, setIsFocused] = useState(true);
   const [jumpInput, setJumpInput] = useState("");
-  const [isBlocked, setIsBlocked] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+
+  // Per-session reading pace rate limit (prevents bot scraping)
+  const [paceWarning, setPaceWarning] = useState(false);
+  const pageTurnsRef = useRef([]);
+
+  // CDN Signed URLs: Offload Postgres database and serve PDFs from Cloudflare Edge CDN
+  const [cdnPdfUrl, setCdnPdfUrl] = useState(null);
+  const [isLoadingPdfUrl, setIsLoadingPdfUrl] = useState(false);
 
   // Stop audio on unmount or page change
   useEffect(() => {
@@ -60,44 +67,86 @@ export default function SecureReader({ book, session, onBack }) {
     localStorage.setItem(`last_read_book`, book.id);
   }, [currentPageDisplay, book.id]);
 
+  // CDN Signed URL resolution for PDFs (expires in 2 hours = 7200s)
   useEffect(() => {
-    // Only enforce seats for institutional licenses (not admins or independent readers)
-    if (session.type !== "license") return;
+    let isMounted = true;
+    async function resolveSignedCdnUrl() {
+      if (!book.pdfUrl) {
+        setCdnPdfUrl(null);
+        return;
+      }
+      try {
+        let storagePath = null;
+        if (book.pdfUrl.includes('/storage/v1/object/public/pdfs/')) {
+          storagePath = book.pdfUrl.split('/storage/v1/object/public/pdfs/')[1]?.split('?')[0];
+        } else if (book.pdfUrl.includes('/pdfs/')) {
+          storagePath = book.pdfUrl.split('/pdfs/')[1]?.split('?')[0];
+        }
+
+        if (storagePath) {
+          setIsLoadingPdfUrl(true);
+          const decodedPath = decodeURIComponent(storagePath);
+          const { data, error } = await supabase.storage
+            .from('pdfs')
+            .createSignedUrl(decodedPath, 7200);
+
+          if (!error && data?.signedUrl && isMounted) {
+            setCdnPdfUrl(data.signedUrl);
+            setIsLoadingPdfUrl(false);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("Could not generate signed CDN URL, falling back to direct URL:", err);
+      }
+
+      if (isMounted) {
+        setCdnPdfUrl(book.pdfUrl);
+        setIsLoadingPdfUrl(false);
+      }
+    }
+
+    resolveSignedCdnUrl();
+    return () => { isMounted = false; };
+  }, [book.pdfUrl]);
+
+  // Telemetry session tracking with UNLIMITED simultaneous logins (no seat cap)
+  useEffect(() => {
+    if (session.type !== "license" && session.role !== "reader") return;
 
     let heartbeatInterval;
     async function initSession() {
-      const fiveMinsAgo = new Date(Date.now() - 5 * 60000).toISOString();
-      // Clean up dead sessions
-      await supabase.from('reading_sessions').delete().lt('last_active', fiveMinsAgo);
+      try {
+        const fiveMinsAgo = new Date(Date.now() - 5 * 60000).toISOString();
+        // Clean up dead sessions
+        await supabase.from('reading_sessions').delete().lt('last_active', fiveMinsAgo);
 
-      // Check current sessions for this license
-      const { data: activeSessions } = await supabase.from('reading_sessions').select('id').eq('license_id', session.id);
-      
-      const mySessionId = localStorage.getItem('reader_session_id') || `sess_${Date.now()}`;
-      const isAlreadyReading = activeSessions?.find(s => s.id === mySessionId);
+        // Unlimited simultaneous logins per ID: each device/browser tab gets an independent session
+        const mySessionId = localStorage.getItem('reader_session_id') || `sess_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        localStorage.setItem('reader_session_id', mySessionId);
 
-      // We need to know the seats limit, which we can fetch or pass down.
-      // Since it's not passed, we fetch it quickly.
-      const { data: licData } = await supabase.from('licenses').select('seats').eq('id', session.id).single();
-      const maxSeats = licData ? licData.seats : 100;
+        // Record telemetry without blocking
+        await supabase.from('reading_sessions').upsert({
+          id: mySessionId,
+          license_id: session.id,
+          book_id: book.id,
+          last_active: new Date().toISOString()
+        });
+        
+        await supabase.from('book_views').insert([{
+          id: `v_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          book_id: book.id,
+          license_id: session.id,
+          viewed_at: new Date().toISOString()
+        }]);
 
-      if (!isAlreadyReading && activeSessions && activeSessions.length >= maxSeats) {
-        setIsBlocked(true);
-        return;
+        // Heartbeat keeps session alive
+        heartbeatInterval = setInterval(() => {
+          supabase.from('reading_sessions').update({ last_active: new Date().toISOString() }).eq('id', mySessionId);
+        }, 45000);
+      } catch (err) {
+        console.warn("Session tracking non-blocking telemetry notice:", err);
       }
-
-      // Upsert my session
-      localStorage.setItem('reader_session_id', mySessionId);
-      await supabase.from('reading_sessions').upsert({ id: mySessionId, license_id: session.id, book_id: book.id, last_active: new Date().toISOString() });
-      
-      if (!isAlreadyReading) {
-        await supabase.from('book_views').insert([{ id: `v_${Date.now()}`, book_id: book.id, license_id: session.id, viewed_at: new Date().toISOString() }]);
-      }
-
-      // Heartbeat
-      heartbeatInterval = setInterval(() => {
-        supabase.from('reading_sessions').update({ last_active: new Date().toISOString() }).eq('id', mySessionId);
-      }, 60000);
     }
     initSession();
 
@@ -105,6 +154,25 @@ export default function SecureReader({ book, session, onBack }) {
       if (heartbeatInterval) clearInterval(heartbeatInterval);
     };
   }, [book.id, session]);
+
+  // Per-session reading pace rate limiter (anti-scraping check)
+  const checkPaceLimit = useCallback(() => {
+    const now = Date.now();
+    const windowStart = now - 60000; // 60s sliding window
+    const recent = pageTurnsRef.current.filter(t => t > windowStart);
+    const burst = recent.filter(t => t > now - 4000); // 4s burst window
+
+    // Limit: Max 40 pages per minute or 7 pages within 4 seconds
+    if (recent.length >= 40 || burst.length >= 7) {
+      setPaceWarning(true);
+      setTimeout(() => setPaceWarning(false), 5000);
+      return false;
+    }
+
+    recent.push(now);
+    pageTurnsRef.current = recent;
+    return true;
+  }, []);
 
   // Sync jump input when page changes
   useEffect(() => {
@@ -114,6 +182,7 @@ export default function SecureReader({ book, session, onBack }) {
   const handleJump = () => {
     let p = parseInt(jumpInput, 10);
     if (!isNaN(p) && p >= 1 && p <= totalPages) {
+      if (!checkPaceLimit()) return;
       if (book.pdfUrl) setPdfPageNumber(p);
       else setPage(p - 1);
     } else {
@@ -122,14 +191,16 @@ export default function SecureReader({ book, session, onBack }) {
   };
 
   const next = useCallback(() => {
+    if (!checkPaceLimit()) return;
     if (book.pdfUrl) setPdfPageNumber(p => Math.min(p + 1, totalPages));
     else setPage(p => Math.min(p + 1, totalPages - 1));
-  }, [totalPages, book.pdfUrl]);
+  }, [totalPages, book.pdfUrl, checkPaceLimit]);
   
   const prev = useCallback(() => {
+    if (!checkPaceLimit()) return;
     if (book.pdfUrl) setPdfPageNumber(p => Math.max(p - 1, 1));
     else setPage(p => Math.max(p - 1, 0));
-  }, [book.pdfUrl]);
+  }, [book.pdfUrl, checkPaceLimit]);
 
   // Deterrents & Strict Focus Lock
   useEffect(() => {
@@ -190,20 +261,10 @@ export default function SecureReader({ book, session, onBack }) {
     };
   }, [next, prev]);
 
-  const watermarkText = `Copyright by ${book.publisher || "Publisher"} - ${book.firstPublish ? book.firstPublish.slice(0, 4) : new Date().getFullYear()}`;
-
-  if (isBlocked) {
-    return (
-      <div className="min-h-[calc(100vh-64px)] flex flex-col items-center justify-center p-6 text-center" style={{ backgroundColor: palette.forest2, color: palette.cream }}>
-        <ShieldAlert size={64} className="mb-6 opacity-50 text-red-500" />
-        <h2 className="text-2xl font-bold mb-4" style={fontDisplay}>All Seats Currently in Use</h2>
-        <p className="max-w-md text-sm mb-8" style={{ color: "rgba(251,247,236,0.7)" }}>
-          Your institution's license allows a limited number of readers at the same time. The maximum number of active reading sessions has been reached. Please try again in a few minutes.
-        </p>
-        <Button variant="outlineLight" onClick={onBack}><ArrowLeft size={16} strokeWidth={1.8} /> Return to Library</Button>
-      </div>
-    );
-  }
+  // Watermark college name and date without exposing individual student PII
+  const collegeName = session?.institution || session?.name || "Licensed Institution";
+  const accessDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+  const watermarkText = `${collegeName.toUpperCase()} • LICENSED ACCESS • ${accessDate}`;
 
   return (
     <div className="min-h-[calc(100vh-64px)] flex flex-col relative" style={{ backgroundColor: palette.forest2 }}>
@@ -241,19 +302,25 @@ export default function SecureReader({ book, session, onBack }) {
         </div>
       )}
 
+      {paceWarning && (
+        <div className="flex items-center gap-2 justify-center py-2 text-xs font-semibold animate-pulse" style={{ backgroundColor: "#991B1B", color: palette.cream }}>
+          <ShieldAlert size={14} strokeWidth={2} /> Reading pace limit reached: rapid automated page turning detected. Reading will resume shortly.
+        </div>
+      )}
+
       <div className="flex-1 flex items-center justify-center p-6 overflow-auto">
         <div
           className="no-select relative rounded-md shadow-2xl overflow-hidden flex flex-col items-center"
           style={{ backgroundColor: palette.cream, minHeight: 460, ...fontBody, color: palette.ink }}
           onContextMenu={(e) => e.preventDefault()}
         >
-          {/* Repeating watermark overlay */}
+          {/* Repeating watermark overlay (College Name & Access Date - Zero Student PII) */}
           <div
-            className="pointer-events-none absolute inset-0 overflow-hidden opacity-[0.08] flex flex-wrap content-start gap-8 p-4 z-50"
+            className="pointer-events-none absolute inset-0 overflow-hidden opacity-[0.09] flex flex-wrap content-start gap-12 p-6 z-50 select-none"
             aria-hidden="true"
           >
-            {Array.from({ length: 12 }).map((_, i) => (
-              <span key={i} className="text-xs whitespace-nowrap" style={{ transform: "rotate(-18deg)", color: palette.ink }}>
+            {Array.from({ length: 24 }).map((_, i) => (
+              <span key={i} className="text-xs font-bold tracking-wider whitespace-nowrap" style={{ transform: "rotate(-22deg)", color: palette.ink }}>
                 {watermarkText}
               </span>
             ))}
@@ -262,11 +329,11 @@ export default function SecureReader({ book, session, onBack }) {
           {book.pdfUrl ? (
             <div className="w-full h-full flex items-center justify-center pointer-events-none">
               <Document 
-                file={book.pdfUrl} 
+                file={cdnPdfUrl || book.pdfUrl} 
                 onLoadSuccess={({ numPages }) => setNumPdfPages(numPages)}
                 loading={
                   <div className="py-20 px-8 flex items-center justify-center">
-                    <BookLoader book={book} message="Loading secure PDF document..." size="md" />
+                    <BookLoader book={book} message={isLoadingPdfUrl ? "Establishing secure CDN edge connection..." : "Loading secure PDF document..."} size="md" />
                   </div>
                 }
                 error={

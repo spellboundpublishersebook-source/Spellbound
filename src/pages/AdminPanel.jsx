@@ -1,6 +1,6 @@
 import { supabase } from "../supabaseClient";
 import React, { useState, useMemo } from "react";
-import { Plus, Trash2, Check, X, Users, UploadCloud, Gift, LayoutGrid, Search, BookOpen, Settings, LayoutTemplate, Mail } from "lucide-react";
+import { Plus, Trash2, Check, X, Users, UploadCloud, Gift, LayoutGrid, Search, BookOpen, Settings, LayoutTemplate, Mail, AlertTriangle, Key, Activity } from "lucide-react";
 import { palette, fontDisplay, getGenres, setGenres as saveGenres, getPubTypes, setPubTypes as savePubTypes, getCustomHeadings, getHomepageConfig, setHomepageConfig, getPages, setPages } from "../theme";
 import { addMonths, today, daysUntil, genCredentialId, genPassword } from "../data/mockData";
 import Button from "../components/Button";
@@ -23,7 +23,8 @@ const TABS = [
 
 export default function AdminPanel({
   books, licenses, uploaders, trialRequests, readers = [], subscribers = [], emailTemplates, featuredAuthors,
-  onCreateLicense, onRevokeLicense, onToggleLicenseStatus, onEditInstitutionAccess,
+  activeReadingSessions = [],
+  onCreateLicense, onRevokeLicense, onToggleLicenseStatus, onEditInstitutionAccess, onRotateSemesterPassword,
   onCreateReader, onRevokeReader, onToggleReaderStatus, onEditReaderAccess, onResendReaderEmail,
   onAddUploader, onRemoveUploader,
   onApproveTrial, onRejectTrial, onEditTrialAccess, onResendTrialEmail, onResendInstitutionEmail, onUpdateEmailTemplate,
@@ -34,11 +35,45 @@ export default function AdminPanel({
 
   const pendingTrials = trialRequests.filter((t) => t.status === "pending").length;
 
+  // Active reading sessions telemetry and spike analysis
+  const activeSessionCounts = useMemo(() => {
+    const counts = {};
+    (activeReadingSessions || []).forEach((s) => {
+      if (s.license_id) {
+        counts[s.license_id] = (counts[s.license_id] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [activeReadingSessions]);
+
+  // Unusual traffic spikes: any institution with >= 50 simultaneous active sessions (or high surge)
+  const spikedInstitutions = useMemo(() => {
+    return licenses.filter(l => (activeSessionCounts[l.id] || 0) >= 50);
+  }, [licenses, activeSessionCounts]);
+
   return (
     <div className="bg-[#f8f9fa] min-h-screen pb-20">
       <div className="max-w-6xl mx-auto px-6 py-10">
         <h1 className="text-3xl font-extrabold mb-1 text-[#111111]" style={fontDisplay}>Super Admin</h1>
         <p className="text-sm mb-8 text-black font-medium">Full control over institutions, uploaders, and trial approvals.</p>
+
+        {/* Unusual Traffic Spike Alert Banner */}
+        {spikedInstitutions.length > 0 && (
+          <div className="mb-8 p-4 rounded-xl border border-amber-300 bg-amber-50 flex items-start gap-3 shadow-sm">
+            <AlertTriangle className="text-amber-600 mt-0.5 shrink-0" size={22} />
+            <div>
+              <h3 className="font-bold text-amber-900 text-sm flex items-center gap-2">
+                Unusual Traffic Spike Detected (High Concurrent Campus Load)
+                <Badge tone="warn">{spikedInstitutions.length} Institution{spikedInstitutions.length > 1 ? "s" : ""}</Badge>
+              </h3>
+              <p className="text-xs text-amber-800 mt-1">
+                The following institution(s) are experiencing rapid student login surges:
+                {spikedInstitutions.map((inst) => ` ${inst.name} (${activeSessionCounts[inst.id]} concurrent readers)`).join(",")}.
+                Read requests are automatically offloaded to Cloudflare edge CDN and Supabase connection pooler with 0 seat caps.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="grid sm:grid-cols-3 gap-4 mb-8">
           <StatCard label="Books in catalog" value={books.length} icon={LayoutGrid} />
@@ -72,7 +107,17 @@ export default function AdminPanel({
           />
         )}
         {tab === "institutions" && (
-          <InstitutionsTab books={books} licenses={licenses} onCreateLicense={onCreateLicense} onRevokeLicense={onRevokeLicense} onToggleLicenseStatus={onToggleLicenseStatus} onResendEmail={onResendInstitutionEmail} onEditAccess={onEditInstitutionAccess} />
+          <InstitutionsTab
+            books={books}
+            licenses={licenses}
+            activeSessionCounts={activeSessionCounts}
+            onCreateLicense={onCreateLicense}
+            onRevokeLicense={onRevokeLicense}
+            onToggleLicenseStatus={onToggleLicenseStatus}
+            onResendEmail={onResendInstitutionEmail}
+            onEditAccess={onEditInstitutionAccess}
+            onRotateSemesterPassword={onRotateSemesterPassword}
+          />
         )}
         {tab === "readers" && (
           <ReadersTab
@@ -105,7 +150,17 @@ export default function AdminPanel({
 }
 
 // ---------------------------------------------------------------------------
-function InstitutionsTab({ books, licenses, onCreateLicense, onRevokeLicense, onToggleLicenseStatus, onResendEmail, onEditAccess }) {
+function InstitutionsTab({
+  books,
+  licenses,
+  activeSessionCounts = {},
+  onCreateLicense,
+  onRevokeLicense,
+  onToggleLicenseStatus,
+  onResendEmail,
+  onEditAccess,
+  onRotateSemesterPassword
+}) {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -122,6 +177,29 @@ function InstitutionsTab({ books, licenses, onCreateLicense, onRevokeLicense, on
   const [authorFilter, setAuthorFilter] = useState("All");
   const [issuedCreds, setIssuedCreds] = useState(null);
   const [isTest, setIsTest] = useState(false);
+
+  // Semester Password Rotation state
+  const [rotatingLicense, setRotatingLicense] = useState(null);
+  const [newSemesterPw, setNewSemesterPw] = useState("");
+  const [isRotating, setIsRotating] = useState(false);
+  const [rotatedSuccess, setRotatedSuccess] = useState(false);
+
+  function openRotatePassword(license) {
+    setRotatingLicense(license);
+    setNewSemesterPw(genPassword());
+    setRotatedSuccess(false);
+  }
+
+  async function handleConfirmRotatePassword(e) {
+    e.preventDefault();
+    if (!rotatingLicense || !newSemesterPw) return;
+    setIsRotating(true);
+    const ok = await onRotateSemesterPassword(rotatingLicense.id, newSemesterPw);
+    setIsRotating(false);
+    if (ok) {
+      setRotatedSuccess(true);
+    }
+  }
 
   const filteredBooks = useMemo(() => books.filter((b) =>
     (genreFilter === "All" || b.genre === genreFilter) &&
@@ -192,7 +270,7 @@ function InstitutionsTab({ books, licenses, onCreateLicense, onRevokeLicense, on
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              {["Institution", "Login ID", "Password", "Books", "Price", "Term", "Status", ""].map((h) => (
+              {["Institution", "Login ID", "Password", "Active Readers", "Books", "Price", "Term", "Status", ""].map((h) => (
                 <th key={h} className="text-left px-4 py-3 font-bold text-black uppercase tracking-wider text-[11px]">{h}</th>
               ))}
             </tr>
@@ -203,11 +281,25 @@ function InstitutionsTab({ books, licenses, onCreateLicense, onRevokeLicense, on
               const expired = left < 0;
               const soon = left <= 15 && !expired;
               const isOffline = l.type === "offline";
+              const activeCount = activeSessionCounts[l.id] || 0;
+              const isSpiked = activeCount >= 50;
               return (
                 <tr key={l.id} className="border-t border-gray-100 bg-white hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3">{l.name}</td>
+                  <td className="px-4 py-3 font-medium text-gray-900">{l.name}</td>
                   <td className="px-4 py-3"><code>{l.id}</code></td>
                   <td className="px-4 py-3"><code>{l.password}</code></td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-gray-800">{activeCount}</span>
+                      {isSpiked ? (
+                        <Badge tone="warn" className="animate-pulse flex items-center gap-1 text-[10px]">
+                          <Activity size={10} /> Spike
+                        </Badge>
+                      ) : activeCount > 0 ? (
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" title="Active readers" />
+                      ) : null}
+                    </div>
+                  </td>
                   <td className="px-4 py-3">{l.bookIds.length} titles</td>
                   <td className="px-4 py-3">₹{l.price.toLocaleString()}</td>
                   <td className="px-4 py-3">{l.startDate.slice(0, 10)} → {l.endDate.slice(0, 10)}</td>
@@ -220,6 +312,12 @@ function InstitutionsTab({ books, licenses, onCreateLicense, onRevokeLicense, on
                         <Mail size={12} /> Resend Email
                       </button>
                     )}
+                    <button
+                      onClick={() => openRotatePassword(l)}
+                      className="text-xs font-semibold flex items-center gap-1 text-indigo-600 hover:text-indigo-800 uppercase tracking-wider"
+                    >
+                      <Key size={12} /> Rotate Semester PW
+                    </button>
                     <button onClick={() => openEditAccess(l)} className="text-xs font-semibold text-black uppercase tracking-wider">
                       Edit Access
                     </button>
@@ -236,7 +334,7 @@ function InstitutionsTab({ books, licenses, onCreateLicense, onRevokeLicense, on
               );
             })}
             {licenses.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-6 text-center text-black">No institutions yet.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-6 text-center text-black">No institutions yet.</td></tr>
             )}
           </tbody>
         </table>
@@ -394,6 +492,96 @@ function InstitutionsTab({ books, licenses, onCreateLicense, onRevokeLicense, on
           <Button onClick={handleSaveAccess} className="w-full">
             Save Changes
           </Button>
+        </Modal>
+      )}
+
+      {rotatingLicense && (
+        <Modal
+          title={`Rotate Semester Password: ${rotatingLicense.name}`}
+          onClose={() => { setRotatingLicense(null); setRotatedSuccess(false); }}
+        >
+          {rotatedSuccess ? (
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg bg-green-50 border border-green-200 text-green-900 text-sm">
+                <div className="font-bold flex items-center gap-2 mb-1">
+                  <Check size={16} className="text-green-600" /> Password Rotated Successfully!
+                </div>
+                <p className="text-xs text-green-800">
+                  The previous semester password has been revoked. Students must use the new semester password to access the library.
+                </p>
+              </div>
+
+              <div className="rounded-md border p-4 text-sm space-y-2 bg-[#FFF9E6] border-[#FDEB9E]">
+                <div>Institution: <strong>{rotatingLicense.name}</strong></div>
+                <div>Login ID: <code>{rotatingLicense.id}</code></div>
+                <div>New Semester Password: <code className="font-bold text-base text-black bg-white px-2 py-0.5 rounded border border-amber-300">{newSemesterPw}</code></div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(newSemesterPw);
+                    alert("Password copied to clipboard!");
+                  }}
+                  className="flex-1"
+                >
+                  Copy Password
+                </Button>
+                {rotatingLicense.email && (
+                  <Button
+                    variant="brass"
+                    onClick={() => {
+                      if (onResendEmail) onResendEmail(rotatingLicense.id);
+                      alert("Updated credentials sent to " + rotatingLicense.email);
+                    }}
+                    className="flex-1"
+                  >
+                    <Mail size={14} /> Email Institution
+                  </Button>
+                )}
+                <Button onClick={() => { setRotatingLicense(null); setRotatedSuccess(false); }} className="flex-1">
+                  Done
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleConfirmRotatePassword} className="space-y-4">
+              <p className="text-sm text-gray-700">
+                Rotating the semester password will immediately invalidate the previous password. Past semester students who have graduated will no longer have access.
+              </p>
+
+              <div className="p-3 bg-gray-50 rounded border text-xs space-y-1">
+                <div>Institution: <strong>{rotatingLicense.name}</strong></div>
+                <div>Current Password: <code>{rotatingLicense.password}</code></div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">New Semester Password</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    value={newSemesterPw}
+                    onChange={(e) => setNewSemesterPw(e.target.value)}
+                    className="flex-1 px-3 py-2 border rounded text-sm font-mono focus:border-amber-400 outline-none"
+                  />
+                  <Button type="button" variant="outline" size="sm" onClick={() => setNewSemesterPw(genPassword())}>
+                    Generate
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="outline" onClick={() => setRotatingLicense(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isRotating}>
+                  {isRotating ? "Rotating..." : "Confirm & Rotate"}
+                </Button>
+              </div>
+            </form>
+          )}
         </Modal>
       )}
     </div>
