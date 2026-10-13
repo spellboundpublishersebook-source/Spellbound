@@ -6,6 +6,28 @@ import {
 import { fontDisplay, fontBody } from "../theme";
 import { daysUntil } from "../data/mockData";
 
+// Wiley-Style Animated Details Button with Loading Sweep Effect
+function WileyDetailsButton({ onClick, className = "", fullWidth = false }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`relative group/btn inline-flex items-center justify-center text-xs font-semibold tracking-wider transition-all duration-200 cursor-pointer border border-black hover:border-[#4D8BDB] hover:ring-2 hover:ring-[#4D8BDB] focus:outline-none focus:border-[#4D8BDB] focus:ring-2 focus:ring-[#4D8BDB] rounded-[2px] bg-white text-black hover:text-white shadow-sm ${
+        fullWidth ? "w-full h-[32px] py-1.5 px-3" : "w-[120px] h-[32px] py-1.5 px-4"
+      } ${className}`}
+    >
+      {/* Loading sweep fill from left to right */}
+      <span className="absolute inset-0 overflow-hidden rounded-[2px] pointer-events-none">
+        <span className="absolute inset-0 bg-black -translate-x-full group-hover/btn:translate-x-0 transition-transform duration-300 ease-out origin-left pointer-events-none" />
+      </span>
+      {/* Text label */}
+      <span className="relative z-10 select-none">
+        Details
+      </span>
+    </button>
+  );
+}
+
 // Carousel row for the multi-category dashboard view
 function CategoryCarouselRow({ genre, books, onOpenBook, onSelectGenre }) {
   const scrollRef = useRef(null);
@@ -116,13 +138,13 @@ function CategoryCarouselRow({ genre, books, onOpenBook, onSelectGenre }) {
                 Edition : 1
               </p>
 
-              {/* Details Button */}
-              <button
-                onClick={() => onOpenBook(b.id)}
-                className="w-full mt-auto py-2 px-3 border border-black bg-white text-black hover:bg-black hover:text-white transition-colors text-xs font-semibold text-center rounded-none shadow-sm cursor-pointer"
-              >
-                Details
-              </button>
+              {/* Details Button with Wiley Loading Sweep Animation */}
+              <div className="w-full mt-auto pt-1">
+                <WileyDetailsButton
+                  onClick={() => onOpenBook(b.id)}
+                  fullWidth
+                />
+              </div>
             </div>
           ))}
         </div>
@@ -779,13 +801,13 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                               Edition : 1
                             </p>
 
-                            {/* Details Button */}
-                            <button
-                              onClick={() => onOpenBook(b.id)}
-                              className="w-full mt-auto py-2 px-3 border border-black bg-white text-black hover:bg-black hover:text-white transition-colors text-xs font-semibold text-center rounded-none shadow-sm cursor-pointer"
-                            >
-                              Details
-                            </button>
+                            {/* Details Button with Wiley Loading Sweep Animation */}
+                            <div className="w-full mt-auto pt-1">
+                              <WileyDetailsButton
+                                onClick={() => onOpenBook(b.id)}
+                                fullWidth
+                              />
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -828,12 +850,9 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                               </p>
 
                               <div className="mb-5">
-                                <button
+                                <WileyDetailsButton
                                   onClick={() => onOpenBook(b.id)}
-                                  className="py-2 px-8 border border-black bg-white text-black hover:bg-black hover:text-white transition-colors text-xs font-semibold rounded-none cursor-pointer"
-                                >
-                                  Details
-                                </button>
+                                />
                               </div>
 
                               {/* Description with ...Show More */}
