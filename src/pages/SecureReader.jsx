@@ -40,7 +40,7 @@ export default function SecureReader({ book, session, onBack }) {
     }
   };
 
-  const totalPages = book.pdfUrl ? (numPdfPages || 0) : book.pages.length;
+  const totalPages = book.pdfUrl ? (numPdfPages || book.totalPages || 0) : (book.totalPages || book.pages.length);
   const currentPageDisplay = book.pdfUrl ? pdfPageNumber : (page + 1);
 
   // Resume logic on mount
