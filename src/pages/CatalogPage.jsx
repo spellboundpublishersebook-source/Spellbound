@@ -381,13 +381,14 @@ export default function CatalogPage({ books, onNavigate }) {
             <p className="text-sm text-black mt-2">What's new? Browse latest titles in the new releases category to discover your next read!</p>
           </div>
           <button 
-            className="text-sm font-semibold flex items-center hover:text-black flex-shrink-0"
+            className="group inline-flex items-center gap-1.5 text-sm font-semibold text-gray-700 hover:text-black px-3.5 py-1.5 rounded-full border border-transparent hover:border-[#FDD132] hover:bg-[#FDD132]/10 hover:shadow-sm transition-all duration-200 cursor-pointer active:scale-95 flex-shrink-0"
             onClick={() => {
               setDateFilter("Last 3 Months");
               document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth" });
             }}
           >
-            View all <ChevronRight size={16} />
+            <span>View all</span>
+            <ChevronRight size={16} className="text-gray-500 group-hover:text-black transform transition-transform duration-200 ease-out group-hover:translate-x-1" />
           </button>
         </div>
 
@@ -425,10 +426,11 @@ export default function CatalogPage({ books, onNavigate }) {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 border-b border-gray-200 pb-4 gap-4">
           <h2 className="text-2xl font-bold" style={fontDisplay}>Featured Authors</h2>
           <button 
-            className="text-sm font-semibold flex items-center hover:text-black flex-shrink-0"
+            className="group inline-flex items-center gap-1.5 text-sm font-semibold text-gray-700 hover:text-black px-3.5 py-1.5 rounded-full border border-transparent hover:border-[#FDD132] hover:bg-[#FDD132]/10 hover:shadow-sm transition-all duration-200 cursor-pointer active:scale-95 flex-shrink-0"
             onClick={() => onNavigate("authors")}
           >
-            View all authors <ChevronRight size={16} />
+            <span>View all authors</span>
+            <ChevronRight size={16} className="text-gray-500 group-hover:text-black transform transition-transform duration-200 ease-out group-hover:translate-x-1" />
           </button>
         </div>
         
@@ -443,16 +445,23 @@ export default function CatalogPage({ books, onNavigate }) {
             return (
               <div 
                 key={idx} 
-                className="flex flex-col items-center group cursor-pointer max-w-[140px]"
+                className="flex flex-col items-center group/author cursor-pointer max-w-[140px] select-none transition-all duration-300 ease-out hover:-translate-y-2.5 active:scale-95"
                 onClick={() => {
                   setSelectedAuthor(author);
                   document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth" });
                 }}
               >
-                <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-gray-200 to-gray-300 flex items-center justify-center text-2xl font-bold text-black group- mb-3 border-4 border-white">
-                  {initials}
+                <div className="relative w-24 h-24 rounded-full bg-gradient-to-tr from-gray-200 via-gray-100 to-gray-300 group-hover/author:from-[#FDD132] group-hover/author:via-amber-200 group-hover/author:to-yellow-300 flex items-center justify-center text-2xl font-bold text-black mb-3 border-4 border-white shadow-md group-hover/author:shadow-[0_16px_32px_-8px_rgba(0,0,0,0.3)] ring-2 ring-transparent group-hover/author:ring-[#FDD132] group-hover/author:ring-offset-2 transition-all duration-300 ease-out transform group-hover/author:scale-108">
+                  <span className="transform transition-transform duration-300 group-hover/author:scale-110">
+                    {initials}
+                  </span>
                 </div>
-                <p className="font-semibold text-sm text-center group-hover:text-[#FDD132] transition-colors line-clamp-2">{author}</p>
+                <p className="font-semibold text-sm text-center text-gray-800 group-hover/author:text-black group-hover/author:font-bold transition-all duration-200 line-clamp-2">
+                  {author}
+                </p>
+                <span className="text-[11px] font-bold text-amber-700 opacity-0 group-hover/author:opacity-100 transition-opacity duration-200 mt-0.5">
+                  View titles →
+                </span>
               </div>
             );
           })}
@@ -464,7 +473,7 @@ export default function CatalogPage({ books, onNavigate }) {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 border-b border-gray-200 pb-4 gap-4">
           <h2 className="text-2xl font-bold" style={fontDisplay}>Browse Catalog</h2>
           <button 
-            className="text-sm font-semibold flex items-center hover:text-black flex-shrink-0"
+            className="group inline-flex items-center gap-1.5 text-sm font-semibold text-gray-700 hover:text-black px-3.5 py-1.5 rounded-full border border-transparent hover:border-[#FDD132] hover:bg-[#FDD132]/15 hover:shadow-sm transition-all duration-200 cursor-pointer active:scale-95 flex-shrink-0"
             onClick={() => {
               setGenre("All");
               setSelectedAuthor("All");
@@ -476,7 +485,8 @@ export default function CatalogPage({ books, onNavigate }) {
               setAlphaFilter("All");
             }}
           >
-            Clear Filters <ChevronRight size={16} />
+            <span>Clear Filters</span>
+            <ChevronRight size={16} className="text-gray-500 group-hover:text-black transform transition-transform duration-200 ease-out group-hover:translate-x-1" />
           </button>
         </div>
 
@@ -794,30 +804,38 @@ export default function CatalogPage({ books, onNavigate }) {
           <p className="text-black text-sm mt-2">The premier online library platform for institutions and avid readers.</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="bg-white rounded-xl p-8 border border-gray-100 text-center flex flex-col items-center">
-            <div className="w-16 h-16 bg-[#fff9db] rounded-full flex items-center justify-center mb-4">
-              <ShieldCheck size={32} className="text-[#FDD132]" strokeWidth={2} />
+          <div className="group/benefit relative bg-white rounded-xl p-8 border border-gray-200 hover:border-[#FDD132] text-center flex flex-col items-center transition-all duration-300 ease-out hover:-translate-y-3 shadow-sm hover:shadow-[0_24px_48px_-12px_rgba(0,0,0,0.14),0_8px_20px_-6px_rgba(0,0,0,0.08)] overflow-hidden cursor-default select-none">
+            {/* Golden top accent bar on hover */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-[#FDD132] transform scale-x-0 group-hover/benefit:scale-x-100 transition-transform duration-300 ease-out origin-center" />
+            <div className="w-16 h-16 bg-[#fff9db] group-hover/benefit:bg-[#FDD132] rounded-full flex items-center justify-center mb-5 transition-all duration-300 ease-out group-hover/benefit:scale-110 group-hover/benefit:shadow-md">
+              <ShieldCheck size={32} className="text-[#B8860B] group-hover/benefit:text-black transition-all duration-300 group-hover/benefit:rotate-6" strokeWidth={2} />
             </div>
-            <h3 className="font-bold text-lg mb-2" style={fontDisplay}>Secure Browser Reading</h3>
-            <p className="text-sm text-black leading-relaxed">
+            <h3 className="font-bold text-lg mb-2 text-black transition-colors" style={fontDisplay}>Secure Browser Reading</h3>
+            <p className="text-sm text-gray-700 group-hover/benefit:text-black leading-relaxed transition-colors">
               Every book here is read in-browser only — there's no download, ensuring content protection and easy access everywhere.
             </p>
           </div>
-          <div className="bg-white rounded-xl p-8 border border-gray-100 text-center flex flex-col items-center">
-            <div className="w-16 h-16 bg-[#fff9db] rounded-full flex items-center justify-center mb-4">
-              <Library size={32} className="text-[#FDD132]" strokeWidth={2} />
+
+          <div className="group/benefit relative bg-white rounded-xl p-8 border border-gray-200 hover:border-[#FDD132] text-center flex flex-col items-center transition-all duration-300 ease-out hover:-translate-y-3 shadow-sm hover:shadow-[0_24px_48px_-12px_rgba(0,0,0,0.14),0_8px_20px_-6px_rgba(0,0,0,0.08)] overflow-hidden cursor-default select-none">
+            {/* Golden top accent bar on hover */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-[#FDD132] transform scale-x-0 group-hover/benefit:scale-x-100 transition-transform duration-300 ease-out origin-center" />
+            <div className="w-16 h-16 bg-[#fff9db] group-hover/benefit:bg-[#FDD132] rounded-full flex items-center justify-center mb-5 transition-all duration-300 ease-out group-hover/benefit:scale-110 group-hover/benefit:shadow-md">
+              <Library size={32} className="text-[#B8860B] group-hover/benefit:text-black transition-all duration-300 group-hover/benefit:rotate-6" strokeWidth={2} />
             </div>
-            <h3 className="font-bold text-lg mb-2" style={fontDisplay}>Institutional Access</h3>
-            <p className="text-sm text-black leading-relaxed">
+            <h3 className="font-bold text-lg mb-2 text-black transition-colors" style={fontDisplay}>Institutional Access</h3>
+            <p className="text-sm text-gray-700 group-hover/benefit:text-black leading-relaxed transition-colors">
               Tailored specifically for universities and schools. Institutions get a fixed set of titles for licensed terms effortlessly.
             </p>
           </div>
-          <div className="bg-white rounded-xl p-8 border border-gray-100 text-center flex flex-col items-center">
-            <div className="w-16 h-16 bg-[#fff9db] rounded-full flex items-center justify-center mb-4">
-              <BookmarkCheck size={32} className="text-[#FDD132]" strokeWidth={2} />
+
+          <div className="group/benefit relative bg-white rounded-xl p-8 border border-gray-200 hover:border-[#FDD132] text-center flex flex-col items-center transition-all duration-300 ease-out hover:-translate-y-3 shadow-sm hover:shadow-[0_24px_48px_-12px_rgba(0,0,0,0.14),0_8px_20px_-6px_rgba(0,0,0,0.08)] overflow-hidden cursor-default select-none">
+            {/* Golden top accent bar on hover */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-[#FDD132] transform scale-x-0 group-hover/benefit:scale-x-100 transition-transform duration-300 ease-out origin-center" />
+            <div className="w-16 h-16 bg-[#fff9db] group-hover/benefit:bg-[#FDD132] rounded-full flex items-center justify-center mb-5 transition-all duration-300 ease-out group-hover/benefit:scale-110 group-hover/benefit:shadow-md">
+              <BookmarkCheck size={32} className="text-[#B8860B] group-hover/benefit:text-black transition-all duration-300 group-hover/benefit:rotate-6" strokeWidth={2} />
             </div>
-            <h3 className="font-bold text-lg mb-2" style={fontDisplay}>Curated Collections</h3>
-            <p className="text-sm text-black leading-relaxed">
+            <h3 className="font-bold text-lg mb-2 text-black transition-colors" style={fontDisplay}>Curated Collections</h3>
+            <p className="text-sm text-gray-700 group-hover/benefit:text-black leading-relaxed transition-colors">
               Access the most meticulously selected books across various genres. Free trial readers get thirty days to explore everything.
             </p>
           </div>
