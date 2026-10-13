@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import { 
   Search, ShieldCheck, ChevronLeft, ChevronRight, ChevronUp, ChevronDown,
@@ -56,6 +56,19 @@ export default function CatalogPage({ books, onNavigate }) {
   };
   const [dateTo, setDateTo] = useState("");
   const [query, setQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchContainerRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setIsSearchOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const [alphaFilter, setAlphaFilter] = useState("All");
   
   const [openFilters, setOpenFilters] = useState({
@@ -189,10 +202,10 @@ export default function CatalogPage({ books, onNavigate }) {
     <div className="bg-[#f8f9fa] min-h-screen text-[#131313] w-full" style={fontBody}>
       
       {/* HERO SECTION */}
-      <section className="bg-[#F9FAFB] text-black py-8 sm:py-12 md:py-20 px-4 sm:px-6 relative z-20 overflow-hidden w-full max-w-full">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 lg:gap-12 items-center">
+      <section className="bg-[#F9FAFB] text-black py-8 sm:py-12 md:py-20 px-4 sm:px-6 relative z-30 overflow-visible w-full max-w-full">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 lg:gap-12 items-center relative z-30">
           
-          <div className="lg:w-1/2 z-10 w-full">
+          <div className="lg:w-1/2 z-30 w-full relative">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight uppercase" style={fontDisplay}>
               Start Your Reading <span className="text-[#FDD132]">Adventure</span> Invest In Books Today
             </h1>
@@ -201,17 +214,22 @@ export default function CatalogPage({ books, onNavigate }) {
               Reading a book requires an account — issued to your institution, or a free 30-day trial you can request yourself.
             </p>
             
-            <div className="mt-6 sm:mt-8 relative max-w-lg w-full">
+            <div className="mt-6 sm:mt-8 relative max-w-lg w-full z-40" ref={searchContainerRef}>
               <div className="flex items-center bg-white rounded-md p-1.5 w-full relative z-20 shadow-sm border border-gray-200">
                 <Search size={20} className="ml-3 text-black flex-shrink-0" />
                 <input
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setIsSearchOpen(true);
+                  }}
+                  onFocus={() => setIsSearchOpen(true)}
                   placeholder="Search book here..."
                   className="flex-1 bg-transparent border-none outline-none px-3 py-2.5 sm:py-3 text-black w-full text-sm"
                 />
                 <AnimatedSweepButton 
                   onClick={() => {
+                    setIsSearchOpen(false);
                     document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth" });
                   }}
                   variant="yellow"
@@ -222,38 +240,45 @@ export default function CatalogPage({ books, onNavigate }) {
               </div>
 
               {/* Live Search Dropdown */}
-              {query.trim().length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-md shadow-2xl z-30 max-h-80 overflow-y-auto border border-gray-100">
+              {isSearchOpen && query.trim().length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-md shadow-2xl z-50 max-h-80 overflow-y-auto border border-gray-200">
                   {filtered.length > 0 ? (
-                    <ul className="py-2">
+                    <ul className="py-2 divide-y divide-gray-100">
                       {filtered.slice(0, 10).map((b) => (
                         <li 
                           key={b.id} 
-                          onClick={() => onNavigate("book-details", b.id)}
-                          className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-start gap-4 border-b border-gray-50 last:border-0"
+                          onClick={() => {
+                            setIsSearchOpen(false);
+                            setQuery("");
+                            onNavigate("book-details", b.id);
+                          }}
+                          className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-start gap-4 transition-colors"
                         >
-                          <BookCover book={b} className="w-10 h-14 flex-shrink-0 text-[10px] rounded" />
+                          <BookCover book={b} className="w-10 h-14 flex-shrink-0 text-[10px] rounded shadow-sm" />
                           <div className="flex-1 min-w-0 pt-1">
                             <h4 className="text-black font-bold truncate text-sm">{b.title}</h4>
-                            <p className="text-black text-xs truncate">{b.author}</p>
-                            <p className="text-black text-[10px] mt-1">{b.genre}</p>
+                            <p className="text-gray-600 text-xs truncate">{b.author}</p>
+                            <p className="text-gray-500 text-[10px] mt-1 uppercase font-semibold">{b.genre}</p>
                           </div>
-                          <div className="flex-shrink-0 text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                          <div className="flex-shrink-0 text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-100">
                             View Access
                           </div>
                         </li>
                       ))}
                       {filtered.length > 10 && (
                         <li 
-                          className="px-4 py-3 text-center text-sm font-semibold text-black hover:text-black cursor-pointer bg-gray-50"
-                          onClick={() => document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth" })}
+                          className="px-4 py-3 text-center text-sm font-semibold text-black hover:bg-gray-100 cursor-pointer bg-gray-50"
+                          onClick={() => {
+                            setIsSearchOpen(false);
+                            document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth" });
+                          }}
                         >
                           See all {filtered.length} results...
                         </li>
                       )}
                     </ul>
                   ) : (
-                    <div className="px-4 py-6 text-center text-black text-sm">
+                    <div className="px-4 py-6 text-center text-gray-500 text-sm">
                       No books found matching "{query}"
                     </div>
                   )}
@@ -339,7 +364,7 @@ export default function CatalogPage({ books, onNavigate }) {
       </section>
 
       {/* STATS STRIP */}
-      <section className="bg-[#FDD132] text-black py-4">
+      <section className="bg-[#FDD132] text-black py-4 relative z-10">
         <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-around items-center text-sm md:text-base font-bold uppercase tracking-wide gap-4 text-center">
           <div className="flex items-center gap-2"><BookOpen size={20} /> 10,000+ Titles</div>
           <div className="hidden sm:block w-px h-6 bg-black/20"></div>

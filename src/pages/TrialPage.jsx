@@ -3,14 +3,16 @@ import { Sparkles, CheckCircle2 } from "lucide-react";
 import { fontDisplay, fontBody } from "../theme";
 import { motion } from "framer-motion";
 
-export default function TrialPage({ onRequestTrial }) {
+export default function TrialPage({ onRequestTrial, onNavigate }) {
   const [form, setForm] = useState({ name: "", email: "", institution: "" });
+  const [submittedEmail, setSubmittedEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
+    setSubmittedEmail(form.email);
     await new Promise(r => setTimeout(r, 600));
     onRequestTrial(form);
     setSent(true);
@@ -190,17 +192,43 @@ export default function TrialPage({ onRequestTrial }) {
             <h2 style={{ ...fontDisplay, color: "#111111", fontSize: "28px", fontWeight: "800", margin: "0 0 12px" }}>
               Request Submitted!
             </h2>
-            <p style={{ color: "#000000", fontSize: "15px", lineHeight: "1.6", margin: "0 auto 32px", maxWidth: "340px" }}>
+            <p style={{ color: "#374151", fontSize: "15px", lineHeight: "1.6", margin: "0 auto 32px", maxWidth: "360px" }}>
               We've received your request for a 30-day trial. Once the admin approves it, you'll receive your login credentials by email.
             </p>
             <div style={{
-              background: "#111111", border: "1px solid #E5E7EB",
-              borderRadius: "16px", padding: "16px 24px",
-              display: "inline-block", boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
+              background: "#111111", border: "1px solid #2B2D31",
+              borderRadius: "14px", padding: "14px 28px",
+              display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px",
+              boxShadow: "0 4px 14px rgba(0,0,0,0.12)", marginBottom: "28px"
             }}>
-              <p style={{ color: "#000000", fontSize: "14px", margin: 0 }}>
-                Sent to <span style={{ color: "#111111", fontWeight: "700" }}>{form.email}</span>
-              </p>
+              <span style={{ color: "#E5E7EB", fontSize: "14px", fontWeight: "500" }}>
+                Sent to
+              </span>
+              <strong style={{ color: "#FDD132", fontSize: "14px", fontWeight: "700" }}>
+                {submittedEmail || form.email}
+              </strong>
+            </div>
+
+            <div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onNavigate) onNavigate("catalog");
+                  else window.location.hash = "catalog";
+                }}
+                style={{
+                  background: "#FDD132", color: "#111111",
+                  fontSize: "14px", fontWeight: "700",
+                  padding: "12px 28px", borderRadius: "10px",
+                  border: "none", cursor: "pointer",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                  transition: "all 0.2s ease"
+                }}
+                onMouseEnter={e => e.target.style.filter = "brightness(0.95)"}
+                onMouseLeave={e => e.target.style.filter = "none"}
+              >
+                Browse Catalog →
+              </button>
             </div>
           </motion.div>
         )}

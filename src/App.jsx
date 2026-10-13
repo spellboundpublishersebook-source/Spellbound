@@ -827,7 +827,7 @@ export default function App() {
       {view === "login" && <LoginPage onLogin={handleLogin} />}
       {view === "login-admin" && <LoginPage onLogin={handleLogin} mode="admin" />}
       {view === "login-reader" && <LoginPage onLogin={handleLogin} mode="reader" />}
-      {view === "trial" && <TrialPage onRequestTrial={handleRequestTrial} />}
+      {view === "trial" && <TrialPage onRequestTrial={handleRequestTrial} onNavigate={navigate} />}
 
       {view === "reader-dashboard" && session?.role === "reader" && (
         <ReaderDashboard session={session} books={availableBooks} onOpenBook={(id) => navigate("book-details", id)} />
