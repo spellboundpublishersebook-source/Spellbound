@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { ChevronLeft, BookOpen, Calendar, ShieldCheck, Tag, Info, Quote, Copy } from "lucide-react";
 import { fontDisplay, fontBody } from "../theme";
 import BookLoader from "../components/BookLoader";
+import AnimatedSweepButton from "../components/AnimatedSweepButton";
 import { Modal } from "../components/UI";
 
 const BookCover = ({ book, className = "" }) => {
@@ -78,31 +79,34 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
               <div className="text-2xl font-bold mb-4 text-center">₹{book.price}.00</div>
               {session ? (
                 (session.role === "admin" || session.role === "uploader" || session.bookIds === "all" || session.bookIds?.includes(book.id)) ? (
-                  <button 
+                  <AnimatedSweepButton 
                     onClick={handleOpenReader} 
-                    className="w-full bg-[#FDD132] text-black font-bold py-3 rounded-md hover:bg-yellow-400 transition-colors mb-3 flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-[0.99]"
+                    variant="yellow"
+                    className="w-full font-bold py-3 rounded-md mb-3 text-sm shadow-sm"
                   >
                     <BookOpen size={18} /> {book.pdfUrl ? "View PDF" : "Read Book"}
-                  </button>
+                  </AnimatedSweepButton>
                 ) : (
-                  <div className="w-full bg-gray-100 text-black font-bold py-3 rounded-md text-center mb-3 border border-gray-200">
+                  <div className="w-full bg-gray-100 text-black font-bold py-3 rounded-md text-center mb-3 border border-gray-200 text-sm">
                     Not available for your institution
                   </div>
                 )
               ) : (
                 <>
-                  <button 
+                  <AnimatedSweepButton 
                     onClick={() => onNavigate("login-reader")} 
-                    className="w-full bg-[#FDD132] text-black font-bold py-3 rounded-md hover:bg-yellow-400 transition-colors mb-3"
+                    variant="yellow"
+                    className="w-full font-bold py-3 rounded-md mb-3 text-sm shadow-sm"
                   >
                     Access via Institution
-                  </button>
-                  <button 
+                  </AnimatedSweepButton>
+                  <AnimatedSweepButton 
                     onClick={() => onNavigate("trial")} 
-                    className="w-full bg-[#111111] text-white font-bold py-3 rounded-md hover:bg-gray-800 transition-colors"
+                    variant="black"
+                    className="w-full font-bold py-3 rounded-md text-sm shadow-sm"
                   >
                     Request Free Trial
-                  </button>
+                  </AnimatedSweepButton>
                 </>
               )}
             </div>

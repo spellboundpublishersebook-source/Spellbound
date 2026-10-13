@@ -5,26 +5,20 @@ import {
 } from "lucide-react";
 import { fontDisplay, fontBody } from "../theme";
 import { daysUntil } from "../data/mockData";
+import AnimatedSweepButton from "../components/AnimatedSweepButton";
 
-// Wiley-Style Animated Details Button with Loading Sweep Effect
+// Wiley-Style Animated Details Button with Counter-Translation Mask
 function WileyDetailsButton({ onClick, className = "", fullWidth = false }) {
   return (
-    <button
-      type="button"
+    <AnimatedSweepButton
       onClick={onClick}
-      className={`relative group/btn inline-flex items-center justify-center text-xs font-semibold tracking-wider transition-all duration-200 cursor-pointer border border-black hover:border-[#4D8BDB] hover:ring-2 hover:ring-[#4D8BDB] focus:outline-none focus:border-[#4D8BDB] focus:ring-2 focus:ring-[#4D8BDB] rounded-[2px] bg-white text-black hover:text-white shadow-sm ${
+      variant="outline"
+      className={`text-xs font-semibold tracking-wider rounded-[2px] shadow-sm ${
         fullWidth ? "w-full h-[32px] py-1.5 px-3" : "w-[120px] h-[32px] py-1.5 px-4"
       } ${className}`}
     >
-      {/* Loading sweep fill from left to right */}
-      <span className="absolute inset-0 overflow-hidden rounded-[2px] pointer-events-none">
-        <span className="absolute inset-0 bg-black -translate-x-full group-hover/btn:translate-x-0 transition-transform duration-300 ease-out origin-left pointer-events-none" />
-      </span>
-      {/* Text label */}
-      <span className="relative z-10 select-none">
-        Details
-      </span>
-    </button>
+      Details
+    </AnimatedSweepButton>
   );
 }
 
@@ -429,12 +423,13 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                           <span className="text-[#D4A017] text-xs font-bold uppercase tracking-wider mb-2 block">{b.genre}</span>
                           <h3 className="text-black text-2xl md:text-3xl font-bold mb-3 leading-tight" style={fontDisplay}>{b.title}</h3>
                           <p className="text-black text-sm mb-6 line-clamp-2">{b.author}</p>
-                          <button
+                          <AnimatedSweepButton
                             onClick={() => onOpenBook(b.id)}
-                            className="bg-black text-white font-bold px-6 py-3 rounded hover:bg-gray-800 transition-colors cursor-pointer"
+                            variant="black"
+                            className="font-bold px-6 py-3 rounded text-sm shadow-sm"
                           >
                             Details
-                          </button>
+                          </AnimatedSweepButton>
                         </div>
                       </div>
                     ))}

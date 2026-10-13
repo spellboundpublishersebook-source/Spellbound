@@ -6,6 +6,7 @@ import {
   Library, BookmarkCheck 
 } from "lucide-react";
 import { fontDisplay, fontBody, getHomepageConfig } from "../theme";
+import AnimatedSweepButton from "../components/AnimatedSweepButton";
 
 // Helper for book covers since we only have colors
 const BookCover = ({ book, className = "" }) => {
@@ -209,14 +210,15 @@ export default function CatalogPage({ books, onNavigate }) {
                   placeholder="Search book here..."
                   className="flex-1 bg-transparent border-none outline-none px-3 py-3 text-black w-full"
                 />
-                <button 
+                <AnimatedSweepButton 
                   onClick={() => {
                     document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth" });
                   }}
-                  className="bg-[#FDD132] text-black font-semibold px-6 md:px-8 py-3 rounded-md hover:bg-yellow-400 transition-colors flex-shrink-0"
+                  variant="yellow"
+                  className="font-semibold px-6 md:px-8 py-3 rounded-md text-sm flex-shrink-0"
                 >
                   Search
-                </button>
+                </AnimatedSweepButton>
               </div>
 
               {/* Live Search Dropdown */}
@@ -260,12 +262,20 @@ export default function CatalogPage({ books, onNavigate }) {
             </div>
             
             <div className="mt-8 flex gap-4">
-              <button className="text-sm text-black hover:text-black border border-gray-600 rounded px-4 py-2 hover:border-gray-400 transition-colors" onClick={() => onNavigate("trial")}>
+              <AnimatedSweepButton 
+                onClick={() => onNavigate("trial")}
+                variant="outline"
+                className="text-sm rounded px-4 py-2"
+              >
                 Request free trial
-              </button>
-              <button className="text-sm text-black hover:text-black border border-gray-600 rounded px-4 py-2 hover:border-gray-400 transition-colors" onClick={() => onNavigate("login-reader")}>
+              </AnimatedSweepButton>
+              <AnimatedSweepButton 
+                onClick={() => onNavigate("login-reader")}
+                variant="outline"
+                className="text-sm rounded px-4 py-2"
+              >
                 Institution login
-              </button>
+              </AnimatedSweepButton>
             </div>
           </div>
 
@@ -378,12 +388,13 @@ export default function CatalogPage({ books, onNavigate }) {
                 <p className="text-xs text-black mb-2">{b.author}</p>
                 <div className="mt-auto">
                   <div className="font-bold text-sm mb-3">₹{b.price}.00</div>
-                  <button 
+                  <AnimatedSweepButton 
                     onClick={(e) => { e.stopPropagation(); onNavigate("book-details", b.id); }}
-                    className="bg-[#F9FAFB] text-black text-xs px-3 py-2 rounded flex items-center gap-2 w-full justify-center hover:bg-gray-800 transition-colors"
+                    variant="card-subtle"
+                    className="text-xs px-3 py-2 rounded w-full justify-center"
                   >
                     <BookOpen size={14} /> View book
-                  </button>
+                  </AnimatedSweepButton>
                 </div>
               </div>
             </div>
@@ -683,19 +694,20 @@ export default function CatalogPage({ books, onNavigate }) {
                   <p className="text-xs text-black mt-1 truncate">{b.author}</p>
                   <div className="mt-4 flex items-center justify-between">
                     <span className="font-bold text-sm">₹{b.price}.00</span>
-                    <button 
+                    <AnimatedSweepButton 
                       onClick={(e) => { e.stopPropagation(); onNavigate("book-details", b.id); }}
-                      className="text-[10px] sm:text-xs border border-gray-300 rounded px-2 py-1 text-black hover:bg-gray-100 transition-colors whitespace-nowrap"
+                      variant="card-outline"
+                      className="text-[10px] sm:text-xs rounded px-2.5 py-1 whitespace-nowrap"
                     >
                       View book
-                    </button>
+                    </AnimatedSweepButton>
                   </div>
                 </div>
               ))}
               {filtered.length === 0 && (
                 <div className="col-span-full py-20 text-center">
                   <p className="text-black">No titles match the selected filters.</p>
-                  <button onClick={resetFilters} className="mt-4 bg-[#FDD132] text-black px-6 py-2 rounded-md font-bold text-sm">Reset Filters</button>
+                  <AnimatedSweepButton onClick={resetFilters} variant="yellow" className="mt-4 px-6 py-2 rounded-md font-bold text-sm">Reset Filters</AnimatedSweepButton>
                 </div>
               )}
             </div>
@@ -712,9 +724,15 @@ export default function CatalogPage({ books, onNavigate }) {
             <p className="text-black text-sm mb-8 leading-relaxed max-w-sm mx-auto md:mx-0">
               Discover titles tailored to your reading history and preferences based on your past activity.
             </p>
-            <button className="bg-[#FDD132] text-black font-bold px-8 py-3 rounded-md text-sm hover:bg-yellow-400 transition-colors">
+            <AnimatedSweepButton 
+              onClick={() => {
+                document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth" });
+              }}
+              variant="yellow"
+              className="font-bold px-8 py-3 rounded-md text-sm shadow-sm"
+            >
               Explore More
-            </button>
+            </AnimatedSweepButton>
           </div>
           
           <div className="md:w-2/3 flex gap-4 items-center justify-center z-10 w-full overflow-x-auto pb-4 md:pb-0">
