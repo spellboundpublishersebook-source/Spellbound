@@ -90,7 +90,7 @@ function CategoryCarouselRow({ genre, books, onOpenBook, onSelectGenre }) {
           {books.map((b) => (
             <div
               key={b.id}
-              className="w-[185px] sm:w-[200px] flex-shrink-0 flex flex-col bg-white"
+              className="w-[185px] sm:w-[200px] flex-shrink-0 flex flex-col bg-white p-3 rounded-xl border border-gray-200 hover:border-black transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl cursor-pointer group/card"
             >
               {/* Cover */}
               <div
@@ -755,7 +755,7 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                       /* GRID VIEW (Screenshot 1) */
                       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
                         {paginatedBooks.map((b) => (
-                          <div key={b.id} className="flex flex-col bg-white">
+                          <div key={b.id} className="flex flex-col bg-white p-3 rounded-xl border border-gray-200 hover:border-black transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl cursor-pointer group/card">
                             {/* Cover */}
                             <div
                               onClick={() => onOpenBook(b.id)}
@@ -812,7 +812,7 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                         {paginatedBooks.map((b) => (
                           <div
                             key={b.id}
-                            className="flex flex-col sm:flex-row gap-6 p-6 bg-white border border-gray-200 rounded-sm shadow-sm"
+                            className="flex flex-col sm:flex-row gap-6 p-6 bg-white border border-gray-200 hover:border-black rounded-lg shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group/card"
                           >
                             {/* Left Cover */}
                             <div

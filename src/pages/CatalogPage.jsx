@@ -380,11 +380,13 @@ export default function CatalogPage({ books, onNavigate }) {
             <div 
               key={b.id} 
               onClick={() => onNavigate("book-details", b.id)}
-              className="book-card p-4 flex gap-4"
+              className="book-card group/card p-4 flex gap-4"
             >
-              <BookCover book={b} className="w-24 h-36 rounded-md flex-shrink-0" />
+              <div className="w-24 h-36 rounded-md overflow-hidden flex-shrink-0 shadow-sm">
+                <BookCover book={b} className="w-full h-full transition-transform duration-300 group-hover/card:scale-105" />
+              </div>
               <div className="flex flex-col flex-1">
-                <h3 className="font-bold text-sm leading-tight mb-1" style={fontDisplay}>{b.title}</h3>
+                <h3 className="font-bold text-sm leading-tight mb-1 group-hover/card:underline transition-colors" style={fontDisplay}>{b.title}</h3>
                 <p className="text-xs text-black mb-2">{b.author}</p>
                 <div className="mt-auto">
                   <div className="font-bold text-sm mb-3">₹{b.price}.00</div>
@@ -687,10 +689,12 @@ export default function CatalogPage({ books, onNavigate }) {
                 <div 
                   key={b.id} 
                   onClick={() => onNavigate("book-details", b.id)}
-                  className="book-card flex flex-col p-3 bg-white border border-gray-100 rounded-lg"
+                  className="book-card group/card flex flex-col p-3 bg-white border border-black rounded-xl"
                 >
-                  <BookCover book={b} className="w-full aspect-[2/3] rounded-md mb-4" />
-                  <h3 className="font-bold text-sm leading-tight line-clamp-2" style={fontDisplay}>{b.title}</h3>
+                  <div className="w-full aspect-[2/3] rounded-md mb-4 overflow-hidden shadow-sm">
+                    <BookCover book={b} className="w-full h-full transition-transform duration-300 group-hover/card:scale-105" />
+                  </div>
+                  <h3 className="font-bold text-sm leading-tight line-clamp-2 group-hover/card:underline transition-colors" style={fontDisplay}>{b.title}</h3>
                   <p className="text-xs text-black mt-1 truncate">{b.author}</p>
                   <div className="mt-4 flex items-center justify-between">
                     <span className="font-bold text-sm">₹{b.price}.00</span>
