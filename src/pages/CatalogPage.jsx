@@ -84,7 +84,7 @@ export default function CatalogPage({ books, onNavigate }) {
   };
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(15);
 
   const resetFilters = () => {
     setGenre("All");
@@ -784,9 +784,9 @@ export default function CatalogPage({ books, onNavigate }) {
                   aria-label="Books per page"
                   className="bg-gray-50 border border-gray-300 rounded px-2.5 py-1 text-black font-semibold text-xs focus:outline-none focus:border-black cursor-pointer hover:bg-gray-100 transition-colors"
                 >
-                  <option value={10}>10 per page</option>
-                  <option value={20}>20 per page</option>
-                  <option value={50}>50 per page</option>
+                  <option value={15}>15 per page</option>
+                  <option value={30}>30 per page</option>
+                  <option value={45}>45 per page</option>
                 </select>
               </div>
             </div>
