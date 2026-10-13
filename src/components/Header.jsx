@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { LogOut, Menu, X, Home, LayoutDashboard, FlaskConical, ShieldCheck, User } from "lucide-react";
 import { fontDisplay, fontBody } from "../theme";
 import AnimatedSweepButton from "./AnimatedSweepButton";
@@ -9,17 +9,45 @@ export default function Header({ session, view, onNavigate, onLogout }) {
 
   const close = () => setMenuOpen(false);
 
+  // Prevent background scrolling when mobile shutter is open
+  useEffect(() => {
+    if (menuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [menuOpen]);
+
+  // Close menu on Escape or screen resize to desktop
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") close();
+    };
+    const handleResize = () => {
+      if (window.innerWidth >= 640) close();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
   return (
     <>
       <header
         style={{ backgroundColor: "#FFFFFF", borderBottom: "1px solid #E5E7EB" }}
-        className="sticky top-0 z-[100] shadow-sm"
+        className="sticky top-0 z-[100] shadow-sm relative"
       >
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-auto py-1">
 
           {/* LOGO + BRAND */}
           <button
-            onClick={() => { onNavigate("catalog"); window.scrollTo(0, 0); close(); }}
+            onClick={() => { onNavigate("catalog"); window.scrollTo({ top: 0, behavior: "smooth" }); close(); }}
             className="flex items-center gap-2 sm:gap-3 flex-shrink-0"
           >
             <img
@@ -51,7 +79,7 @@ export default function Header({ session, view, onNavigate, onLogout }) {
             <NavLinks session={session} view={view} onNavigate={onNavigate} onLogout={onLogout} />
           </div>
 
-          {/* MOBILE RIGHT SIDE: Hamburger Menu Only (Sign In & Dashboard are inside the dropdown) */}
+          {/* MOBILE RIGHT SIDE: Hamburger / Close Toggle Button */}
           <div className="flex sm:hidden items-center">
             <button
               onClick={() => setMenuOpen(o => !o)}
@@ -62,97 +90,101 @@ export default function Header({ session, view, onNavigate, onLogout }) {
             </button>
           </div>
         </div>
+
+        {/* MOBILE SHUTTER DRAWER (Inside <header> so it shares z-[100] and is never hidden behind hero or page elements) */}
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="sm:hidden absolute top-full left-0 right-0 bg-white border-b border-gray-200 shadow-2xl z-50"
+            >
+              <div className="p-4 flex flex-col gap-1.5 max-h-[calc(100vh-80px)] overflow-y-auto">
+                <DrawerItem
+                  icon={<Home size={18} />}
+                  label="Home"
+                  active={view === "catalog"}
+                  onClick={() => { onNavigate("catalog"); window.scrollTo({ top: 0, behavior: "smooth" }); close(); }}
+                />
+
+                {!session && (
+                  <>
+                    <DrawerItem
+                      icon={<FlaskConical size={18} />}
+                      label="Free Trial"
+                      active={view === "trial"}
+                      onClick={() => { onNavigate("trial"); close(); }}
+                    />
+                    <div className="pt-3 mt-1 border-t border-gray-100 flex flex-col gap-2.5">
+                      <AnimatedSweepButton
+                        onClick={() => { onNavigate("login-reader"); close(); }}
+                        variant="yellow"
+                        className="w-full font-bold py-2.5 rounded-lg text-sm shadow-sm"
+                      >
+                        Sign In / Institution Login
+                      </AnimatedSweepButton>
+                      <AnimatedSweepButton
+                        onClick={() => { onNavigate("login-admin"); close(); }}
+                        variant="yellow-outline"
+                        className="w-full font-bold py-2 rounded-lg text-sm"
+                      >
+                        Admin Login
+                      </AnimatedSweepButton>
+                    </div>
+                  </>
+                )}
+
+                {session && (
+                  <>
+                    <DrawerItem
+                      icon={<LayoutDashboard size={18} />}
+                      label="Dashboard"
+                      active={["reader-dashboard", "admin", "uploader"].includes(view)}
+                      onClick={() => { onNavigate(session.role === "reader" ? "reader-dashboard" : session.role); close(); }}
+                    />
+                    <div className="pt-3 mt-1 border-t border-gray-100">
+                      <AnimatedSweepButton
+                        onClick={() => { onNavigate(session.role === "reader" ? "reader-dashboard" : session.role); close(); }}
+                        variant="yellow"
+                        className="w-full font-bold py-2.5 rounded-lg text-sm mb-3 shadow-sm"
+                      >
+                        Open Dashboard
+                      </AnimatedSweepButton>
+                    </div>
+                    <div className="px-3.5 py-2 text-xs text-gray-700 bg-gray-50 rounded-lg flex items-center justify-between border border-gray-100">
+                      <span>Signed in as <strong className="text-black">{session.name}</strong></span>
+                      <span className="text-gray-500 font-semibold capitalize">({session.role})</span>
+                    </div>
+                    <DrawerItem
+                      icon={<LogOut size={18} />}
+                      label="Log out"
+                      active={false}
+                      danger
+                      onClick={() => { onLogout(); close(); }}
+                    />
+                  </>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
-      {/* MOBILE DRAWER */}
-      {menuOpen && (
-        <>
-          {/* Backdrop */}
-          <div
+      {/* MOBILE BACKDROP OVERLAY */}
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
             onClick={close}
-            style={{
-              position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
-              zIndex: 28, backdropFilter: "blur(2px)",
-            }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs z-[90] sm:hidden"
           />
-          {/* Drawer */}
-          <div
-            style={{
-              position: "fixed", top: "58px", left: 0, right: 0,
-              background: "#FFFFFF", borderBottom: "1px solid #E5E7EB",
-              zIndex: 29, padding: "16px",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
-            }}
-          >
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <DrawerItem
-                icon={<Home size={18} />}
-                label="Home"
-                active={view === "catalog"}
-                onClick={() => { onNavigate("catalog"); window.scrollTo(0, 0); close(); }}
-              />
-
-              {!session && (
-                <>
-                  <DrawerItem
-                    icon={<FlaskConical size={18} />}
-                    label="Free Trial"
-                    active={view === "trial"}
-                    onClick={() => { onNavigate("trial"); close(); }}
-                  />
-                  <div className="pt-3 mt-1 border-t border-gray-100 flex flex-col gap-2.5">
-                    <AnimatedSweepButton
-                      onClick={() => { onNavigate("login-reader"); close(); }}
-                      variant="yellow"
-                      className="w-full font-bold py-2.5 rounded-lg text-sm shadow-sm"
-                    >
-                      Sign In / Institution Login
-                    </AnimatedSweepButton>
-                    <AnimatedSweepButton
-                      onClick={() => { onNavigate("login-admin"); close(); }}
-                      variant="yellow-outline"
-                      className="w-full font-bold py-2 rounded-lg text-sm"
-                    >
-                      Admin Login
-                    </AnimatedSweepButton>
-                  </div>
-                </>
-              )}
-
-              {session && (
-                <>
-                  <DrawerItem
-                    icon={<LayoutDashboard size={18} />}
-                    label="Dashboard"
-                    active={["reader-dashboard", "admin", "uploader"].includes(view)}
-                    onClick={() => { onNavigate(session.role === "reader" ? "reader-dashboard" : session.role); close(); }}
-                  />
-                  <div className="pt-3 mt-1 border-t border-gray-100">
-                    <AnimatedSweepButton
-                      onClick={() => { onNavigate(session.role === "reader" ? "reader-dashboard" : session.role); close(); }}
-                      variant="yellow"
-                      className="w-full font-bold py-2.5 rounded-lg text-sm mb-3 shadow-sm"
-                    >
-                      Open Dashboard
-                    </AnimatedSweepButton>
-                  </div>
-                  <div style={{ padding: "6px 12px", fontSize: "12px", color: "#000000" }}>
-                    Signed in as <span style={{ color: "#000000", fontWeight: "600" }}>{session.name}</span>
-                    <span style={{ color: "#6B7280" }}> ({session.role})</span>
-                  </div>
-                  <DrawerItem
-                    icon={<LogOut size={18} />}
-                    label="Log out"
-                    active={false}
-                    danger
-                    onClick={() => { onLogout(); close(); }}
-                  />
-                </>
-              )}
-            </div>
-          </div>
-        </>
-      )}
+        )}
+      </AnimatePresence>
     </>
   );
 }
@@ -326,18 +358,21 @@ function DrawerItem({ icon, label, active, danger, onClick }) {
   return (
     <button
       onClick={onClick}
-      style={{
-        display: "flex", alignItems: "center", gap: "12px",
-        padding: "12px 14px", borderRadius: "10px", border: "none",
-        cursor: "pointer", textAlign: "left", width: "100%",
-        background: active ? "rgba(253,209,50,0.08)" : "transparent",
-        color: danger ? "#DC2626" : active ? "#111111" : "#6B7280",
-        fontWeight: "600", fontSize: "14px",
-        transition: "background 0.15s",
-      }}
+      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl w-full text-left font-semibold text-sm transition-all duration-150 active:scale-[0.98] cursor-pointer ${
+        danger
+          ? "text-red-600 hover:bg-red-50"
+          : active
+          ? "bg-[#FDD132]/20 text-black font-bold shadow-xs border border-[#FDD132]/40"
+          : "text-gray-700 hover:bg-gray-100 hover:text-black"
+      }`}
     >
-      {icon}
-      {label}
+      <span className={active ? "text-black" : danger ? "text-red-600" : "text-gray-500"}>
+        {icon}
+      </span>
+      <span>{label}</span>
+      {active && (
+        <span className="ml-auto w-2 h-2 rounded-full bg-[#111111]" />
+      )}
     </button>
   );
 }
