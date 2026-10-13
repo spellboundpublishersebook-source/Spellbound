@@ -186,36 +186,36 @@ export default function CatalogPage({ books, onNavigate }) {
   }, [books, homepageConfig]);
 
   return (
-    <div className="bg-[#f8f9fa] min-h-screen text-[#131313]" style={fontBody}>
+    <div className="bg-[#f8f9fa] min-h-screen text-[#131313] w-full max-w-full overflow-x-hidden" style={fontBody}>
       
       {/* HERO SECTION */}
-      <section className="bg-[#F9FAFB] text-black py-12 md:py-20 px-6 relative z-20">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-12 items-center">
+      <section className="bg-[#F9FAFB] text-black py-8 sm:py-12 md:py-20 px-4 sm:px-6 relative z-20 overflow-hidden w-full max-w-full">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 lg:gap-12 items-center">
           
-          <div className="lg:w-1/2 z-10">
+          <div className="lg:w-1/2 z-10 w-full">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight uppercase" style={fontDisplay}>
               Start Your Reading <span className="text-[#FDD132]">Adventure</span> Invest In Books Today
             </h1>
-            <p className="mt-6 text-sm md:text-base text-black max-w-lg leading-relaxed">
+            <p className="mt-4 sm:mt-6 text-sm md:text-base text-black max-w-lg leading-relaxed">
               Every title in the catalog, open to browse. Anyone can look through the full list below. 
               Reading a book requires an account — issued to your institution, or a free 30-day trial you can request yourself.
             </p>
             
-            <div className="mt-8 relative max-w-lg w-full">
-              <div className="flex items-center bg-white rounded-md p-1.5 w-full relative z-20">
+            <div className="mt-6 sm:mt-8 relative max-w-lg w-full">
+              <div className="flex items-center bg-white rounded-md p-1.5 w-full relative z-20 shadow-sm border border-gray-200">
                 <Search size={20} className="ml-3 text-black flex-shrink-0" />
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search book here..."
-                  className="flex-1 bg-transparent border-none outline-none px-3 py-3 text-black w-full"
+                  className="flex-1 bg-transparent border-none outline-none px-3 py-2.5 sm:py-3 text-black w-full text-sm"
                 />
                 <AnimatedSweepButton 
                   onClick={() => {
                     document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth" });
                   }}
                   variant="yellow"
-                  className="font-semibold px-6 md:px-8 py-3 rounded-md text-sm flex-shrink-0"
+                  className="font-semibold px-5 sm:px-8 py-2.5 sm:py-3 rounded-md text-sm flex-shrink-0"
                 >
                   Search
                 </AnimatedSweepButton>
@@ -261,27 +261,27 @@ export default function CatalogPage({ books, onNavigate }) {
               )}
             </div>
             
-            <div className="mt-8 flex gap-4">
+            <div className="mt-6 sm:mt-8 flex flex-wrap sm:flex-nowrap gap-3 sm:gap-4">
               <AnimatedSweepButton 
                 onClick={() => onNavigate("trial")}
                 variant="outline"
-                className="text-sm rounded px-4 py-2"
+                className="text-xs sm:text-sm rounded px-4 py-2"
               >
                 Request free trial
               </AnimatedSweepButton>
               <AnimatedSweepButton 
                 onClick={() => onNavigate("login-reader")}
                 variant="outline"
-                className="text-sm rounded px-4 py-2"
+                className="text-xs sm:text-sm rounded px-4 py-2"
               >
                 Institution login
               </AnimatedSweepButton>
             </div>
           </div>
 
-          <div className="lg:w-1/2 flex flex-col items-center z-10 w-full mt-8 lg:mt-0">
-            <h2 className="text-2xl mb-8 font-semibold self-center lg:self-start ml-0 lg:ml-12" style={fontDisplay}>Trending Now</h2>
-            <div className="flex gap-4 sm:gap-6 items-center justify-center min-h-[300px] py-4">
+          <div className="lg:w-1/2 flex flex-col items-center z-10 w-full max-w-full mt-6 lg:mt-0 overflow-hidden">
+            <h2 className="text-2xl mb-6 sm:mb-8 font-semibold self-center lg:self-start ml-0 lg:ml-12" style={fontDisplay}>Trending Now</h2>
+            <div className="flex gap-2 sm:gap-4 md:gap-6 items-center justify-center min-h-[200px] sm:min-h-[300px] py-4 max-w-full">
               {visibleTrending.map((b, i) => {
                 const isCenter = i === 1 && visibleTrending.length >= 3;
                 return (
@@ -299,7 +299,7 @@ export default function CatalogPage({ books, onNavigate }) {
                     <div className="relative rounded-md overflow-hidden transition-all duration-300 ease-out group-hover/trending:shadow-[0_28px_50px_-12px_rgba(0,0,0,0.55),0_12px_24px_-6px_rgba(0,0,0,0.35)] group-hover/trending:ring-2 group-hover/trending:ring-[#FDD132] group-hover/trending:ring-offset-2 group-hover/trending:ring-offset-white">
                       <BookCover 
                         book={b} 
-                        className="w-24 h-36 sm:w-32 sm:h-48 md:w-44 md:h-64 rounded-md shadow-2xl transition-transform duration-300 ease-out group-hover/trending:scale-105" 
+                        className="w-20 h-28 sm:w-28 sm:h-42 md:w-44 md:h-64 rounded-md shadow-2xl transition-transform duration-300 ease-out group-hover/trending:scale-105" 
                       />
                       {/* Deep interactive feedback sheen with View Book pill */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent opacity-0 group-hover/trending:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-3 pointer-events-none">
