@@ -27,7 +27,7 @@ export default function Header({ session, view, onNavigate, onLogout }) {
       if (e.key === "Escape") close();
     };
     const handleResize = () => {
-      if (window.innerWidth >= 640) close();
+      if (window.innerWidth >= 1024) close();
     };
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("resize", handleResize);
@@ -41,23 +41,23 @@ export default function Header({ session, view, onNavigate, onLogout }) {
     <>
       <header
         style={{ backgroundColor: "#FFFFFF", borderBottom: "1px solid #E5E7EB" }}
-        className="sticky top-0 z-[100] shadow-sm relative"
+        className="sticky top-0 z-[100] shadow-sm relative w-full max-w-full"
       >
-        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-auto py-1">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 flex items-center justify-between h-auto py-1">
 
           {/* LOGO + BRAND */}
           <button
             onClick={() => { onNavigate("catalog"); window.scrollTo({ top: 0, behavior: "smooth" }); close(); }}
-            className="flex items-center gap-2 sm:gap-3 flex-shrink-0"
+            className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0"
           >
             <img
               src="/logo.png"
               alt="SpellBound Logo"
-              className="h-12 w-auto sm:h-[130px] md:h-[140px] object-contain block"
+              className="h-10 sm:h-12 md:h-14 lg:h-16 w-auto object-contain block flex-shrink-0"
             />
             <div className="flex flex-col items-center text-center">
               <span
-                className="text-[22px] sm:text-[56px] font-black text-[#DC2626] uppercase leading-none tracking-normal"
+                className="text-xl sm:text-2xl md:text-3xl lg:text-[34px] font-black text-[#DC2626] uppercase leading-none tracking-normal"
                 style={{
                   WebkitTextStroke: "1px #DC2626",
                   ...fontBody,
@@ -66,7 +66,7 @@ export default function Header({ session, view, onNavigate, onLogout }) {
                 SpellBound
               </span>
               <span
-                className="text-[9px] sm:text-[18px] font-semibold text-[#000000] italic uppercase mt-0.5 sm:mt-[5px] leading-none tracking-tight sm:tracking-normal whitespace-nowrap"
+                className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs font-semibold text-[#000000] italic uppercase mt-0.5 leading-none tracking-tight sm:tracking-normal whitespace-nowrap"
                 style={fontDisplay}
               >
                 Publishers &amp; Distributors
@@ -74,19 +74,19 @@ export default function Header({ session, view, onNavigate, onLogout }) {
             </div>
           </button>
 
-          {/* DESKTOP NAV */}
-          <div className="hidden sm:flex items-center gap-5">
+          {/* DESKTOP NAV (Only visible on large desktop screens >= 1024px) */}
+          <div className="hidden lg:flex items-center gap-5">
             <NavLinks session={session} view={view} onNavigate={onNavigate} onLogout={onLogout} />
           </div>
 
-          {/* MOBILE RIGHT SIDE: Hamburger / Close Toggle Button */}
-          <div className="flex sm:hidden items-center">
+          {/* MOBILE / TABLET RIGHT SIDE: 3-line Hamburger Menu Toggle */}
+          <div className="flex lg:hidden items-center">
             <button
               onClick={() => setMenuOpen(o => !o)}
               aria-label="Toggle navigation menu"
-              className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 border border-gray-200 text-black cursor-pointer transition-colors"
+              className="p-2 sm:p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 active:scale-95 border border-gray-200 text-black cursor-pointer transition-all shadow-xs flex items-center justify-center"
             >
-              {menuOpen ? <X size={22} /> : <Menu size={22} />}
+              {menuOpen ? <X size={22} className="stroke-[2.5]" /> : <Menu size={22} className="stroke-[2.5]" />}
             </button>
           </div>
         </div>
@@ -99,7 +99,7 @@ export default function Header({ session, view, onNavigate, onLogout }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="sm:hidden absolute top-full left-0 right-0 bg-white border-b border-gray-200 shadow-2xl z-50"
+              className="lg:hidden absolute top-full left-0 right-0 bg-white border-b border-gray-200 shadow-2xl z-50 overflow-hidden"
             >
               <div className="p-4 flex flex-col gap-1.5 max-h-[calc(100vh-80px)] overflow-y-auto">
                 <DrawerItem
@@ -181,7 +181,7 @@ export default function Header({ session, view, onNavigate, onLogout }) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={close}
-            className="fixed inset-0 bg-black/50 backdrop-blur-xs z-[90] sm:hidden"
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs z-[90] lg:hidden"
           />
         )}
       </AnimatePresence>
