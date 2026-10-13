@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ================================================================
+   SCROLL PERFORMANCE
+   ================================================================ */
+
+html {
+  scroll-behavior: auto;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior-y: none;
+}
+
+/* ── Sticky header: NO will-change (breaks iOS compositor thread) ── */
+header {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* ── Book cards: isolated paint containers ── */
+.book-card {
+  contain: layout style;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #000000;
+  cursor: pointer;
+}
+.book-card:hover {
+  border-color: #D1D5DB;
+}
+
+/* ── Catalog sections: defer off-screen paint (NOT modals/admin) ── */
+.catalog-section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;
+}
+
+/* ── Selection ─────────────────────────────────────────────────── */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}
