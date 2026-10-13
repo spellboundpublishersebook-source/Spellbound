@@ -1,0 +1,1690 @@
+{
+  "settings": [
+    {
+      "id": "global",
+      "genres": [
+        "ACCOUNTING",
+        "AGRICULTURE",
+        "ANTHROPOLOGY",
+        "AQUACULTURE, FISHERIES & FISH SCIENCE",
+        "ARCHAEOLOGY",
+        "ARCHITECTURE & PLANNING",
+        "ART & APPLIED ARTS",
+        "BENGALI LINGUISTIC",
+        "BIOMEDICAL ENGINEERING",
+        "BIOSCIENCE",
+        "BOTANY",
+        "BUSINESS & MANAGEMENT",
+        "CHEMICAL & BIOCHEMICAL ENGINEERING",
+        "HISTOLOGY",
+        "IMMUNOLOGY",
+        "IT",
+        "LINGUISTIC"
+      ],
+      "pub_types": [
+        "Books",
+        "Journals",
+        "Reference works",
+        "Book Series"
+      ],
+      "custom_headings": null,
+      "homepage_config": {
+        "trendingMode": "manual",
+        "newReleasesMode": "auto",
+        "trendingBookIds": [
+          "b1791471092760",
+          "b1791470938275",
+          "b1791470605353"
+        ],
+        "createdForYouMode": "auto",
+        "newReleasesBookIds": [],
+        "featuredAuthorsList": [],
+        "featuredAuthorsMode": "auto",
+        "createdForYouBookIds": []
+      },
+      "pages": {
+        "faqs": {
+          "title": "FAQs",
+          "content": "Q: How do I request a trial?\nA: Click 'Request Trial' on the book page."
+        },
+        "terms": {
+          "title": "Terms",
+          "content": "By using this platform, you agree to our terms of service."
+        },
+        "about-us": {
+          "title": "About Us",
+          "content": "Welcome to World Knowledge. We provide a vast collection of books."
+        },
+        "contact-us": {
+          "title": "Contact Us",
+          "content": "Reach out to us at support@worldknowledge.example.com"
+        },
+        "privacy-policy": {
+          "title": "Privacy Policy",
+          "content": "We respect your privacy and protect your data."
+        }
+      }
+    }
+  ],
+  "admins": [
+    {
+      "id": "admin",
+      "password": "admin123",
+      "name": "Publisher Admin"
+    }
+  ],
+  "uploaders": [
+    {
+      "id": "uploader1",
+      "password": "upload123",
+      "name": "Editorial Team",
+      "email": null
+    }
+  ],
+  "featured_authors": [
+    {
+      "id": "author_1790585143201",
+      "name": "Allen B. Downey",
+      "photo_url": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/author_1790585139232.jpeg",
+      "bio": "na"
+    }
+  ],
+  "books": [
+    {
+      "id": "b1790325517401",
+      "title": "Introduction to Computer Science",
+      "author": "Dr. Jean-Claude Franchitti (NYU Courant Institute)",
+      "genre": "IT",
+      "publisher": "OpenStax, Rice University",
+      "price": 1499,
+      "color": "#5A3B2E",
+      "firstpublish": "2024",
+      "copyright": "2026",
+      "printisbn": "Color Paperback: 978‑1‑711471‑83‑9; B&W Paperback: 978‑1‑711471‑82‑2; Digital Version: 978‑1‑961584‑58‑7",
+      "onlineisbn": "2024",
+      "description": "Dr. Franchitti has over 40 years of industry experience and 30+ years of teaching, with contributions to projects like IBM InfoSphere DataStage and methodologies in enterprise architecture.",
+      "totalpages": 939,
+      "pages": [
+        "Dr. Franchitti has over 40 years of industry experience and 30+ years of teaching, with contributions to projects like IBM InfoSphere DataStage and methodologies in enterprise architecture."
+      ],
+      "pdfurl": null,
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1790325517401.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1790326058608",
+      "title": "Operating Systems and Infrastructure in Data Science",
+      "author": "Josef Spillner",
+      "genre": "IT",
+      "publisher": "vdf Hochschulverlag AG an der ETH Zürich",
+      "price": 599,
+      "color": "#8C3B3F",
+      "firstpublish": "2023",
+      "copyright": "2026",
+      "printisbn": "2023",
+      "onlineisbn": "2023",
+      "description": "Introduction: Context of tools and teamwork in data science.\n\nConcepts: Programming & DataOps: Graphs, streams, pipelines, workflows, sharding, map-reduce.\n\nConcepts: Operating Systems: Fundamentals, current OS (Linux, macOS, Windows), processes, virtualization, networking.\n\nConcepts: Infrastructure: Networks, HPC, cloud computing.\n\nApplications & Tools: Shells, Python modules, package management, Git, containerization.\n\nMiddleware: Flask, Streamlit, databases, Spark.\n\nCollaboration Platforms: Jupyter, GitLab, governance.\n\nExecution & Orchestration: Kubernetes, cloud services.\n\nGlobal Infrastructure: Open data platforms, distributed applications.\n\nThis book is essentially a bridge between operating system fundamentals and modern data science infrastructure, showing how tools, workflows, and platforms integrate to support scalable, reproducible, and collaborative data science.",
+      "totalpages": 172,
+      "pages": [
+        "Introduction: Context of tools and teamwork in data science.\n\nConcepts: Programming & DataOps: Graphs, streams, pipelines, workflows, sharding, map-reduce.\n\nConcepts: Operating Systems: Fundamentals, current OS (Linux, macOS, Windows), processes, virtualization, networking.\n\nConcepts: Infrastructure: Networks, HPC, cloud computing.\n\nApplications & Tools: Shells, Python modules, package management, Git, containerization.\n\nMiddleware: Flask, Streamlit, databases, Spark.\n\nCollaboration Platforms: Jupyter, GitLab, governance.\n\nExecution & Orchestration: Kubernetes, cloud services.\n\nGlobal Infrastructure: Open data platforms, distributed applications.\n\nThis book is essentially a bridge between operating system fundamentals and modern data science infrastructure, showing how tools, workflows, and platforms integrate to support scalable, reproducible, and collaborative data science."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1790326058608.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1790326058608.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1790324212104",
+      "title": "The C programming language",
+      "author": "Brian W. Kernighan and Dennis M. Ritchie",
+      "genre": "BUSINESS & MANAGEMENT",
+      "publisher": "Prentice Hall (part of the Prentice Hall Software Series)",
+      "price": 999,
+      "color": "#A97F45",
+      "firstpublish": "1978",
+      "copyright": "2026",
+      "printisbn": "1978",
+      "onlineisbn": "1978",
+      "description": "Introduces and defines the C programming language, including syntax, semantics, and idiomatic usage. It’s both a tutorial and a reference manual.",
+      "totalpages": 288,
+      "pages": [
+        "Introduces and defines the C programming language, including syntax, semantics, and idiomatic usage. It’s both a tutorial and a reference manual."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1790324212104.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1790324212104.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791471017590",
+      "title": "Mushroom Cultivation_2nd EDITION",
+      "author": "BIPLAB BAGCHI",
+      "genre": "AGRICULTURE",
+      "publisher": "Spellbound",
+      "price": 1,
+      "color": "#8C3B3F",
+      "firstpublish": "1",
+      "copyright": "1",
+      "printisbn": "",
+      "onlineisbn": "1",
+      "description": "",
+      "totalpages": 1,
+      "pages": [
+        "This book has no content pages yet."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791471017590.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791471017590.jpg",
+      "uploaded_by": "admin",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1790323912543",
+      "title": "The Little Book of Semaphores",
+      "author": "Allen B. Downey",
+      "genre": "BUSINESS & MANAGEMENT",
+      "publisher": "Techno World ",
+      "price": 7991,
+      "color": "#8C3B3F",
+      "firstpublish": "2012",
+      "copyright": "2026",
+      "printisbn": "ISBN",
+      "onlineisbn": "ISBN",
+      "description": "Most undergraduate Operating Systems textbooks have a module on Synchro\nnization, which usually presents a set of primitives (mutexes, semaphores, mon\nitors, and sometimes condition variables), and classical problems like readers\nwriters and producers-consumers.\nWhenI took the Operating Systems class at Berkeley, and taught it at Colby\nCollege, I got the impression that most students were able to understand the\nsolutions to these problems, but few would have been able to produce them, or\nsolve similar problems.\nOne reason students don’t understand this material deeply is that it takes\nmore time, and more practice, than most classes can spare. Synchronization is\njust one of the modules competing for space in an Operating Systems class, and\nI’m not sure I can argue that it is the most important. But I do think it is one\nof the most challenging, interesting, and (done right) fun.\nI wrote the first edition this book with the goal of identifying synchronization\nidioms and patterns that could be understood in isolation and then assembled\nto solve complex problems. This was a challenge, because synchronization code\ndoesn’t compose well; as the number of components increases, the number of\ninteractions grows unmanageably.\nNevertheless, I found patterns in the solutions I saw, and discovered at\nleast some systematic approaches to assembling solutions that are demonstrably\ncorrect.\nI had a chance to test this approach when I taught Operating Systems at\nWellesley College. I used the first edition of The Little Book of Semaphores\nalong with one of the standard textbooks, and I taught Synchronization as a\nconcurrent thread for the duration of the course. Each week I gave the students\na few pages from the book, ending with a puzzle, and sometimes a hint. I told\nthem not to look at the hint unless they were stumped.\nI also gave them some tools for testing their solutions: a small magnetic\nwhiteboard where they could write code, and a stack of magnets to represent\nthe threads executing the code.\nThe results were dramatic. Given more time to absorb the material, stu\ndents demonstrated a depth of understanding I had not seen before. More\nimportantly, most of them were able to solve most of the puzzles. In some\ncases they reinvented classical solutions; in other cases they found creative new\napproaches",
+      "totalpages": 291,
+      "pages": [
+        "Most undergraduate Operating Systems textbooks have a module on Synchro\nnization, which usually presents a set of primitives (mutexes, semaphores, mon\nitors, and sometimes condition variables), and classical problems like readers\nwriters and producers-consumers.\nWhenI took the Operating Systems class at Berkeley, and taught it at Colby\nCollege, I got the impression that most students were able to understand the\nsolutions to these problems, but few would have been able to produce them, or\nsolve similar problems.\nOne reason students don’t understand this material deeply is that it takes\nmore time, and more practice, than most classes can spare. Synchronization is\njust one of the modules competing for space in an Operating Systems class, and\nI’m not sure I can argue that it is the most important. But I do think it is one\nof the most challenging, interesting, and (done right) fun.\nI wrote the first edition this book with the goal of identifying synchronization\nidioms and patterns that could be understood in isolation and then assembled\nto solve complex problems. This was a challenge, because synchronization code\ndoesn’t compose well; as the number of components increases, the number of\ninteractions grows unmanageably.\nNevertheless, I found patterns in the solutions I saw, and discovered at\nleast some systematic approaches to assembling solutions that are demonstrably\ncorrect.\nI had a chance to test this approach when I taught Operating Systems at\nWellesley College. I used the first edition of The Little Book of Semaphores\nalong with one of the standard textbooks, and I taught Synchronization as a\nconcurrent thread for the duration of the course. Each week I gave the students\na few pages from the book, ending with a puzzle, and sometimes a hint. I told\nthem not to look at the hint unless they were stumped.\nI also gave them some tools for testing their solutions: a small magnetic\nwhiteboard where they could write code, and a stack of magnets to represent\nthe threads executing the code.\nThe results were dramatic. Given more time to absorb the material, stu\ndents demonstrated a depth of understanding I had not seen before. More\nimportantly, most of them were able to solve most of the puzzles. In some\ncases they reinvented classical solutions; in other cases they found creative new\napproaches"
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1790323912543.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1790323912543.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1790278411362",
+      "title": "python",
+      "author": "python",
+      "genre": "Fiction",
+      "publisher": "python",
+      "price": 0,
+      "color": "#8C3B3F",
+      "firstpublish": "python",
+      "copyright": "python",
+      "printisbn": "python",
+      "onlineisbn": "python",
+      "description": "",
+      "totalpages": 267,
+      "pages": [
+        "This book has no content pages yet."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1790278411362.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1790278411362.png",
+      "uploaded_by": null,
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791870917556",
+      "title": "A Tale of Two Cities",
+      "author": "Charles Dickens",
+      "genre": "ACCOUNTING",
+      "publisher": "Charles Dickens",
+      "price": 799,
+      "color": "#8C3B3F",
+      "firstpublish": "1999",
+      "copyright": "Charles Dickens",
+      "printisbn": "",
+      "onlineisbn": "111",
+      "description": "Set in London and Paris during the French Revolution, this novel follows characters whose lives become intertwined amid political turmoil and personal sacrifice. Dickens explores justice, violence, loyalty, and redemption.",
+      "totalpages": 450,
+      "pages": [
+        "Set in London and Paris during the French Revolution, this novel follows characters whose lives become intertwined amid political turmoil and personal sacrifice. Dickens explores justice, violence, loyalty, and redemption."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791870917556.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791870917556.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791871080287",
+      "title": "Anne of Green Gables",
+      "author": "L. M. Montgomery",
+      "genre": "ANTHROPOLOGY",
+      "publisher": "L. M. Montgomery",
+      "price": 999,
+      "color": "#8C3B3F",
+      "firstpublish": "2000",
+      "copyright": "L. M. Montgomery",
+      "printisbn": "",
+      "onlineisbn": "111",
+      "description": "Anne of Green Gables follows imaginative orphan Anne Shirley as she arrives at Green Gables and gradually finds a home and community. The story celebrates friendship, education, imagination, and belonging.",
+      "totalpages": 350,
+      "pages": [
+        "Anne of Green Gables follows imaginative orphan Anne Shirley as she arrives at Green Gables and gradually finds a home and community. The story celebrates friendship, education, imagination, and belonging."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791871080287.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791871080287.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1790326712155",
+      "title": "Java: A Beginner’s Guide, Sixth Edition",
+      "author": "Herbert Schildt",
+      "genre": "IT",
+      "publisher": "McGraw‑Hill Education",
+      "price": 1799,
+      "color": "#8C3B3F",
+      "firstpublish": "2014",
+      "copyright": "2026",
+      "printisbn": "2014",
+      "onlineisbn": "2014",
+      "description": "Java Fundamentals: Syntax, data types, operators, control statements.\n\nClasses & Objects: Constructors, methods, inheritance, polymorphism.\n\nPackages & Interfaces: Modular programming and abstraction.\n\nException Handling: Structured error management.\n\nMultithreading: Basics of concurrent programming.\n\nGenerics & Collections: Type‑safe programming and data structures.\n\nJavaFX GUI Programming: Building graphical applications.\n\nAdvanced Topics: Networking, event handling, lambda expressions (Java 8).\n\nThis book is designed to take you from zero knowledge of Java to building real applications, with practical examples and self‑tests at the end of each chapter.",
+      "totalpages": 1153,
+      "pages": [
+        "Java Fundamentals: Syntax, data types, operators, control statements.\n\nClasses & Objects: Constructors, methods, inheritance, polymorphism.\n\nPackages & Interfaces: Modular programming and abstraction.\n\nException Handling: Structured error management.\n\nMultithreading: Basics of concurrent programming.\n\nGenerics & Collections: Type‑safe programming and data structures.\n\nJavaFX GUI Programming: Building graphical applications.\n\nAdvanced Topics: Networking, event handling, lambda expressions (Java 8).\n\nThis book is designed to take you from zero knowledge of Java to building real applications, with practical examples and self‑tests at the end of each chapter."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1790326712155.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1790326712155.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1790329408341",
+      "title": "JavaScript: The Definitive Guide, 6th Edition",
+      "author": "David Flanagan",
+      "genre": "IT",
+      "publisher": "O’Reilly Media & Mallick Publisher ",
+      "price": 499,
+      "color": "#8C3B3F",
+      "firstpublish": "2011",
+      "copyright": "2026",
+      "printisbn": "2011",
+      "onlineisbn": "2011",
+      "description": "Comprehensive reference and tutorial for JavaScript, covering both core language features and browser APIs.",
+      "totalpages": 630,
+      "pages": [
+        "Comprehensive reference and tutorial for JavaScript, covering both core language features and browser APIs."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1790329408341.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1790329408341.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1790330002303",
+      "title": "An Open Guide to Data Structures and Algorithms",
+      "author": "Clément Mihailescu and The AlgoExpert Team",
+      "genre": "IT",
+      "publisher": "Mallick Publisher",
+      "price": 999,
+      "color": "#8C3B3F",
+      "firstpublish": "2024",
+      "copyright": "2026",
+      "printisbn": "2024",
+      "onlineisbn": "2024",
+      "description": "Provides a clear, practical introduction to data structures and algorithms, focusing on interview preparation and real-world applications.",
+      "totalpages": 350,
+      "pages": [
+        "Provides a clear, practical introduction to data structures and algorithms, focusing on interview preparation and real-world applications."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1790330002303.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1790330002303.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1790327972793",
+      "title": "Foundations of Computation",
+      "author": "Carol Critchlow and David Eck",
+      "genre": "IT",
+      "publisher": "TINT  Publisher",
+      "price": 899,
+      "color": "#8C3B3F",
+      "firstpublish": "2011",
+      "copyright": "2026",
+      "printisbn": "2011",
+      "onlineisbn": "2011",
+      "description": "Logic and Proof: Propositional logic, Boolean algebra, deduction, induction, recursion.\n\nSets, Functions, and Relations: Programming with sets/functions, relational databases.\n\nRegular Expressions & Finite-State Automata: Languages, regex, deterministic and nondeterministic automata.\n\nGrammars: Context-free grammars, parsing, pushdown automata, general grammars.\n\nTuring Machines & Computability: Limits of computation, undecidability.\n\nThis book is essentially a gateway into theoretical computer science, blending mathematical rigor with computer science applications.",
+      "totalpages": 256,
+      "pages": [
+        "Logic and Proof: Propositional logic, Boolean algebra, deduction, induction, recursion.\n\nSets, Functions, and Relations: Programming with sets/functions, relational databases.\n\nRegular Expressions & Finite-State Automata: Languages, regex, deterministic and nondeterministic automata.\n\nGrammars: Context-free grammars, parsing, pushdown automata, general grammars.\n\nTuring Machines & Computability: Limits of computation, undecidability.\n\nThis book is essentially a gateway into theoretical computer science, blending mathematical rigor with computer science applications."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1790327972793.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1790327972793.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791470471304",
+      "title": "Biochemistry Fundamental Approac",
+      "author": "S.S. Banerjee",
+      "genre": "BIOSCIENCE",
+      "publisher": "Spellbound",
+      "price": 111,
+      "color": "#8C3B3F",
+      "firstpublish": "111",
+      "copyright": "111",
+      "printisbn": "",
+      "onlineisbn": "111",
+      "description": "",
+      "totalpages": 111,
+      "pages": [
+        "This book has no content pages yet."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791470471304.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791470471304.jpg",
+      "uploaded_by": "admin",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791470605353",
+      "title": "Biofertilizer",
+      "author": "Biblab Bagchi",
+      "genre": "BOTANY",
+      "publisher": "Spellbound",
+      "price": 1,
+      "color": "#8C3B3F",
+      "firstpublish": "a",
+      "copyright": "a",
+      "printisbn": "",
+      "onlineisbn": "a",
+      "description": "",
+      "totalpages": 1,
+      "pages": [
+        "This book has no content pages yet."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791470605353.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791470605353.jpg",
+      "uploaded_by": "admin",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791470714818",
+      "title": "FUNAMENTALS OF Immulogy",
+      "author": "Dr. Suchandra Chowdhury",
+      "genre": "IMMUNOLOGY",
+      "publisher": "Spellbound",
+      "price": 1,
+      "color": "#8C3B3F",
+      "firstpublish": "1",
+      "copyright": "1",
+      "printisbn": "",
+      "onlineisbn": "1",
+      "description": "",
+      "totalpages": 1,
+      "pages": [
+        "This book has no content pages yet."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791470714818.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791470714818.jpg",
+      "uploaded_by": "admin",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791470876857",
+      "title": "Histology Book",
+      "author": "Das and Majumder",
+      "genre": "HISTOLOGY",
+      "publisher": "Spellbound",
+      "price": 1,
+      "color": "#8C3B3F",
+      "firstpublish": "1",
+      "copyright": "1",
+      "printisbn": "",
+      "onlineisbn": "1",
+      "description": "",
+      "totalpages": 1,
+      "pages": [
+        "This book has no content pages yet."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791470876857.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791470876857.jpg",
+      "uploaded_by": "admin",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791470938275",
+      "title": "Inside Bengali Linguistics The Science of a Languag",
+      "author": "Partha Sir",
+      "genre": "BENGALI LINGUISTIC",
+      "publisher": "Spellbound",
+      "price": 1,
+      "color": "#8C3B3F",
+      "firstpublish": "1",
+      "copyright": "1",
+      "printisbn": "",
+      "onlineisbn": "1",
+      "description": "",
+      "totalpages": 1,
+      "pages": [
+        "This book has no content pages yet."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791470938275.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791470938275.jpg",
+      "uploaded_by": "admin",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791471092760",
+      "title": "বাংলা ভাষাতত্ত্বের অন্দরমহলে",
+      "author": "DR . PARTHA CHATTAPADHAY",
+      "genre": "BENGALI LINGUISTIC",
+      "publisher": "Spellbound",
+      "price": 1,
+      "color": "#8C3B3F",
+      "firstpublish": "1",
+      "copyright": "1",
+      "printisbn": "",
+      "onlineisbn": "1",
+      "description": "",
+      "totalpages": 1,
+      "pages": [
+        "This book has no content pages yet."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791471092760.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791471092760.jpg",
+      "uploaded_by": "admin",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791870672504",
+      "title": "Oliver Twist",
+      "author": "Charles Dickens",
+      "genre": "ARCHAEOLOGY",
+      "publisher": "Charles Dickens",
+      "price": 699,
+      "color": "#8C3B3F",
+      "firstpublish": "111",
+      "copyright": "Charles Dickens",
+      "printisbn": "",
+      "onlineisbn": "111",
+      "description": "Oliver Twist follows an orphan navigating poverty, exploitation, and criminal surroundings in nineteenth-century England. Dickens uses Oliver's experiences to examine social inequality, institutional neglect, and compassion.",
+      "totalpages": 780,
+      "pages": [
+        "Oliver Twist follows an orphan navigating poverty, exploitation, and criminal surroundings in nineteenth-century England. Dickens uses Oliver's experiences to examine social inequality, institutional neglect, and compassion."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791870672504.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791870672504.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1790323579910",
+      "title": "Workplace Software and Skills ",
+      "author": "TAMMIE BOLLING, PELLISSIPPI STATE COMMUNITY COLLEGE  ANGELA MITCHELL, WILMINGTON COLLEGE  TANYA SCOTT, SOUTHERN NEW HAMPSHIRE UNIVERSITY/UNIVERSITY  OF ARIZONA GLOBAL CAMPUS  NYROBI WHEELER, BELLEVUE UNIVERSITY",
+      "genre": "ACCOUNTING",
+      "publisher": "Openstax",
+      "price": 2002,
+      "color": "#8C3B3F",
+      "firstpublish": "2010",
+      "copyright": "2025",
+      "printisbn": "ISBN",
+      "onlineisbn": "ISBN",
+      "description": "Preface \nAbout OpenStax \nOpenStax is part of Rice University, which is a 501(c)(3) nonprofit charitable corporation. As an educational \ninitiative, it’s our mission to improve educational access and learning for everyone. Through our partnerships \nwith philanthropic organizations and our alliance with other educational resource companies, we’re breaking \ndown the most common barriers to learning. Because we believe that everyone should and can have access to \nknowledge. \nAbout OpenStax Resources \nCustomization \nWorkplace Software and Skills is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike \n4.0 (CC BY NC-SA) license, which means that you can non-commercially distribute, remix, and build upon the \ncontent, as long as you provide attribution to OpenStax and its content contributors, and distribute all \nderivatives under the same license. \nBecause our books are openly licensed, you are free to use the entire book or select only the sections that are \nmost relevant to the needs of your course. Feel free to remix the content by assigning your students certain \nchapters and sections in your syllabus, in the order that you prefer. You can even provide a direct link in your \nsyllabus to the sections in the web view of your book. \nInstructors also have the option of creating a customized version of their OpenStax book. Visit the Instructor \nResources section of your book page on OpenStax.org for more information.",
+      "totalpages": 1047,
+      "pages": [
+        "Technology in Everyday Life and Business \nFigure 1.1 Today’s workspaces represent decades of advances in technology. Portable personal computers, cellular communications, \ntablets, and advances in artificial intelligence have changed the way people do their jobs. (credit: modification of \"Home office, \nComputer, Desk\" by Pexels/Pixabay, CC0) \nChapter Outline \n1.1 Computing from Inception to Today \n1.2 Computer Hardware and Networks \n1.3 The Internet, Cloud Computing, and the Internet of Things \n1.4 Safety, Security, Privacy, and the Ethical Use of Technology \nChapter Scenario \nWorldCorp welcomes you to your new position within the company, a multinational corporation where the jobs \nare plentiful, and the future is bright. To be successful at WorldCorp, you will need to know a little bit about the \ncomputing past and a lot about the computing present. You’ll also need to have a sense of the computing \nfuture, especially as it pertains to business. That’s what this chapter is about. You will also need to know how to \nperform basic functions at WorldCorp using two major computer programs you’ve probably heard \nof—Microsoft 365, or more commonly known as Office, and Google Workspace. The next chapter in this \ntextbook, Essentials of Software Applications for Business, covers the basics of these programs. \nWorldCorp activities presented in other chapters will lay out specific computing tasks, such as formatting \ndocuments, creating spreadsheets, designing online slide presentations, posting on social media, and \nconducting virtual meetings. Even though the online environment changes rapidly, these are fundamental \ncomputing skills that workers need regardless of their level of employment. As you move forward in the text, \nyou will learn more about WorldCorp, its structure, products, customers, and strategies."
+      ],
+      "pdfurl": null,
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1790323579910.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791868782578",
+      "title": "The Art of War ",
+      "author": "Sun Tzu",
+      "genre": "ANTHROPOLOGY",
+      "publisher": "Lionel Giles, M.A. ",
+      "price": 399,
+      "color": "#8C3B3F",
+      "firstpublish": "1910",
+      "copyright": "Spellbound",
+      "printisbn": "",
+      "onlineisbn": "111",
+      "description": "The Art of War is an ancient Chinese treatise on strategy, leadership, planning, and decision-making attributed to Sun Tzu. This edition features an English translation by Lionel Giles, with historical commentary and notes. Its ideas have influenced military strategy, leadership studies, and strategic thinking for centuries.",
+      "totalpages": 101,
+      "pages": [
+        "The Art of War is an ancient Chinese treatise on strategy, leadership, planning, and decision-making attributed to Sun Tzu. This edition features an English translation by Lionel Giles, with historical commentary and notes. Its ideas have influenced military strategy, leadership studies, and strategic thinking for centuries."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791868782578.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791868782578.jpg",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791869017507",
+      "title": "The Republic",
+      "author": "Plato",
+      "genre": "ANTHROPOLOGY",
+      "publisher": "Spellbound",
+      "price": 799,
+      "color": "#8C3B3F",
+      "firstpublish": "380 BCE",
+      "copyright": "Spellbound",
+      "printisbn": "",
+      "onlineisbn": "111",
+      "description": "Plato's The Republic explores justice, political philosophy, education, morality, and the ideal state through a philosophical dialogue featuring Socrates.",
+      "totalpages": 400,
+      "pages": [
+        "Plato's The Republic explores justice, political philosophy, education, morality, and the ideal state through a philosophical dialogue featuring Socrates."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791869017507.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791869017507.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791870091057",
+      "title": "The Call of the Wild",
+      "author": "Jack London",
+      "genre": "ANTHROPOLOGY",
+      "publisher": "Jack London",
+      "price": 299,
+      "color": "#8C3B3F",
+      "firstpublish": "1903",
+      "copyright": "Jack London",
+      "printisbn": "",
+      "onlineisbn": "111",
+      "description": "his adventure novel follows Buck, a domesticated dog taken to the Yukon during the Klondike Gold Rush. Through hardship and changing circumstances, Buck discovers his instincts and adapts to life in the wilderness.",
+      "totalpages": 150,
+      "pages": [
+        "his adventure novel follows Buck, a domesticated dog taken to the Yukon during the Klondike Gold Rush. Through hardship and changing circumstances, Buck discovers his instincts and adapts to life in the wilderness."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791870091057.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791870091057.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791870307244",
+      "title": "Wuthering Heights",
+      "author": "Author: Emily Brontë",
+      "genre": "AGRICULTURE",
+      "publisher": "Author: Emily Brontë",
+      "price": 899,
+      "color": "#8C3B3F",
+      "firstpublish": "1112",
+      "copyright": "Author: Emily Brontë",
+      "printisbn": "",
+      "onlineisbn": "111",
+      "description": "Set on the Yorkshire moors, Wuthering Heights explores the complicated relationships between Heathcliff, Catherine Earnshaw, and their families. The novel examines love, revenge, social class, and the lasting consequences of past actions.",
+      "totalpages": 600,
+      "pages": [
+        "Set on the Yorkshire moors, Wuthering Heights explores the complicated relationships between Heathcliff, Catherine Earnshaw, and their families. The novel examines love, revenge, social class, and the lasting consequences of past actions."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791870307244.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791870307244.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791870444119",
+      "title": "Jane Eyre",
+      "author": "Charlotte Brontë",
+      "genre": "ANTHROPOLOGY",
+      "publisher": "Charlotte Brontë",
+      "price": 999,
+      "color": "#8C3B3F",
+      "firstpublish": "1847",
+      "copyright": "Charlotte Brontë",
+      "printisbn": "",
+      "onlineisbn": "111",
+      "description": "ane Eyre tells the story of an orphan who grows into an independent woman while navigating education, employment, love, and moral responsibility. The novel explores personal dignity, independence, and social expectations.",
+      "totalpages": 550,
+      "pages": [
+        "ane Eyre tells the story of an orphan who grows into an independent woman while navigating education, employment, love, and moral responsibility. The novel explores personal dignity, independence, and social expectations."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791870444119.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791870444119.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791870561155",
+      "title": "Great Expectations",
+      "author": "Charles Dickens",
+      "genre": "ANTHROPOLOGY",
+      "publisher": "Charles Dickens",
+      "price": 799,
+      "color": "#8C3B3F",
+      "firstpublish": "1899",
+      "copyright": "Charles Dickens",
+      "printisbn": "",
+      "onlineisbn": "111",
+      "description": "harles Dickens's Great Expectations follows Pip, an orphan whose unexpected financial prospects change his ambitions and relationships. The novel examines social class, personal growth, loyalty, and the difference between wealth and true character.",
+      "totalpages": 700,
+      "pages": [
+        "harles Dickens's Great Expectations follows Pip, an orphan whose unexpected financial prospects change his ambitions and relationships. The novel examines social class, personal growth, loyalty, and the difference between wealth and true character."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791870561155.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791870561155.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791869756211",
+      "title": "White Fang",
+      "author": "Jack London",
+      "genre": "ANTHROPOLOGY",
+      "publisher": "Macmillan",
+      "price": 899,
+      "color": "#8C3B3F",
+      "firstpublish": "1906",
+      "copyright": "Macmillan",
+      "printisbn": "",
+      "onlineisbn": "111",
+      "description": "White Fang follows a wild wolf-dog's journey through the harsh wilderness and his gradual transformation through encounters with humans. T",
+      "totalpages": 350,
+      "pages": [
+        "White Fang follows a wild wolf-dog's journey through the harsh wilderness and his gradual transformation through encounters with humans. The novel explores survival, loyalty, and the relationship between animals and people."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791869756211.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791869756211.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791871192754",
+      "title": "Little Women",
+      "author": "Louisa May Alcott",
+      "genre": "AGRICULTURE",
+      "publisher": "Louisa May Alcott",
+      "price": 899,
+      "color": "#8C3B3F",
+      "firstpublish": "2001",
+      "copyright": "Louisa May Alcott",
+      "printisbn": "",
+      "onlineisbn": "111",
+      "description": "Little Women follows the four March sisters as they grow up, develop their ambitions, and face family and personal challenges. The novel explores sisterhood, independence, generosity, and the transition from childhood to adulthood.",
+      "totalpages": 600,
+      "pages": [
+        "Little Women follows the four March sisters as they grow up, develop their ambitions, and face family and personal challenges. The novel explores sisterhood, independence, generosity, and the transition from childhood to adulthood."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791871192754.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791871192754.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791871441918",
+      "title": "The Secret Garden",
+      "author": "Frances Hodgson Burnett",
+      "genre": "ANTHROPOLOGY",
+      "publisher": "Frances Hodgson Burnett",
+      "price": 899,
+      "color": "#8C3B3F",
+      "firstpublish": "1911",
+      "copyright": "Frances Hodgson Burnett",
+      "printisbn": "",
+      "onlineisbn": "",
+      "description": "The Secret Garden follows Mary Lennox as she discovers a neglected garden on a country estate. As the garden begins to flourish, Mary and the people around her develop new friendships and perspectives.",
+      "totalpages": 300,
+      "pages": [
+        "The Secret Garden follows Mary Lennox as she discovers a neglected garden on a country estate. As the garden begins to flourish, Mary and the people around her develop new friendships and perspectives."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791871441918.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791871441918.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791871564533",
+      "title": "The Wonderful Wizard of Oz",
+      "author": "L. Frank Baum",
+      "genre": "ACCOUNTING",
+      "publisher": "L. Frank Baum",
+      "price": 399,
+      "color": "#8C3B3F",
+      "firstpublish": "1900",
+      "copyright": "L. Frank Baum",
+      "printisbn": "",
+      "onlineisbn": "",
+      "description": "orothy is swept away from Kansas to the magical land of Oz, where she travels with companions in search of their wishes. The story explores courage, friendship, self-discovery, and the meaning of home.c",
+      "totalpages": 250,
+      "pages": [
+        "orothy is swept away from Kansas to the magical land of Oz, where she travels with companions in search of their wishes. The story explores courage, friendship, self-discovery, and the meaning of home."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791871564533.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791871564533.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791871722694",
+      "title": "Adventures of Huckleberry Finn",
+      "author": "Mark Twain",
+      "genre": "ACCOUNTING",
+      "publisher": "Mark Twain",
+      "price": 599,
+      "color": "#8C3B3F",
+      "firstpublish": "1902",
+      "copyright": "Mark Twain",
+      "printisbn": "",
+      "onlineisbn": "111",
+      "description": "Huck Finn travels along the Mississippi River with Jim, an enslaved man seeking freedom. Their journey explores friendship, social prejudice, conscience, and the conflict between accepted customs and moral responsibility.",
+      "totalpages": 400,
+      "pages": [
+        "Huck Finn travels along the Mississippi River with Jim, an enslaved man seeking freedom. Their journey explores friendship, social prejudice, conscience, and the conflict between accepted customs and moral responsibility."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791871722694.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791871722694.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791871899935",
+      "title": "The Adventures of Tom Sawyer",
+      "author": "Mark Twain",
+      "genre": "ACCOUNTING",
+      "publisher": "Mark Twain",
+      "price": 699,
+      "color": "#8C3B3F",
+      "firstpublish": "1876",
+      "copyright": "Mark Twain",
+      "printisbn": "",
+      "onlineisbn": "111",
+      "description": "Tom Sawyer is an adventurous boy growing up along the Mississippi River. His escapades with friends involve mischief, mysteries, and unexpected dangers, while reflecting the experiences of childhood and small-town life.",
+      "totalpages": 300,
+      "pages": [
+        "Tom Sawyer is an adventurous boy growing up along the Mississippi River. His escapades with friends involve mischief, mysteries, and unexpected dangers, while reflecting the experiences of childhood and small-town life."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791871899935.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791871899935.png",
+      "uploaded_by": "uploader1",
+      "status": "published",
+      "pubtype": "Books"
+    },
+    {
+      "id": "b1791889205850",
+      "title": "DEMO",
+      "author": "DEMO",
+      "genre": "BIOMEDICAL ENGINEERING",
+      "publisher": "DEMO",
+      "price": 1200,
+      "color": "#A97F45",
+      "firstpublish": "DEMO",
+      "copyright": "DEMO",
+      "printisbn": "",
+      "onlineisbn": "DEMO",
+      "description": "",
+      "totalpages": 120,
+      "pages": [
+        "This book has no content pages yet."
+      ],
+      "pdfurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/pdfs/b1791889205850.pdf",
+      "coverurl": "https://cctdfzdcnunkiriwqnyn.supabase.co/storage/v1/object/public/covers/b1791889205850.png",
+      "uploaded_by": "admin",
+      "status": "published",
+      "pubtype": "Books"
+    }
+  ],
+  "licenses": [
+    {
+      "id": "DEM-5825",
+      "password": "kiJcKE",
+      "name": "demo",
+      "type": "license",
+      "bookids": [
+        "b1791868782578",
+        "b1791869017507"
+      ],
+      "seats": 100,
+      "price": 1222,
+      "startdate": "2026-09-25T07:41:15.056Z",
+      "enddate": "2026-09-25",
+      "createdat": "2026-09-25T07:41:15.056Z",
+      "email": "thisisforunofficialpuroseonly@gmail.com"
+    },
+    {
+      "id": "SHARIF",
+      "password": "SHARIF",
+      "name": "SHARIF",
+      "type": "license",
+      "bookids": [
+        "b1790325517401",
+        "b1790326058608",
+        "b1790324212104",
+        "b1791471017590",
+        "b1790323912543",
+        "b1790278411362",
+        "b1791870917556",
+        "b1791871080287",
+        "b1790326712155",
+        "b1790329408341",
+        "b1790330002303",
+        "b1790327972793",
+        "b1791470471304",
+        "b1791470605353",
+        "b1791470714818",
+        "b1791470876857",
+        "b1791470938275",
+        "b1791471092760",
+        "b1791870672504",
+        "b1790323579910",
+        "b1791868782578",
+        "b1791869017507",
+        "b1791869756211",
+        "b1791870091057",
+        "b1791870307244",
+        "b1791870444119",
+        "b1791870561155",
+        "b1791871192754",
+        "b1791871441918",
+        "b1791871564533",
+        "b1791871722694",
+        "b1791871899935"
+      ],
+      "seats": 100,
+      "price": 75,
+      "startdate": "2026-10-13",
+      "enddate": "2027-10-13",
+      "createdat": "2026-10-13T04:57:06.124Z",
+      "email": "spellboundpublishersebook@gmail.com"
+    },
+    {
+      "id": "Test",
+      "password": "pmr7rf",
+      "name": "Test1",
+      "type": "license",
+      "bookids": [
+        "b1790325517401",
+        "b1790326058608",
+        "b1790324212104",
+        "b1791471017590",
+        "b1790323912543",
+        "b1790278411362",
+        "b1791870917556",
+        "b1791871080287",
+        "b1790326712155",
+        "b1790329408341",
+        "b1790330002303",
+        "b1790327972793",
+        "b1791470471304",
+        "b1791470605353",
+        "b1791470714818",
+        "b1791470876857",
+        "b1791470938275",
+        "b1791471092760",
+        "b1791870672504",
+        "b1790323579910",
+        "b1791868782578",
+        "b1791869017507",
+        "b1791870091057",
+        "b1791870307244",
+        "b1791870444119",
+        "b1791870561155",
+        "b1791869756211",
+        "b1791871192754",
+        "b1791871441918",
+        "b1791871564533",
+        "b1791871722694",
+        "b1791871899935"
+      ],
+      "seats": 100,
+      "price": 53,
+      "startdate": "2026-10-13",
+      "enddate": "2027-11-13",
+      "createdat": "2026-10-13T10:19:43.429Z",
+      "email": "sk.imran3038@gmail.com"
+    },
+    {
+      "id": "DEM-9072",
+      "password": "Tn72Pc",
+      "name": "demo2",
+      "type": "license",
+      "bookids": [
+        "b1790278411362",
+        "b1790323579910",
+        "b1790323912543"
+      ],
+      "seats": 100,
+      "price": 123,
+      "startdate": "2026-09-30",
+      "enddate": "2027-09-30",
+      "createdat": "2026-09-30T11:25:10.059Z",
+      "email": "spellboundpublishersebook@gmail.com"
+    },
+    {
+      "id": "GVC-1042",
+      "password": "Kx82Lq",
+      "name": "Green Valley College",
+      "type": "license",
+      "bookids": [
+        "b1",
+        "b2",
+        "b3",
+        "b4",
+        "b5"
+      ],
+      "seats": 500,
+      "price": 45000,
+      "startdate": "2026-01-01",
+      "enddate": "2026-10-02",
+      "createdat": "2025-12-20",
+      "email": null
+    },
+    {
+      "id": "TIN-5994",
+      "password": "YszVa2",
+      "name": "TINT",
+      "type": "license",
+      "bookids": [
+        "b1790278411362",
+        "b1790323579910",
+        "b1790323912543"
+      ],
+      "seats": 100,
+      "price": 1,
+      "startdate": "2026-09-25",
+      "enddate": "2026-09-25",
+      "createdat": "2026-09-25",
+      "email": null
+    },
+    {
+      "id": "Spellbound",
+      "password": "SPELLBOUND",
+      "name": "Spellbound",
+      "type": "license",
+      "bookids": [
+        "b1791471092760",
+        "b1791471017590",
+        "b1791470938275",
+        "b1791470876857",
+        "b1791470714818",
+        "b1791470605353",
+        "b1791470471304",
+        "b1790278411362",
+        "b1790323579910",
+        "b1790323912543",
+        "b1790325517401",
+        "b1790326058608",
+        "b1790324212104",
+        "b1790326712155",
+        "b1790329408341",
+        "b1790330002303",
+        "b1790327972793"
+      ],
+      "seats": 100,
+      "price": 1222,
+      "startdate": "2026-10-08",
+      "enddate": "2026-10-08",
+      "createdat": "2026-10-08T14:26:31.683Z",
+      "email": "spellboundpublishersebook@gmail.com"
+    },
+    {
+      "id": "SPELLBOUND",
+      "password": "SPELLBOUND",
+      "name": "SPELLBOUND",
+      "type": "license",
+      "bookids": [
+        "b1790278411362",
+        "b1790323579910",
+        "b1790323912543",
+        "b1790325517401",
+        "b1790326058608",
+        "b1790324212104",
+        "b1790326712155",
+        "b1790329408341",
+        "b1790330002303",
+        "b1790327972793",
+        "b1791471092760",
+        "b1791471017590",
+        "b1791470938275",
+        "b1791470876857",
+        "b1791470714818",
+        "b1791470605353",
+        "b1791470471304"
+      ],
+      "seats": 100,
+      "price": 111,
+      "startdate": "2026-10-08",
+      "enddate": "2027-10-08",
+      "createdat": "2026-10-08T14:52:54.697Z",
+      "email": "spellboundpublishersebook@gmail.com"
+    },
+    {
+      "id": "DEM-3785",
+      "password": "5bhQwp",
+      "name": "demo1",
+      "type": "license",
+      "bookids": [
+        "b1790323579910",
+        "b1790278411362",
+        "b1790323912543",
+        "b1790325517401",
+        "b1790326058608",
+        "b1790324212104",
+        "b1790326712155",
+        "b1790329408341",
+        "b1790330002303",
+        "b1790327972793"
+      ],
+      "seats": 100,
+      "price": 12222,
+      "startdate": "2026-09-30",
+      "enddate": "2027-09-30",
+      "createdat": "2026-09-30T11:22:02.559Z",
+      "email": "spellboundpublishersebook@gmail.com"
+    }
+  ],
+  "trial_requests": [
+    {
+      "id": "t1790330089937",
+      "name": "Sharif Roy",
+      "email": "sharifmolla567@gamil.com",
+      "institution": "TINT",
+      "status": "approved",
+      "requestedat": "2026-09-25",
+      "password": "yFi2SJ",
+      "expiresat": "2026-10-25",
+      "bookids": null
+    },
+    {
+      "id": "t1790333366293",
+      "name": "Jisan Mallick ",
+      "email": "rm2602600@gmail.com",
+      "institution": "TICT ",
+      "status": "rejected",
+      "requestedat": "2026-09-25",
+      "password": null,
+      "expiresat": null,
+      "bookids": null
+    },
+    {
+      "id": "t1790333439511",
+      "name": "Tushar Mallick ",
+      "email": "rm2602500@gmail.com",
+      "institution": "Techno International Newtown ",
+      "status": "rejected",
+      "requestedat": "2026-09-25",
+      "password": null,
+      "expiresat": null,
+      "bookids": null
+    },
+    {
+      "id": "t1790333609871",
+      "name": "Ankita Mallick",
+      "email": "rm2602500@gmail.com",
+      "institution": "Techno India College of Technology ",
+      "status": "rejected",
+      "requestedat": "2026-09-25",
+      "password": null,
+      "expiresat": null,
+      "bookids": null
+    },
+    {
+      "id": "t1790333868498",
+      "name": "Ranita Molla ",
+      "email": "rm2602500@gmail.com",
+      "institution": "Techno International ",
+      "status": "rejected",
+      "requestedat": "2026-09-25",
+      "password": null,
+      "expiresat": null,
+      "bookids": null
+    },
+    {
+      "id": "t1790334020827",
+      "name": "Hitiui",
+      "email": "rm2602500@gmail.com",
+      "institution": "Tict",
+      "status": "rejected",
+      "requestedat": "2026-09-25",
+      "password": null,
+      "expiresat": null,
+      "bookids": null
+    },
+    {
+      "id": "t1790334179730",
+      "name": "Tusar Khan ",
+      "email": "rm2602500@gmail.com",
+      "institution": "Hil climb institute ",
+      "status": "rejected",
+      "requestedat": "2026-09-25",
+      "password": null,
+      "expiresat": null,
+      "bookids": null
+    },
+    {
+      "id": "t1790334207853",
+      "name": "Hola ",
+      "email": "jisanmallick0522@gmail.com",
+      "institution": "Independent reader",
+      "status": "approved",
+      "requestedat": "2026-09-25",
+      "password": "CG3FPg",
+      "expiresat": "2026-10-25",
+      "bookids": null
+    },
+    {
+      "id": "t1790493439979",
+      "name": "Nisha",
+      "email": "nishashikary@gmail.com",
+      "institution": "Independent reader",
+      "status": "rejected",
+      "requestedat": "2026-09-27",
+      "password": null,
+      "expiresat": null,
+      "bookids": null
+    },
+    {
+      "id": "t1790580324048",
+      "name": "Sreya Ray",
+      "email": "rm2602500@gmail.com",
+      "institution": "TINT",
+      "status": "approved",
+      "requestedat": "2026-09-28",
+      "password": "BJMBSh",
+      "expiresat": "2026-10-28",
+      "bookids": null
+    },
+    {
+      "id": "t1790581127711",
+      "name": "sg",
+      "email": "sayantanghosh689@gmail.com",
+      "institution": "tint",
+      "status": "approved",
+      "requestedat": "2026-09-28",
+      "password": "GSF3nv",
+      "expiresat": "2026-10-28",
+      "bookids": null
+    },
+    {
+      "id": "t1790580768147",
+      "name": "Sreya Ray",
+      "email": "rm2602500@gmail.com",
+      "institution": "Tint",
+      "status": "rejected",
+      "requestedat": "2026-09-28",
+      "password": null,
+      "expiresat": null,
+      "bookids": null
+    },
+    {
+      "id": "t1790766604915",
+      "name": "rezwanparvej",
+      "email": "rezwanparvej@gmail.com",
+      "institution": "Independent reader",
+      "status": "approved",
+      "requestedat": "2026-09-30",
+      "password": "skHUym",
+      "expiresat": "2026-10-30",
+      "bookids": [
+        "b1790278411362"
+      ]
+    },
+    {
+      "id": "t1791886469827",
+      "name": "Sk Imran",
+      "email": "sk.imran3038@gmail.com",
+      "institution": "Aliah University ",
+      "status": "approved",
+      "requestedat": "2026-10-13",
+      "password": "pMr7rf",
+      "expiresat": "2026-11-13",
+      "bookids": [
+        "b1790325517401",
+        "b1790326058608",
+        "b1790324212104",
+        "b1791471017590",
+        "b1790323912543",
+        "b1790278411362",
+        "b1791870917556",
+        "b1791871080287",
+        "b1790326712155",
+        "b1790329408341",
+        "b1790330002303",
+        "b1790327972793",
+        "b1791470471304",
+        "b1791470605353",
+        "b1791470714818",
+        "b1791470876857",
+        "b1791470938275",
+        "b1791471092760",
+        "b1791870672504",
+        "b1790323579910",
+        "b1791868782578",
+        "b1791869017507",
+        "b1791870091057",
+        "b1791870307244",
+        "b1791870444119",
+        "b1791870561155",
+        "b1791869756211",
+        "b1791871192754",
+        "b1791871441918",
+        "b1791871564533",
+        "b1791871722694",
+        "b1791871899935"
+      ]
+    }
+  ],
+  "readers": [
+    {
+      "id": "b6c38971-34fc-47dc-9875-051367c3dd81",
+      "login_id": "sharifmolla567@gamil.com",
+      "password": "yFi2SJ",
+      "name": "Sharif Roy",
+      "email": "sharifmolla567@gamil.com",
+      "account_type": "free_trial",
+      "bookids": null,
+      "startdate": "2026-09-25T00:00:00+00:00",
+      "enddate": "2026-10-25T00:00:00+00:00",
+      "created_at": "2026-10-02T12:18:55.557221+00:00"
+    },
+    {
+      "id": "bae64fb8-2138-48e6-a8a0-86e0f48e8e57",
+      "login_id": "jisanmallick0522@gmail.com",
+      "password": "CG3FPg",
+      "name": "Hola ",
+      "email": "jisanmallick0522@gmail.com",
+      "account_type": "free_trial",
+      "bookids": null,
+      "startdate": "2026-09-25T00:00:00+00:00",
+      "enddate": "2026-10-25T00:00:00+00:00",
+      "created_at": "2026-10-02T12:18:55.557221+00:00"
+    },
+    {
+      "id": "1ba40aa4-3ef8-45a0-8d9d-6199203e5b3f",
+      "login_id": "rm2602500@gmail.com",
+      "password": "BJMBSh",
+      "name": "Sreya Ray",
+      "email": "rm2602500@gmail.com",
+      "account_type": "free_trial",
+      "bookids": null,
+      "startdate": "2026-09-28T00:00:00+00:00",
+      "enddate": "2026-10-28T00:00:00+00:00",
+      "created_at": "2026-10-02T12:18:55.557221+00:00"
+    },
+    {
+      "id": "857eed1b-8c4d-4a35-b921-ebac6e138b15",
+      "login_id": "sayantanghosh689@gmail.com",
+      "password": "GSF3nv",
+      "name": "sg",
+      "email": "sayantanghosh689@gmail.com",
+      "account_type": "free_trial",
+      "bookids": null,
+      "startdate": "2026-09-28T00:00:00+00:00",
+      "enddate": "2026-10-28T00:00:00+00:00",
+      "created_at": "2026-10-02T12:18:55.557221+00:00"
+    },
+    {
+      "id": "ccc93570-fa6a-455e-adc3-27ae1a95774b",
+      "login_id": "rezwanparvej@gmail.com",
+      "password": "skHUym",
+      "name": "rezwanparvej",
+      "email": "rezwanparvej@gmail.com",
+      "account_type": "free_trial",
+      "bookids": [
+        "b1790278411362"
+      ],
+      "startdate": "2026-09-30T00:00:00+00:00",
+      "enddate": "2026-10-30T00:00:00+00:00",
+      "created_at": "2026-10-02T12:18:55.557221+00:00"
+    },
+    {
+      "id": "d08a0c1b-e782-4201-bbaa-1ef40603a6d5",
+      "login_id": "sk.imran3038@gmail.com",
+      "password": "pMr7rf",
+      "name": "Sk Imran",
+      "email": "sk.imran3038@gmail.com",
+      "account_type": "free_trial",
+      "bookids": [
+        "b1790325517401",
+        "b1790326058608",
+        "b1790324212104",
+        "b1791471017590",
+        "b1790323912543",
+        "b1790278411362",
+        "b1791870917556",
+        "b1791871080287",
+        "b1790326712155",
+        "b1790329408341",
+        "b1790330002303",
+        "b1790327972793",
+        "b1791470471304",
+        "b1791470605353",
+        "b1791470714818",
+        "b1791470876857",
+        "b1791470938275",
+        "b1791471092760",
+        "b1791870672504",
+        "b1790323579910",
+        "b1791868782578",
+        "b1791869017507",
+        "b1791870091057",
+        "b1791870307244",
+        "b1791870444119",
+        "b1791870561155",
+        "b1791869756211",
+        "b1791871192754",
+        "b1791871441918",
+        "b1791871564533",
+        "b1791871722694",
+        "b1791871899935"
+      ],
+      "startdate": "2026-10-13T00:00:00+00:00",
+      "enddate": "2026-11-13T00:00:00+00:00",
+      "created_at": "2026-10-13T10:14:49.589894+00:00"
+    }
+  ],
+  "subscribers": [
+    {
+      "id": "66b25251-4c01-44d7-98f3-bf87918b0413",
+      "email": "spellboundpublishersebook@gmail.com",
+      "subscribed_at": "2026-10-13T06:01:17.117546+00:00"
+    }
+  ],
+  "reading_sessions": [
+    {
+      "id": "sess_1791888662824",
+      "license_id": "Test",
+      "book_id": "b1791870917556",
+      "last_active": "2026-10-13T10:51:34.981+00:00"
+    }
+  ],
+  "book_views": [
+    {
+      "id": "v_1790321660335",
+      "book_id": "b1790278411362",
+      "license_id": "TIN-5994",
+      "viewed_at": "2026-09-25T07:34:20.335+00:00"
+    },
+    {
+      "id": "v_1790321660619",
+      "book_id": "b1790278411362",
+      "license_id": "TIN-5994",
+      "viewed_at": "2026-09-25T07:34:20.619+00:00"
+    },
+    {
+      "id": "v_1790326808101",
+      "book_id": "b1790278411362",
+      "license_id": "TIN-5994",
+      "viewed_at": "2026-09-25T09:00:08.101+00:00"
+    },
+    {
+      "id": "v_1790326808440",
+      "book_id": "b1790278411362",
+      "license_id": "TIN-5994",
+      "viewed_at": "2026-09-25T09:00:08.44+00:00"
+    },
+    {
+      "id": "v_1790943762455",
+      "book_id": "b1790323912543",
+      "license_id": "DEM-9072",
+      "viewed_at": "2026-10-02T12:22:42.455+00:00"
+    },
+    {
+      "id": "v_1790943762686",
+      "book_id": "b1790323912543",
+      "license_id": "DEM-9072",
+      "viewed_at": "2026-10-02T12:22:42.686+00:00"
+    },
+    {
+      "id": "v_1790944456943",
+      "book_id": "b1790278411362",
+      "license_id": "DEM-9072",
+      "viewed_at": "2026-10-02T12:34:16.943+00:00"
+    },
+    {
+      "id": "v_1790944456981",
+      "book_id": "b1790278411362",
+      "license_id": "DEM-9072",
+      "viewed_at": "2026-10-02T12:34:16.981+00:00"
+    },
+    {
+      "id": "v_1790945497417",
+      "book_id": "b1790278411362",
+      "license_id": "DEM-9072",
+      "viewed_at": "2026-10-02T12:51:37.417+00:00"
+    },
+    {
+      "id": "v_1790945497437",
+      "book_id": "b1790278411362",
+      "license_id": "DEM-9072",
+      "viewed_at": "2026-10-02T12:51:37.437+00:00"
+    },
+    {
+      "id": "v_1790946393814",
+      "book_id": "b1790323579910",
+      "license_id": "DEM-9072",
+      "viewed_at": "2026-10-02T13:06:33.814+00:00"
+    },
+    {
+      "id": "v_1790946393840",
+      "book_id": "b1790323579910",
+      "license_id": "DEM-9072",
+      "viewed_at": "2026-10-02T13:06:33.84+00:00"
+    },
+    {
+      "id": "v_1790952824336",
+      "book_id": "b1790323579910",
+      "license_id": "DEM-9072",
+      "viewed_at": "2026-10-02T14:53:44.336+00:00"
+    },
+    {
+      "id": "v_1790952824343",
+      "book_id": "b1790323579910",
+      "license_id": "DEM-9072",
+      "viewed_at": "2026-10-02T14:53:44.343+00:00"
+    },
+    {
+      "id": "v_1790953623149",
+      "book_id": "b1790323579910",
+      "license_id": "DEM-9072",
+      "viewed_at": "2026-10-02T15:07:03.149+00:00"
+    },
+    {
+      "id": "v_1790953623716",
+      "book_id": "b1790323579910",
+      "license_id": "DEM-9072",
+      "viewed_at": "2026-10-02T15:07:03.716+00:00"
+    },
+    {
+      "id": "v_1791453713259",
+      "book_id": "b1790278411362",
+      "license_id": "DEM-9072",
+      "viewed_at": "2026-10-08T10:01:53.259+00:00"
+    },
+    {
+      "id": "v_1791453713389",
+      "book_id": "b1790278411362",
+      "license_id": "DEM-9072",
+      "viewed_at": "2026-10-08T10:01:53.389+00:00"
+    },
+    {
+      "id": "v_1791454917538",
+      "book_id": "b1790323912543",
+      "license_id": "DEM-9072",
+      "viewed_at": "2026-10-08T10:21:57.538+00:00"
+    },
+    {
+      "id": "v_1791454917700",
+      "book_id": "b1790323912543",
+      "license_id": "DEM-9072",
+      "viewed_at": "2026-10-08T10:21:57.7+00:00"
+    },
+    {
+      "id": "v_1791467749550",
+      "book_id": "b1790278411362",
+      "license_id": "DEM-9072",
+      "viewed_at": "2026-10-08T13:55:49.55+00:00"
+    },
+    {
+      "id": "v_1791467749557",
+      "book_id": "b1790278411362",
+      "license_id": "DEM-9072",
+      "viewed_at": "2026-10-08T13:55:49.557+00:00"
+    },
+    {
+      "id": "v_1791468324091",
+      "book_id": "b1790323912543",
+      "license_id": "DEM-9072",
+      "viewed_at": "2026-10-08T14:05:24.091+00:00"
+    },
+    {
+      "id": "v_1791468324348",
+      "book_id": "b1790323912543",
+      "license_id": "DEM-9072",
+      "viewed_at": "2026-10-08T14:05:24.348+00:00"
+    },
+    {
+      "id": "v_1791471236719",
+      "book_id": "b1791471017590",
+      "license_id": "SPELLBOUND",
+      "viewed_at": "2026-10-08T14:53:56.719+00:00"
+    },
+    {
+      "id": "v_1791471236912",
+      "book_id": "b1791471017590",
+      "license_id": "SPELLBOUND",
+      "viewed_at": "2026-10-08T14:53:56.912+00:00"
+    },
+    {
+      "id": "v_1791471408712",
+      "book_id": "b1791470876857",
+      "license_id": "SPELLBOUND",
+      "viewed_at": "2026-10-08T14:56:48.712+00:00"
+    },
+    {
+      "id": "v_1791471408840",
+      "book_id": "b1791470876857",
+      "license_id": "SPELLBOUND",
+      "viewed_at": "2026-10-08T14:56:48.84+00:00"
+    },
+    {
+      "id": "v_1791471413834",
+      "book_id": "b1791470714818",
+      "license_id": "SPELLBOUND",
+      "viewed_at": "2026-10-08T14:56:53.834+00:00"
+    },
+    {
+      "id": "v_1791471414120",
+      "book_id": "b1791470714818",
+      "license_id": "SPELLBOUND",
+      "viewed_at": "2026-10-08T14:56:54.12+00:00"
+    },
+    {
+      "id": "v_1791472393524",
+      "book_id": "b1791470714818",
+      "license_id": "SPELLBOUND",
+      "viewed_at": "2026-10-08T15:13:13.524+00:00"
+    },
+    {
+      "id": "v_1791472545208",
+      "book_id": "b1791470714818",
+      "license_id": "SPELLBOUND",
+      "viewed_at": "2026-10-08T15:15:45.208+00:00"
+    },
+    {
+      "id": "v_1791472545791",
+      "book_id": "b1791470714818",
+      "license_id": "SPELLBOUND",
+      "viewed_at": "2026-10-08T15:15:45.791+00:00"
+    },
+    {
+      "id": "v_1791473123327",
+      "book_id": "b1791470714818",
+      "license_id": "SPELLBOUND",
+      "viewed_at": "2026-10-08T15:25:23.327+00:00"
+    },
+    {
+      "id": "v_1791473123988",
+      "book_id": "b1791470714818",
+      "license_id": "SPELLBOUND",
+      "viewed_at": "2026-10-08T15:25:23.988+00:00"
+    },
+    {
+      "id": "v_1791870495278",
+      "book_id": "b1790323579910",
+      "license_id": "SHARIF",
+      "viewed_at": "2026-10-13T05:48:15.278+00:00"
+    },
+    {
+      "id": "v_1791870495394",
+      "book_id": "b1790323579910",
+      "license_id": "SHARIF",
+      "viewed_at": "2026-10-13T05:48:15.394+00:00"
+    },
+    {
+      "id": "v_1791871307625",
+      "book_id": "b1791471017590",
+      "license_id": "SHARIF",
+      "viewed_at": "2026-10-13T06:01:47.625+00:00"
+    },
+    {
+      "id": "v_1791871307819",
+      "book_id": "b1791471017590",
+      "license_id": "SHARIF",
+      "viewed_at": "2026-10-13T06:01:47.819+00:00"
+    },
+    {
+      "id": "v_1791871745512",
+      "book_id": "b1790329408341",
+      "license_id": "SHARIF",
+      "viewed_at": "2026-10-13T06:09:05.512+00:00"
+    },
+    {
+      "id": "v_1791871745707",
+      "book_id": "b1790329408341",
+      "license_id": "SHARIF",
+      "viewed_at": "2026-10-13T06:09:05.707+00:00"
+    },
+    {
+      "id": "v_1791884546475",
+      "book_id": "b1791470938275",
+      "license_id": "SHARIF",
+      "viewed_at": "2026-10-13T09:42:26.475+00:00"
+    },
+    {
+      "id": "v_1791884546112",
+      "book_id": "b1791470938275",
+      "license_id": "SHARIF",
+      "viewed_at": "2026-10-13T09:42:26.112+00:00"
+    },
+    {
+      "id": "v_1791888663504",
+      "book_id": "b1791870917556",
+      "license_id": "Test",
+      "viewed_at": "2026-10-13T10:51:03.504+00:00"
+    },
+    {
+      "id": "v_1791888663630",
+      "book_id": "b1791870917556",
+      "license_id": "Test",
+      "viewed_at": "2026-10-13T10:51:03.63+00:00"
+    }
+  ],
+  "email_templates": []
+}
