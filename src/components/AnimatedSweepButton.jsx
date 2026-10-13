@@ -33,11 +33,11 @@ export default function AnimatedSweepButton({
       break;
 
     case "yellow-outline":
-      // Base: Transparent with yellow border & yellow text. Hover: Solid yellow fill with crisp black text.
-      baseClasses = "bg-transparent border border-[#FDD132] hover:border-[#FDD132] hover:ring-2 hover:ring-[#FDD132]/40";
-      baseTextColor = "text-[#FDD132]";
+      // Base: White with solid yellow border & crisp black text. Hover: Solid yellow sweep fill with black text.
+      baseClasses = "bg-white border-2 border-[#FDD132] hover:border-black hover:ring-2 hover:ring-black/15 shadow-sm";
+      baseTextColor = "text-black font-bold";
       fillBg = "bg-[#FDD132]";
-      hoverTextColor = "text-[#111111]";
+      hoverTextColor = "text-black font-bold";
       break;
 
     case "black":
