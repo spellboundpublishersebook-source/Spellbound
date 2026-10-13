@@ -63,5 +63,5 @@ DirectoryIndex index.html
   Header set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
-# 5. PREVENT DIRECTORY BROWSING
-Options -Indexes
+# 5. DEFAULT DIRECTORY RESOLUTION (Safe for Hostinger LiteSpeed)
+# (Options -Indexes omitted to avoid AllowOverride 403 Forbidden)
