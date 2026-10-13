@@ -133,12 +133,17 @@ function InstitutionsTab({ books, licenses, onCreateLicense, onRevokeLicense, on
   
   function openEditAccess(license) {
     setEditLicenseId(license.id);
-    setSelected(license.bookIds || []);
+    const existing = license.bookIds || license.bookids || [];
+    setSelected(Array.isArray(existing) ? [...existing] : []);
+    setSearch("");
+    setGenreFilter("All");
+    setPubTypeFilter("All");
+    setAuthorFilter("All");
     setShowEditAccessModal(true);
   }
   
-  function handleSaveAccess() {
-    onEditAccess(editLicenseId, selected);
+  async function handleSaveAccess() {
+    await onEditAccess(editLicenseId, selected);
     setShowEditAccessModal(false);
     setEditLicenseId(null);
     setSelected([]);
@@ -323,38 +328,61 @@ function InstitutionsTab({ books, licenses, onCreateLicense, onRevokeLicense, on
       {showEditAccessModal && (
         <Modal title="Edit Institution Access" onClose={() => setShowEditAccessModal(false)} wide>
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-semibold text-sm">Select Books ({selected.length} chosen)</h3>
+            <h3 className="font-semibold text-sm">Select Books ({selected.length} chosen of {books.length} total)</h3>
             <div className="flex gap-2">
               <button type="button" onClick={() => setSelected(books.map(b => b.id))} className="text-xs font-semibold text-blue-600 hover:underline">Select All</button>
+              {search || genreFilter !== "All" || pubTypeFilter !== "All" || authorFilter !== "All" ? (
+                <button type="button" onClick={() => setSelected(Array.from(new Set([...selected, ...filteredBooks.map(b => b.id)])))} className="text-xs font-semibold text-blue-600 hover:underline">Select Filtered</button>
+              ) : null}
               <button type="button" onClick={() => setSelected([])} className="text-xs font-semibold text-red-600 hover:underline">Clear All</button>
             </div>
           </div>
-          <div className="flex gap-4 mb-4">
-            <input type="text" placeholder="Search books..." className="flex-1 px-3 py-2 border rounded-md" value={search} onChange={e => setSearch(e.target.value)} />
-            <select className="border rounded-md px-3 py-2" value={genreFilter} onChange={e => setGenreFilter(e.target.value)}>
+          <div className="flex flex-wrap gap-2 mb-4">
+            <input type="text" placeholder="Search books or authors..." className="flex-1 min-w-[150px] px-3 py-2 border rounded-md text-sm outline-none" value={search} onChange={e => setSearch(e.target.value)} />
+            <select className="border rounded-md px-3 py-2 text-sm max-w-[130px] outline-none" value={genreFilter} onChange={e => setGenreFilter(e.target.value)}>
               <option value="All">All Genres</option>
               {getGenres().map(g => <option key={g} value={g}>{g}</option>)}
             </select>
+            <select className="border rounded-md px-3 py-2 text-sm max-w-[130px] outline-none" value={pubTypeFilter} onChange={e => setPubTypeFilter(e.target.value)}>
+              <option value="All">All Pub Types</option>
+              {allPubTypes.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <select className="border rounded-md px-3 py-2 text-sm max-w-[130px] outline-none" value={authorFilter} onChange={e => setAuthorFilter(e.target.value)}>
+              <option value="All">All Authors</option>
+              {allAuthors.map(a => <option key={a} value={a}>{a.length > 15 ? a.substring(0,15)+"..." : a}</option>)}
+            </select>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6 max-h-60 overflow-y-auto p-1">
-            {filteredBooks.map((b) => (
-              <label key={b.id} className={`border rounded p-2 flex items-start gap-2 cursor-pointer transition-colors ${selected.includes(b.id) ? 'bg-blue-50 border-blue-400' : 'bg-gray-50'}`}>
-                <input type="checkbox" checked={selected.includes(b.id)} onChange={() => toggle(b.id)} className="mt-1 shrink-0" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6 max-h-64 overflow-y-auto p-1">
+            {filteredBooks.map((b) => {
+              const isChecked = selected.includes(b.id);
+              return (
                 <div 
-                  className="w-8 h-12 rounded-sm shrink-0 bg-cover bg-center shadow-sm"
-                  style={{
-                    backgroundColor: b.color,
-                    backgroundImage: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? `url(${b.coverUrl})` : 'none'
-                  }}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-semibold leading-tight truncate">{b.title}</div>
-                  <div className="text-[10px] text-black mt-1 truncate">{b.author}</div>
+                  key={b.id} 
+                  onClick={() => toggle(b.id)} 
+                  className={`border rounded p-2 flex items-start gap-2 cursor-pointer transition-colors ${isChecked ? 'bg-blue-50 border-blue-400 shadow-sm' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'}`}
+                >
+                  <input 
+                    type="checkbox" 
+                    checked={isChecked} 
+                    onChange={() => {}} 
+                    className="mt-1 shrink-0 pointer-events-none" 
+                  />
+                  <div 
+                    className="w-8 h-12 rounded-sm shrink-0 bg-contain bg-no-repeat bg-center shadow-sm"
+                    style={{
+                      backgroundColor: b.color,
+                      backgroundImage: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? `url(${b.coverUrl})` : 'none'
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold leading-tight truncate text-black">{b.title}</div>
+                    <div className="text-[10px] text-black mt-1 truncate">{b.author}</div>
+                  </div>
                 </div>
-              </label>
-            ))}
+              );
+            })}
           </div>
-          <Button onClick={handleSaveAccess} className="w-full" disabled={selected.length === 0}>
+          <Button onClick={handleSaveAccess} className="w-full">
             Save Changes
           </Button>
         </Modal>
@@ -504,12 +532,17 @@ function TrialsTab({ books, trialRequests, onApproveTrial, onRejectTrial, onRese
 
   function handleOpenEdit(trial) {
     setActiveTrialId(trial.id);
-    setSelected(trial.bookids || books.map(b => b.id));
+    const existing = trial.bookids || trial.bookIds || books.map(b => b.id);
+    setSelected(Array.isArray(existing) ? [...existing] : []);
+    setSearch("");
+    setGenreFilter("All");
+    setPubTypeFilter("All");
+    setAuthorFilter("All");
     setShowEditModal(true);
   }
 
-  function handleSaveEdit() {
-    onEditAccess(activeTrialId, selected);
+  async function handleSaveEdit() {
+    await onEditAccess(activeTrialId, selected);
     setShowEditModal(false);
     setActiveTrialId(null);
     setSelected([]);
@@ -606,22 +639,34 @@ function TrialsTab({ books, trialRequests, onApproveTrial, onRejectTrial, onRese
             </select>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6 max-h-60 overflow-y-auto p-1">
-            {filteredBooks.map((b) => (
-              <label key={b.id} className={`border rounded p-2 flex items-start gap-2 cursor-pointer transition-colors ${selected.includes(b.id) ? 'bg-blue-50 border-blue-400' : 'bg-gray-50'}`}>
-                <input type="checkbox" checked={selected.includes(b.id)} onChange={() => toggle(b.id)} className="mt-1 shrink-0" />
+            {filteredBooks.map((b) => {
+              const isChecked = selected.includes(b.id);
+              return (
                 <div 
-                  className="w-8 h-12 rounded-sm shrink-0 bg-cover bg-center shadow-sm"
-                  style={{
-                    backgroundColor: b.color,
-                    backgroundImage: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? `url(${b.coverUrl})` : 'none'
-                  }}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-semibold leading-tight truncate">{b.title}</div>
-                  <div className="text-[10px] text-black mt-1 truncate">{b.author}</div>
+                  key={b.id} 
+                  onClick={() => toggle(b.id)} 
+                  className={`border rounded p-2 flex items-start gap-2 cursor-pointer transition-colors ${isChecked ? 'bg-blue-50 border-blue-400 shadow-sm' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'}`}
+                >
+                  <input 
+                    type="checkbox" 
+                    checked={isChecked} 
+                    onChange={() => {}} 
+                    className="mt-1 shrink-0 pointer-events-none" 
+                  />
+                  <div 
+                    className="w-8 h-12 rounded-sm shrink-0 bg-contain bg-no-repeat bg-center shadow-sm"
+                    style={{
+                      backgroundColor: b.color,
+                      backgroundImage: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? `url(${b.coverUrl})` : 'none'
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold leading-tight truncate text-black">{b.title}</div>
+                    <div className="text-[10px] text-black mt-1 truncate">{b.author}</div>
+                  </div>
                 </div>
-              </label>
-            ))}
+              );
+            })}
           </div>
           <Button onClick={showApproveModal ? handleConfirmApprove : handleSaveEdit} className="w-full" disabled={selected.length === 0}>
             {showApproveModal ? "Approve Trial" : "Save Changes"}

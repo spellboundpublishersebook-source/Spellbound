@@ -351,14 +351,38 @@ export default function App() {
 
   async function handleEditInstitutionAccess(id, bookIds) {
     try {
-      await supabase.from('licenses').update({ bookids: bookIds }).eq('id', id);
-    } catch(e) { console.error(e); }
+      const { error } = await supabase.from('licenses').update({ bookids: bookIds }).eq('id', id);
+      if (error) {
+        console.error("Error updating institution access in DB:", error);
+        alert("Database error updating access: " + error.message);
+        return;
+      }
+    } catch(e) { 
+      console.error(e); 
+      alert("Error updating access: " + e.message);
+      return;
+    }
+    setLicenses((prev) => prev.map(l => l.id === id ? { ...l, bookIds } : l));
+    if (session && session.id === id) {
+      setSession(prev => ({ ...prev, bookIds }));
+    }
   }
   
   async function handleEditTrialAccess(id, bookIds) {
     try {
-      await supabase.from('trial_requests').update({ bookids: bookIds }).eq('id', id);
+      const { error } = await supabase.from('trial_requests').update({ bookids: bookIds }).eq('id', id);
+      if (error) console.error("Error updating trial in DB:", error);
+      
+      const trial = trialRequests.find(t => t.id === id);
+      if (trial && trial.email) {
+        await supabase.from('readers').update({ bookids: bookIds }).eq('login_id', trial.email);
+        setReaders(prev => prev.map(r => r.loginId === trial.email ? { ...r, bookIds } : r));
+      }
     } catch(e) { console.error(e); }
+    setTrialRequests((prev) => prev.map(t => t.id === id ? { ...t, bookids: bookIds } : t));
+    if (session && (session.id === id || (session.email && trialRequests.find(t => t.id === id)?.email === session.email))) {
+      setSession(prev => ({ ...prev, bookIds }));
+    }
   }
 
   async function handleRejectTrial(id) {
