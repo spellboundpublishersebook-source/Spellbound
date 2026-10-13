@@ -1,8 +1,9 @@
 import { supabase } from "../supabaseClient";
 import React, { useState, useMemo } from "react";
-import { Plus, Trash2, Check, X, Users, UploadCloud, Gift, LayoutGrid, Search, BookOpen, Settings, LayoutTemplate, Mail, AlertTriangle, Key, Activity } from "lucide-react";
+import { Plus, Trash2, Check, X, Users, UploadCloud, Gift, LayoutGrid, Search, BookOpen, Settings, LayoutTemplate, Mail, AlertTriangle, Key, Activity, Eye, Edit3 } from "lucide-react";
 import { palette, fontDisplay, getGenres, setGenres as saveGenres, getPubTypes, setPubTypes as savePubTypes, getCustomHeadings, getHomepageConfig, setHomepageConfig, getPages, setPages } from "../theme";
 import { addMonths, today, daysUntil, genCredentialId, genPassword } from "../data/mockData";
+import { renderEmailHtml, COMPANY_LOGO_URL } from "../email";
 import Button from "../components/Button";
 import { Field, Select, Modal, Badge, StatCard } from "../components/UI";
 import UploaderPanel from "./UploaderPanel";
@@ -1668,6 +1669,7 @@ function EmailsTab({ emailTemplates, onUpdateEmailTemplate }) {
   ];
 
   const [activeTemplate, setActiveTemplate] = useState(DEFAULT_TEMPLATES[0].id);
+  const [showPreview, setShowPreview] = useState(false);
   
   const currentDefault = DEFAULT_TEMPLATES.find(t => t.id === activeTemplate);
   const currentSaved = emailTemplates?.find(t => t.id === activeTemplate);
@@ -1685,56 +1687,160 @@ function EmailsTab({ emailTemplates, onUpdateEmailTemplate }) {
     onUpdateEmailTemplate(activeTemplate, subject, body);
   };
 
+  const sampleVars = {
+    name: "Dr. Eleanor Vance",
+    id: "SPELL-88219",
+    password: "ReadSecure#2026",
+    startDate: "2026-01-15",
+    endDate: "2026-12-31"
+  };
+
+  const preview = useMemo(() => {
+    return renderEmailHtml(subject, body, sampleVars);
+  }, [subject, body]);
+
   return (
-    <div className="grid md:grid-cols-4 gap-6">
-      <div className="md:col-span-1 rounded-md border bg-white p-4 border-gray-200">
-        <h3 className="font-semibold mb-4 text-sm uppercase tracking-wider text-black">Available Templates</h3>
-        <div className="flex flex-col gap-2">
-          {DEFAULT_TEMPLATES.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setActiveTemplate(t.id)}
-              className={`text-left px-3 py-2 rounded text-sm ${activeTemplate === t.id ? 'bg-[#111] text-white' : 'hover:bg-gray-100 text-black'}`}
-            >
-              {t.name}
-            </button>
-          ))}
+    <div className="space-y-6">
+      {/* EmailJS Setup Notice */}
+      <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-950 text-xs leading-relaxed flex flex-col md:flex-row gap-4 items-start justify-between shadow-sm">
+        <div className="space-y-1 max-w-2xl">
+          <div className="font-bold flex items-center gap-1.5 text-sm text-amber-900">
+            <Mail size={16} /> EmailJS Template Configuration Note
+          </div>
+          <p>
+            In your EmailJS dashboard (<strong>emailjs.com</strong> &rarr; Email Templates &rarr; <code>template_cncozac</code>), make sure your message variable uses <strong>triple curly braces</strong>:
+          </p>
+          <div className="my-1.5 p-2 bg-white rounded border border-amber-300 font-mono text-xs inline-flex items-center gap-2">
+            <span className="text-red-500 line-through">{"{{message}}"}</span>
+            <span className="text-gray-400">&rarr;</span>
+            <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">{"{{{message}}}"}</span>
+          </div>
+          <p className="text-gray-600">
+            Double braces force EmailJS to escape HTML, showing raw code tags like <code>&lt;div&gt;</code> in the email. Triple braces <code>{"{{{message}}}"}</code> allow EmailJS to properly render the card design and company logo.
+          </p>
         </div>
-        <div className="mt-8 text-xs text-black bg-gray-50 p-3 rounded border">
-          <strong>Available Variables:</strong>
-          <ul className="mt-2 space-y-1">
-            <li><code>{`{{name}}`}</code> - User/Institution Name</li>
-            <li><code>{`{{id}}`}</code> - Login ID</li>
-            <li><code>{`{{password}}`}</code> - Password</li>
-            <li><code>{`{{startDate}}`}</code> - Purchase Date</li>
-            <li><code>{`{{endDate}}`}</code> - Expiration Date</li>
-          </ul>
+        <div className="flex-shrink-0 bg-white p-3 rounded-lg border border-amber-200 text-center">
+          <img src={COMPANY_LOGO_URL} alt="Company Logo" className="h-10 w-auto mx-auto mb-1 object-contain" />
+          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Company Logo Active</span>
         </div>
       </div>
-      <div className="md:col-span-3">
-        <div className="bg-white rounded-md border p-6 border-gray-200">
-          <h2 className="text-xl font-bold mb-6" style={fontDisplay}>Edit {currentDefault?.name} Email</h2>
-          
-          <div className="mb-4">
-            <label className="block text-sm font-semibold mb-1.5 text-black">Subject Line</label>
-            <input 
-              value={subject} 
-              onChange={e => setSubject(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded border text-sm outline-none bg-gray-50 focus:bg-white"
-            />
+
+      <div className="grid md:grid-cols-4 gap-6">
+        <div className="md:col-span-1 rounded-md border bg-white p-4 border-gray-200">
+          <h3 className="font-semibold mb-4 text-sm uppercase tracking-wider text-black">Available Templates</h3>
+          <div className="flex flex-col gap-2">
+            {DEFAULT_TEMPLATES.map(t => (
+              <button
+                key={t.id}
+                onClick={() => setActiveTemplate(t.id)}
+                className={`text-left px-3 py-2 rounded text-sm transition-colors ${activeTemplate === t.id ? 'bg-[#111] text-white font-bold' : 'hover:bg-gray-100 text-black'}`}
+              >
+                {t.name}
+              </button>
+            ))}
           </div>
-          
-          <div className="mb-6">
-            <label className="block text-sm font-semibold mb-1.5 text-black">Email Body</label>
-            <textarea 
-              value={body} 
-              onChange={e => setBody(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded border text-sm outline-none bg-gray-50 focus:bg-white h-64"
-            />
+          <div className="mt-8 text-xs text-black bg-gray-50 p-3 rounded border">
+            <strong>Available Variables:</strong>
+            <ul className="mt-2 space-y-1">
+              <li><code>{`{{name}}`}</code> - User/Institution Name</li>
+              <li><code>{`{{id}}`}</code> - Login ID</li>
+              <li><code>{`{{password}}`}</code> - Password</li>
+              <li><code>{`{{startDate}}`}</code> - Purchase Date</li>
+              <li><code>{`{{endDate}}`}</code> - Expiration Date</li>
+            </ul>
           </div>
-          
-          <div className="flex justify-end">
-            <Button onClick={handleSave}><Check size={16} /> Save Template</Button>
+        </div>
+
+        <div className="md:col-span-3">
+          <div className="bg-white rounded-md border p-6 border-gray-200">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-gray-100">
+              <div>
+                <h2 className="text-xl font-bold" style={fontDisplay}>Edit {currentDefault?.name} Email</h2>
+                <p className="text-xs text-gray-500 mt-0.5">Customize email messaging dispatched via EmailJS.</p>
+              </div>
+
+              {/* Toggle Edit vs Live Preview */}
+              <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg border border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(false)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    !showPreview ? "bg-white text-black shadow-sm font-bold" : "text-gray-600 hover:text-black"
+                  }`}
+                >
+                  <Edit3 size={14} /> Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(true)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    showPreview ? "bg-white text-black shadow-sm font-bold" : "text-gray-600 hover:text-black"
+                  }`}
+                >
+                  <Eye size={14} /> Preview with Logo
+                </button>
+              </div>
+            </div>
+
+            {!showPreview ? (
+              <>
+                <div className="mb-4">
+                  <label className="block text-sm font-semibold mb-1.5 text-black">Subject Line</label>
+                  <input 
+                    value={subject} 
+                    onChange={e => setSubject(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded border text-sm outline-none bg-gray-50 focus:bg-white"
+                  />
+                </div>
+                
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold mb-1.5 text-black">Email Body</label>
+                  <textarea 
+                    value={body} 
+                    onChange={e => setBody(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded border text-sm outline-none bg-gray-50 focus:bg-white h-64 font-mono text-xs leading-relaxed"
+                  />
+                </div>
+                
+                <div className="flex justify-between items-center pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowPreview(true)}
+                    className="text-xs font-semibold text-gray-600 hover:text-black flex items-center gap-1 cursor-pointer"
+                  >
+                    <Eye size={14} /> Preview formatted email
+                  </button>
+                  <Button onClick={handleSave}><Check size={16} /> Save Template</Button>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border text-xs text-gray-600">
+                  <span><strong>Subject:</strong> {preview.subject}</span>
+                  <span className="text-gray-400">Sample variables rendered</span>
+                </div>
+
+                {/* Email Preview Frame */}
+                <div className="rounded-xl border border-gray-200 overflow-hidden bg-gray-100 shadow-inner p-2 sm:p-4 flex justify-center">
+                  <iframe
+                    title="Email Preview"
+                    srcDoc={preview.html}
+                    className="w-full max-w-[620px] h-[520px] border-0 rounded-lg bg-white shadow-sm"
+                  />
+                </div>
+
+                <div className="flex justify-between items-center pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowPreview(false)}
+                    className="text-xs font-semibold text-gray-600 hover:text-black flex items-center gap-1 cursor-pointer"
+                  >
+                    <Edit3 size={14} /> Back to editor
+                  </button>
+                  <Button onClick={handleSave}><Check size={16} /> Save Template</Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
