@@ -6,6 +6,7 @@ import {
 import { fontDisplay, fontBody } from "../theme";
 import { daysUntil } from "../data/mockData";
 import AnimatedSweepButton from "../components/AnimatedSweepButton";
+import BookCover from "../components/BookCover";
 
 // Wiley-Style Animated Details Button with Counter-Translation Mask
 function WileyDetailsButton({ onClick, className = "", fullWidth = false }) {
@@ -97,13 +98,7 @@ function CategoryCarouselRow({ genre, books, onOpenBook, onSelectGenre }) {
                 onClick={() => onOpenBook(b.id)}
                 className="w-full aspect-[1/1.4] rounded bg-white shadow-sm border border-gray-200 overflow-hidden relative mb-3 cursor-pointer group/card"
               >
-                <div
-                  className="w-full h-full bg-[length:100%_100%] bg-center bg-no-repeat transition-transform duration-300 group-hover/card:scale-105"
-                  style={{
-                    backgroundColor: b.color || "#f3f4f6",
-                    backgroundImage: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? `url(${b.coverUrl})` : "none"
-                  }}
-                />
+                <BookCover book={b} className="w-full h-full transition-transform duration-300 group-hover/card:scale-105" />
               </div>
 
               {/* Badges / Type */}
@@ -416,9 +411,9 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                   <div className="flex w-full transition-transform duration-500 ease-out" style={{ transform: `translateX(-${curatedIndex * 100}%)` }}>
                     {curatedBooks.map((b) => (
                       <div key={b.id} className="w-full flex-shrink-0 flex flex-col md:flex-row gap-8 items-center bg-gray-50 p-6 rounded-xl border border-gray-200">
-                        <div
-                          className="w-32 md:w-48 aspect-[1/1.4] rounded-lg shadow-md bg-[length:100%_100%] bg-center bg-no-repeat flex-shrink-0"
-                          style={{ backgroundColor: b.color || '#333', backgroundImage: b.coverUrl ? `url(${b.coverUrl})` : 'none' }}
+                        <BookCover 
+                          book={b} 
+                          className="w-32 md:w-48 aspect-[1/1.4] rounded-lg shadow-md flex-shrink-0" 
                         />
                         <div className="flex-1 text-left">
                           <span className="text-[#D4A017] text-xs font-bold uppercase tracking-wider mb-2 block">{b.genre}</span>
@@ -763,13 +758,7 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                               onClick={() => onOpenBook(b.id)}
                               className="w-full aspect-[1/1.4] rounded bg-white shadow-sm border border-gray-200 overflow-hidden relative mb-3 cursor-pointer group/card"
                             >
-                              <div
-                                className="w-full h-full bg-[length:100%_100%] bg-center bg-no-repeat transition-transform duration-300 group-hover/card:scale-105"
-                                style={{
-                                  backgroundColor: b.color || "#f3f4f6",
-                                  backgroundImage: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? `url(${b.coverUrl})` : "none"
-                                }}
-                              />
+                              <BookCover book={b} className="w-full h-full transition-transform duration-300 group-hover/card:scale-105" />
                             </div>
 
                             {/* Badges / Type */}
@@ -821,13 +810,7 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                               onClick={() => onOpenBook(b.id)}
                               className="w-36 sm:w-44 aspect-[1/1.4] bg-white rounded shadow-sm border border-gray-200 overflow-hidden flex-shrink-0 cursor-pointer group/card"
                             >
-                              <div
-                                className="w-full h-full bg-[length:100%_100%] bg-center bg-no-repeat transition-transform duration-300 group-hover/card:scale-105"
-                                style={{
-                                  backgroundColor: b.color || "#f3f4f6",
-                                  backgroundImage: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? `url(${b.coverUrl})` : "none"
-                                }}
-                              />
+                              <BookCover book={b} className="w-full h-full transition-transform duration-300 group-hover/card:scale-105" />
                             </div>
 
                             {/* Right Info */}

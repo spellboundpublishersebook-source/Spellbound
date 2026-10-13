@@ -4,24 +4,7 @@ import { fontDisplay, fontBody } from "../theme";
 import BookLoader from "../components/BookLoader";
 import AnimatedSweepButton from "../components/AnimatedSweepButton";
 import { Modal } from "../components/UI";
-
-const BookCover = ({ book, className = "" }) => {
-  const hasCover = book.coverUrl && book.coverUrl !== "null" && book.coverUrl !== "undefined" && book.coverUrl.trim() !== "";
-  return (
-    <div 
-      className={`relative flex flex-col items-center justify-center p-6 text-center overflow-hidden shadow-2xl bg-[length:100%_100%] bg-center bg-no-repeat ${className}`} 
-      style={{ backgroundColor: hasCover ? 'transparent' : book.color, backgroundImage: hasCover ? `url(${book.coverUrl})` : 'none' }}
-    >
-      {!hasCover && (
-        <>
-          <h3 className="text-white font-bold leading-tight z-10 text-2xl md:text-3xl" style={{ ...fontDisplay, textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>{book.title}</h3>
-          <p className="text-white/90 text-lg mt-4 z-10 font-semibold">{book.author}</p>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-80"></div>
-        </>
-      )}
-    </div>
-  );
-};
+import BookCover from "../components/BookCover";
 
 export default function BookDetailsPage({ book, onNavigate, session }) {
   React.useEffect(() => {
