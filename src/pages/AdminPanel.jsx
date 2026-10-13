@@ -24,6 +24,7 @@ const TABS = [
 export default function AdminPanel({
   books, licenses, uploaders, trialRequests, readers = [], subscribers = [], emailTemplates, featuredAuthors,
   onCreateLicense, onRevokeLicense, onToggleLicenseStatus, onEditInstitutionAccess,
+  onCreateReader, onRevokeReader, onToggleReaderStatus, onEditReaderAccess, onResendReaderEmail,
   onAddUploader, onRemoveUploader,
   onApproveTrial, onRejectTrial, onEditTrialAccess, onResendTrialEmail, onResendInstitutionEmail, onUpdateEmailTemplate,
   onAddFeaturedAuthor, onRemoveFeaturedAuthor,
@@ -74,7 +75,15 @@ export default function AdminPanel({
           <InstitutionsTab books={books} licenses={licenses} onCreateLicense={onCreateLicense} onRevokeLicense={onRevokeLicense} onToggleLicenseStatus={onToggleLicenseStatus} onResendEmail={onResendInstitutionEmail} onEditAccess={onEditInstitutionAccess} />
         )}
         {tab === "readers" && (
-          <ReadersTab books={books} readers={readers} />
+          <ReadersTab
+            books={books}
+            readers={readers}
+            onCreateReader={onCreateReader}
+            onRevokeReader={onRevokeReader}
+            onToggleReaderStatus={onToggleReaderStatus}
+            onResendEmail={onResendReaderEmail}
+            onEditAccess={onEditReaderAccess}
+          />
         )}
         {tab === "uploaders" && (
           <UploadersTab uploaders={uploaders} onAddUploader={onAddUploader} onRemoveUploader={onRemoveUploader} />
@@ -392,40 +401,370 @@ function InstitutionsTab({ books, licenses, onCreateLicense, onRevokeLicense, on
 }
 
 // ---------------------------------------------------------------------------
-function ReadersTab({ readers }) {
+function ReadersTab({
+  books,
+  readers = [],
+  onCreateReader,
+  onRevokeReader,
+  onToggleReaderStatus,
+  onResendEmail,
+  onEditAccess
+}) {
+  const [showForm, setShowForm] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [price, setPrice] = useState("");
+  const [startDate, setStartDate] = useState(today());
+  const [duration, setDuration] = useState(12);
+  const [customId, setCustomId] = useState("");
+  const [customPassword, setCustomPassword] = useState("");
+  const [selected, setSelected] = useState([]);
+  const [search, setSearch] = useState("");
+  const [genreFilter, setGenreFilter] = useState("All");
+  const [pubTypeFilter, setPubTypeFilter] = useState("All");
+  const [authorFilter, setAuthorFilter] = useState("All");
+  const [issuedCreds, setIssuedCreds] = useState(null);
+  const [isTest, setIsTest] = useState(false);
+
+  const [editReaderId, setEditReaderId] = useState(null);
+  const [showEditAccessModal, setShowEditAccessModal] = useState(false);
+
+  const filteredBooks = useMemo(() => books.filter((b) =>
+    (genreFilter === "All" || b.genre === genreFilter) &&
+    (pubTypeFilter === "All" || b.pubType === pubTypeFilter) &&
+    (authorFilter === "All" || b.author === authorFilter) &&
+    ((b.title || "").toLowerCase().includes((search || "").toLowerCase()) || (b.author || "").toLowerCase().includes((search || "").toLowerCase()))
+  ), [books, search, genreFilter, pubTypeFilter, authorFilter]);
+
+  const allAuthors = Array.from(new Set(books.map(b => b.author).filter(Boolean))).sort();
+  const allPubTypes = Array.from(new Set(books.map(b => b.pubType).filter(Boolean))).sort();
+
+  function toggle(id) {
+    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  }
+
+  function openEditAccess(reader) {
+    setEditReaderId(reader.id);
+    const existing = reader.bookIds || reader.bookids || [];
+    setSelected(Array.isArray(existing) ? [...existing] : (existing === "all" ? books.map(b => b.id) : []));
+    setSearch("");
+    setGenreFilter("All");
+    setPubTypeFilter("All");
+    setAuthorFilter("All");
+    setShowEditAccessModal(true);
+  }
+
+  async function handleSaveAccess() {
+    if (onEditAccess && editReaderId) {
+      await onEditAccess(editReaderId, selected);
+    }
+    setShowEditAccessModal(false);
+    setEditReaderId(null);
+    setSelected([]);
+  }
+
+  function handleCreate(e) {
+    e.preventDefault();
+    const id = customId.trim() || genCredentialId(name.slice(0, 3).toUpperCase() || "USR");
+    const pass = customPassword.trim() || genPassword();
+
+    let actualStart, actualEnd;
+    if (isTest) {
+      const now = new Date();
+      actualStart = now.toISOString();
+      actualEnd = new Date(now.getTime() + 5 * 60000).toISOString();
+    } else {
+      actualStart = startDate;
+      actualEnd = addMonths(startDate, duration);
+    }
+
+    if (onCreateReader) {
+      onCreateReader({
+        id, loginId: id, password: pass, name, email,
+        bookIds: selected, price: Number(price) || 0,
+        startDate: actualStart, endDate: actualEnd, accountType: "individual"
+      });
+    }
+    setIssuedCreds({ id, password: pass, endDate: actualEnd });
+    setName(""); setEmail(""); setPrice(""); setSelected([]); setStartDate(today()); setDuration(12); setIsTest(false); setCustomId(""); setCustomPassword("");
+  }
+
   return (
     <div>
       <div className="flex justify-between items-center mb-5">
-        <h3 className="text-lg font-bold text-black">Individual Users / Active Trials</h3>
+        <h3 className="text-lg font-bold text-black">Individual Users / Orders</h3>
+        <Button onClick={() => setShowForm(true)}>
+          <Plus size={16} strokeWidth={2} /> Create individual user / order
+        </Button>
       </div>
+
       <div className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              {["Name", "Email", "Login ID", "Password", "Type", "Expiration"].map((h) => (
+              {["User", "Login ID", "Password", "Books", "Price", "Term", "Status", ""].map((h) => (
                 <th key={h} className="text-left px-4 py-3 font-bold text-black uppercase tracking-wider text-[11px]">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {readers.map((r) => (
-              <tr key={r.id} className="border-t border-gray-100 bg-white hover:bg-gray-50 transition-colors">
-                <td className="px-4 py-3 font-semibold">{r.name || "—"}</td>
-                <td className="px-4 py-3 text-black">{r.email || "—"}</td>
-                <td className="px-4 py-3"><code>{r.loginId}</code></td>
-                <td className="px-4 py-3"><code>{r.password}</code></td>
-                <td className="px-4 py-3"><Badge tone={r.accountType === 'free_trial' ? 'neutral' : 'good'}>{r.accountType === 'free_trial' ? 'Free Trial' : 'Paid'}</Badge></td>
-                <td className="px-4 py-3">{new Date(r.endDate).toLocaleDateString()}</td>
-              </tr>
-            ))}
+            {readers.map((r) => {
+              const left = daysUntil(r.endDate);
+              const expired = left < 0 || r.status === "revoked" || r.status === "expired";
+              const soon = left <= 15 && !expired;
+              const isOffline = r.status === "offline";
+              const bookCount = Array.isArray(r.bookIds) ? r.bookIds.length : (r.bookIds === "all" ? books.length : 0);
+              return (
+                <tr key={r.id} className="border-t border-gray-100 bg-white hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3">
+                    <div className="font-semibold text-black">{r.name || "—"}</div>
+                    {r.email && <div className="text-xs text-gray-500">{r.email}</div>}
+                  </td>
+                  <td className="px-4 py-3"><code>{r.loginId}</code></td>
+                  <td className="px-4 py-3"><code>{r.password}</code></td>
+                  <td className="px-4 py-3">{bookCount} titles</td>
+                  <td className="px-4 py-3">₹{Number(r.price || 0).toLocaleString()}</td>
+                  <td className="px-4 py-3 text-xs">
+                    {r.startDate ? r.startDate.slice(0, 10) : "—"} → {r.endDate ? r.endDate.slice(0, 10) : "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    {isOffline ? (
+                      <Badge tone="bad">Offline</Badge>
+                    ) : expired ? (
+                      <Badge tone="bad">Expired</Badge>
+                    ) : soon ? (
+                      <Badge tone="warn">{left}d left</Badge>
+                    ) : (
+                      <Badge tone="good">Active</Badge>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 flex gap-3 items-center h-full flex-wrap">
+                    {r.email && (
+                      <button
+                        onClick={() => onResendEmail && onResendEmail(r.id)}
+                        className="text-xs font-semibold flex items-center gap-1 text-[#D4A017] hover:text-[#b8860b] cursor-pointer"
+                      >
+                        <Mail size={12} /> Resend Email
+                      </button>
+                    )}
+                    <button
+                      onClick={() => openEditAccess(r)}
+                      className="text-xs font-semibold text-black uppercase tracking-wider cursor-pointer hover:underline"
+                    >
+                      Edit Access
+                    </button>
+                    {!expired && (
+                      <button
+                        onClick={() => onToggleReaderStatus && onToggleReaderStatus(r.id, !isOffline)}
+                        className={`text-[11px] font-semibold uppercase tracking-wider cursor-pointer ${
+                          isOffline ? "text-green-600 hover:text-green-700" : "text-yellow-600 hover:text-yellow-700"
+                        }`}
+                      >
+                        {isOffline ? "Set Online" : "Set Offline"}
+                      </button>
+                    )}
+                    {!expired && !isOffline && (
+                      <button
+                        onClick={() => onRevokeReader && onRevokeReader(r.id)}
+                        className="text-[11px] font-semibold uppercase tracking-wider text-red-600 hover:text-red-700 cursor-pointer"
+                      >
+                        Revoke
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
             {readers.length === 0 && (
               <tr>
-                <td colSpan="6" className="px-4 py-8 text-center text-black">No individual users yet.</td>
+                <td colSpan={8} className="px-4 py-8 text-center text-black">No individual users yet.</td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
+
+      {showForm && (
+        <Modal title="Create individual user / order" onClose={() => { setShowForm(false); setIssuedCreds(null); }} wide>
+          {issuedCreds ? (
+            <div>
+              <p className="text-sm mb-4 text-black">
+                Credentials issued successfully. Share these with the user or check email:
+              </p>
+              <div className="rounded-lg bg-gray-50 p-4 border border-gray-200 mb-4 space-y-2 text-sm font-mono text-black">
+                <div><strong>Login ID:</strong> {issuedCreds.id}</div>
+                <div><strong>Password:</strong> {issuedCreds.password}</div>
+                <div><strong>Expires:</strong> {issuedCreds.endDate.slice(0, 10)}</div>
+              </div>
+              <Button onClick={() => { setShowForm(false); setIssuedCreds(null); }} className="w-full">
+                Done
+              </Button>
+            </div>
+          ) : (
+            <form onSubmit={handleCreate} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Full name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="e.g. John Doe" />
+                <Field label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="john@example.com" />
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <Field label="Price (₹)" type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="e.g. 999" />
+                <Field label="Start date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
+                <Select label="Duration" value={duration} onChange={(e) => setDuration(Number(e.target.value))}>
+                  <option value={1}>1 month</option>
+                  <option value={3}>3 months</option>
+                  <option value={6}>6 months</option>
+                  <option value={12}>12 months (1 yr)</option>
+                  <option value={24}>24 months (2 yr)</option>
+                  <option value={36}>36 months (3 yr)</option>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Custom Login ID (optional)" value={customId} onChange={(e) => setCustomId(e.target.value)} placeholder="Auto-generated if empty" />
+                <Field label="Custom Password (optional)" value={customPassword} onChange={(e) => setCustomPassword(e.target.value)} placeholder="Auto-generated if empty" />
+              </div>
+
+              <div className="flex items-center gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <input type="checkbox" id="testReaderOrder" checked={isTest} onChange={e => setIsTest(e.target.checked)} className="cursor-pointer" />
+                <label htmlFor="testReaderOrder" className="text-xs font-semibold text-yellow-800 cursor-pointer">
+                  ⚡ 5-Minute Test Order (for instant expiration testing)
+                </label>
+              </div>
+
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-sm font-semibold text-black">
+                  Select books for this user — {selected.length} of {books.length} selected
+                </span>
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => setSelected(Array.from(new Set([...selected, ...filteredBooks.map(b => b.id)])))} className="text-xs text-blue-600 hover:underline font-semibold">Select Filtered</button>
+                  <button type="button" onClick={() => setSelected([])} className="text-xs text-red-600 hover:underline font-semibold">Clear All</button>
+                </div>
+              </div>
+              <div className="space-y-2 mb-3">
+                <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3">
+                  <Search size={14} className="text-black flex-shrink-0" />
+                  <input
+                    value={search} onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search titles or authors…"
+                    className="flex-1 py-2.5 text-sm outline-none bg-transparent"
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <select value={genreFilter} onChange={(e) => setGenreFilter(e.target.value)} className="rounded-lg border border-gray-200 px-2 py-2 text-xs text-black bg-white">
+                    <option value="All">All Genres</option>
+                    {getGenres().map((g) => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                  <select value={pubTypeFilter} onChange={(e) => setPubTypeFilter(e.target.value)} className="rounded-lg border border-gray-200 px-2 py-2 text-xs text-black bg-white">
+                    <option value="All">All Pub Types</option>
+                    {allPubTypes.map((p) => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                  <select value={authorFilter} onChange={(e) => setAuthorFilter(e.target.value)} className="rounded-lg border border-gray-200 px-2 py-2 text-xs text-black bg-white">
+                    <option value="All">All Authors</option>
+                    {allAuthors.map((a) => <option key={a} value={a}>{a.length > 18 ? a.substring(0,18)+"…" : a}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-gray-200 max-h-56 overflow-y-auto mb-4">
+                {filteredBooks.map((b) => (
+                  <label key={b.id} className="flex items-center gap-3 px-3 py-2.5 text-sm border-b border-gray-100 cursor-pointer hover:bg-gray-50">
+                    <input type="checkbox" checked={selected.includes(b.id)} onChange={() => toggle(b.id)} />
+                    <span 
+                      className="w-5 h-7 rounded-sm flex-shrink-0 bg-cover bg-center shadow-sm" 
+                      style={{ 
+                        backgroundColor: b.color,
+                        backgroundImage: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? `url(${b.coverUrl})` : 'none'
+                      }} 
+                    />
+                    <span className="flex-1 text-black font-medium">{b.title}</span>
+                    <span className="text-gray-500 text-xs">{b.genre}</span>
+                  </label>
+                ))}
+                {filteredBooks.length === 0 && <div className="px-3 py-6 text-sm text-center text-black">No matches found.</div>}
+              </div>
+
+              <Button type="submit" className="w-full" disabled={selected.length === 0}>
+                Generate credentials &amp; create individual order
+              </Button>
+            </form>
+          )}
+        </Modal>
+      )}
+
+      {showEditAccessModal && (
+        <Modal title="Edit Individual User Access" onClose={() => setShowEditAccessModal(false)} wide>
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="font-semibold text-sm">Select Books ({selected.length} chosen of {books.length} total)</h3>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setSelected(books.map(b => b.id))} className="text-xs font-semibold text-blue-600 hover:underline">Select All</button>
+              {search || genreFilter !== "All" || pubTypeFilter !== "All" || authorFilter !== "All" ? (
+                <button type="button" onClick={() => setSelected(Array.from(new Set([...selected, ...filteredBooks.map(b => b.id)])))} className="text-xs font-semibold text-blue-600 hover:underline">Select Filtered</button>
+              ) : null}
+              <button type="button" onClick={() => setSelected([])} className="text-xs font-semibold text-red-600 hover:underline">Clear All</button>
+            </div>
+          </div>
+
+          <div className="space-y-2 mb-3">
+            <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3">
+              <Search size={14} className="text-black flex-shrink-0" />
+              <input
+                value={search} onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search titles or authors…"
+                className="flex-1 py-2 text-sm outline-none bg-transparent"
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <select value={genreFilter} onChange={(e) => setGenreFilter(e.target.value)} className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs text-black bg-white">
+                <option value="All">All Genres</option>
+                {getGenres().map((g) => <option key={g} value={g}>{g}</option>)}
+              </select>
+              <select value={pubTypeFilter} onChange={(e) => setPubTypeFilter(e.target.value)} className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs text-black bg-white">
+                <option value="All">All Pub Types</option>
+                {allPubTypes.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+              <select value={authorFilter} onChange={(e) => setAuthorFilter(e.target.value)} className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs text-black bg-white">
+                <option value="All">All Authors</option>
+                {allAuthors.map((a) => <option key={a} value={a}>{a.length > 18 ? a.substring(0,18)+"…" : a}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6 max-h-60 overflow-y-auto p-1">
+            {filteredBooks.map((b) => {
+              const isChecked = selected.includes(b.id);
+              return (
+                <div 
+                  key={b.id} 
+                  onClick={() => toggle(b.id)} 
+                  className={`border rounded p-2 flex items-start gap-2 cursor-pointer transition-colors ${isChecked ? 'bg-blue-50 border-blue-400 shadow-sm' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'}`}
+                >
+                  <input 
+                    type="checkbox" 
+                    checked={isChecked} 
+                    onChange={() => {}} 
+                    className="mt-1 shrink-0 pointer-events-none" 
+                  />
+                  <div 
+                    className="w-8 h-12 rounded-sm shrink-0 bg-contain bg-no-repeat bg-center shadow-sm"
+                    style={{
+                      backgroundColor: b.color,
+                      backgroundImage: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? `url(${b.coverUrl})` : 'none'
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold leading-tight truncate text-black">{b.title}</div>
+                    <div className="text-[10px] text-black mt-1 truncate">{b.author}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <Button onClick={handleSaveAccess} className="w-full">
+            Save Changes
+          </Button>
+        </Modal>
+      )}
     </div>
   );
 }

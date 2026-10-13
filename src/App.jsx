@@ -166,7 +166,17 @@ export default function App() {
 
       const { data: readData } = await supabase.from('readers').select('*');
       if (readData && readData.length > 0) {
-        setReaders(readData.map(r => ({ ...r, loginId: r.login_id, accountType: r.account_type, bookIds: r.bookids || [], startDate: r.startdate, endDate: r.enddate })));
+        setReaders(readData.map(r => ({
+          ...r,
+          loginId: r.login_id,
+          accountType: r.account_type,
+          bookIds: r.bookids || [],
+          startDate: r.startdate,
+          endDate: r.enddate,
+          status: r.status || (daysUntil(r.enddate) < 0 ? 'expired' : 'active'),
+          price: Number(r.price || 0),
+          type: r.type || 'individual'
+        })));
       }
 
       const { data: subData } = await supabase.from('subscribers').select('*');
@@ -201,9 +211,29 @@ export default function App() {
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'readers' }, (payload) => {
         if (payload.eventType === 'INSERT') {
-          setReaders(prev => [...prev, { ...payload.new, loginId: payload.new.login_id, accountType: payload.new.account_type, bookIds: payload.new.bookids || [], startDate: payload.new.startdate, endDate: payload.new.enddate }]);
+          setReaders(prev => [...prev, {
+            ...payload.new,
+            loginId: payload.new.login_id,
+            accountType: payload.new.account_type,
+            bookIds: payload.new.bookids || [],
+            startDate: payload.new.startdate,
+            endDate: payload.new.enddate,
+            status: payload.new.status || (daysUntil(payload.new.enddate) < 0 ? 'expired' : 'active'),
+            price: Number(payload.new.price || 0),
+            type: payload.new.type || 'individual'
+          }]);
         } else if (payload.eventType === 'UPDATE') {
-          setReaders(prev => prev.map(r => r.id === payload.new.id ? { ...payload.new, loginId: payload.new.login_id, accountType: payload.new.account_type, bookIds: payload.new.bookids || [], startDate: payload.new.startdate, endDate: payload.new.enddate } : r));
+          setReaders(prev => prev.map(r => r.id === payload.new.id ? {
+            ...payload.new,
+            loginId: payload.new.login_id,
+            accountType: payload.new.account_type,
+            bookIds: payload.new.bookids || [],
+            startDate: payload.new.startdate,
+            endDate: payload.new.enddate,
+            status: payload.new.status || (daysUntil(payload.new.enddate) < 0 ? 'expired' : 'active'),
+            price: Number(payload.new.price || 0),
+            type: payload.new.type || 'individual'
+          } : r));
         } else if (payload.eventType === 'DELETE') {
           setReaders(prev => prev.filter(r => r.id !== payload.old.id));
         }
@@ -276,7 +306,10 @@ export default function App() {
     // Check readers (individual trial / paid accounts)
     const reader = readers.find(r => r.loginId === id && r.password === password);
     if (reader) {
-      if (daysUntil(reader.endDate) < 0) {
+      if (reader.status === "offline") {
+        return { ok: false, message: "Your account has been temporarily suspended." };
+      }
+      if (reader.status === "revoked" || daysUntil(reader.endDate) < 0) {
         return { ok: false, message: "Your access has expired." };
       }
       setSession({
@@ -496,6 +529,91 @@ export default function App() {
     setLicenses((prev) => prev.map((l) => (l.id === id ? { ...l, type: newType } : l)));
   }
 
+  async function handleCreateReader(readerData) {
+    try {
+      const dbRow = {
+        login_id: readerData.loginId,
+        password: readerData.password,
+        name: readerData.name,
+        email: readerData.email || null,
+        account_type: readerData.accountType || "individual",
+        bookids: readerData.bookIds || [],
+        startdate: readerData.startDate,
+        enddate: readerData.endDate,
+        status: "active",
+        price: Number(readerData.price) || 0,
+        type: "individual"
+      };
+      const { data, error } = await supabase.from('readers').insert([dbRow]).select();
+      if (error) { console.error(error); alert("Database error: " + error.message); return; }
+
+      if (readerData.email) {
+        import('./email').then(({ sendIndividualReaderEmail }) => {
+          sendIndividualReaderEmail(emailTemplates, readerData.email, readerData.name, readerData.loginId, readerData.password, readerData.startDate, readerData.endDate);
+        });
+      }
+
+      const inserted = data && data[0]
+        ? { ...data[0], loginId: data[0].login_id, accountType: data[0].account_type, bookIds: data[0].bookids || [], startDate: data[0].startdate, endDate: data[0].enddate, status: "active", price: Number(data[0].price || 0) }
+        : { ...readerData, id: `r_${Date.now()}`, status: "active" };
+      setReaders(prev => [...prev, inserted]);
+    } catch (e) {
+      console.error("Error creating reader:", e);
+      alert("Database error: " + e.message);
+    }
+  }
+
+  async function handleEditReaderAccess(readerId, bookIds) {
+    try {
+      const { error } = await supabase.from('readers').update({ bookids: bookIds }).eq('id', readerId);
+      if (error) { console.error(error); alert("Database error: " + error.message); return; }
+      setReaders(prev => prev.map(r => r.id === readerId ? { ...r, bookIds } : r));
+      alert("Reader access updated successfully!");
+    } catch (e) {
+      console.error("Error updating reader access:", e);
+      alert("Failed to update access: " + e.message);
+    }
+  }
+
+  async function handleToggleReaderStatus(readerId, isOffline) {
+    const newStatus = isOffline ? "offline" : "active";
+    try {
+      const { error } = await supabase.from('readers').update({ status: newStatus }).eq('id', readerId);
+      if (error) { console.error(error); alert("Database error: " + error.message); return; }
+      setReaders(prev => prev.map(r => r.id === readerId ? { ...r, status: newStatus } : r));
+    } catch (e) {
+      console.error("Error toggling reader status:", e);
+      alert("Database error: " + e.message);
+    }
+  }
+
+  async function handleRevokeReader(readerId) {
+    try {
+      const { error } = await supabase.from('readers').update({ enddate: today(), status: "revoked" }).eq('id', readerId);
+      if (error) { console.error(error); alert("Database error: " + error.message); return; }
+      setReaders(prev => prev.map(r => r.id === readerId ? { ...r, endDate: today(), status: "revoked" } : r));
+    } catch (e) {
+      console.error("Error revoking reader:", e);
+      alert("Database error: " + e.message);
+    }
+  }
+
+  async function handleResendReaderEmail(readerId) {
+    const reader = readers.find(r => r.id === readerId);
+    if (!reader || !reader.email) {
+      alert("No email address saved for this user.");
+      return;
+    }
+    try {
+      const { sendIndividualReaderEmail } = await import('./email');
+      await sendIndividualReaderEmail(emailTemplates, reader.email, reader.name, reader.loginId, reader.password, reader.startDate, reader.endDate);
+      alert("Email resent successfully!");
+    } catch (e) {
+      console.error("Error resending email:", e);
+      alert("Failed to resend email.");
+    }
+  }
+
   async function handleAddUploader(u) {
     try {
       const { error } = await supabase.from('uploaders').insert([u]);
@@ -690,6 +808,8 @@ export default function App() {
           featuredAuthors={featuredAuthors}
           onCreateLicense={handleCreateLicense} onRevokeLicense={handleRevokeLicense} onToggleLicenseStatus={handleToggleLicenseStatus}
           onEditInstitutionAccess={handleEditInstitutionAccess}
+          onCreateReader={handleCreateReader} onRevokeReader={handleRevokeReader} onToggleReaderStatus={handleToggleReaderStatus}
+          onEditReaderAccess={handleEditReaderAccess} onResendReaderEmail={handleResendReaderEmail}
           onAddUploader={handleAddUploader} onRemoveUploader={handleRemoveUploader}
           onApproveTrial={handleApproveTrial} onRejectTrial={handleRejectTrial} onEditTrialAccess={handleEditTrialAccess}
           onResendTrialEmail={handleResendTrialEmail} onResendInstitutionEmail={handleResendInstitutionEmail}

@@ -98,3 +98,19 @@ export const sendInstitutionLicenseEmail = async (templates, email, name, licens
     alert("Email failed: " + (err?.text || err?.message || JSON.stringify(err)));
   }
 };
+
+export const sendIndividualReaderEmail = async (templates, email, name, loginId, password, startDate, endDate) => {
+  const { subject, body } = getTemplateMessage(
+    templates,
+    'individual_created',
+    "Your Reading Access Details - SpellBound ( Publishers and Distributors )",
+    `Hello {{name}},\n\nYour individual reading access for SpellBound ( Publishers and Distributors ) is active!\n\nHere are your official access details:\nLogin ID: {{id}}\nPassword: {{password}}\n\nStart Date: {{startDate}}\nExpiration Date: {{endDate}}\n\nYou can use these credentials to read your authorized catalog of books.\n\nBest regards,\n- The SpellBound ( Publishers and Distributors ) Team`,
+    { name, id: loginId, password, startDate, endDate }
+  );
+  try {
+    await send(email, name, subject, body);
+  } catch (err) {
+    console.error("❌ Failed to send individual reader email:", err);
+    alert("Email failed: " + (err?.text || err?.message || JSON.stringify(err)));
+  }
+};
