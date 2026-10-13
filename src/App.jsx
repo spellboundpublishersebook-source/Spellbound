@@ -674,7 +674,7 @@ export default function App() {
       {view === "trial" && <TrialPage onRequestTrial={handleRequestTrial} />}
 
       {view === "reader-dashboard" && session?.role === "reader" && (
-        <ReaderDashboard session={session} books={availableBooks} onOpenBook={(id) => { setOpenBookId(id); setView("reading"); }} />
+        <ReaderDashboard session={session} books={availableBooks} onOpenBook={(id) => navigate("book-details", id)} />
       )}
       {view === "reading" && session && openBook && (
         <SecureReader book={openBook} session={session} onBack={() => navigate(session.role === "reader" ? "reader-dashboard" : session.role)} />

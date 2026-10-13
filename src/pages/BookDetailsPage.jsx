@@ -36,8 +36,11 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
       {/* Header / Breadcrumb */}
       <div className="bg-white border-b border-gray-200 py-4 px-6">
         <div className="max-w-7xl mx-auto flex items-center gap-2 text-sm text-black">
-          <button onClick={() => onNavigate("catalog")} className="hover:text-black transition-colors flex items-center gap-1">
-            <ChevronLeft size={16} /> Back to Catalog
+          <button 
+            onClick={() => onNavigate(session?.role === "reader" ? "reader-dashboard" : "catalog")} 
+            className="hover:text-black transition-colors flex items-center gap-1 font-medium cursor-pointer"
+          >
+            <ChevronLeft size={16} /> {session?.role === "reader" ? "Back to Library" : "Back to Catalog"}
           </button>
           <span>/</span>
           <span>{book.genre}</span>

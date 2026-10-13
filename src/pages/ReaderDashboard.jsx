@@ -42,16 +42,10 @@ function CategoryCarouselRow({ genre, books, onOpenBook, onSelectGenre }) {
   return (
     <div className="mb-14 relative">
       {/* Category Header */}
-      <div className="flex items-center justify-between pb-3 mb-6 border-b border-gray-200">
+      <div className="pb-3 mb-6 border-b border-gray-200">
         <h2 className="text-2xl md:text-3xl font-bold text-black tracking-tight" style={fontDisplay}>
           {genre}
         </h2>
-        <button
-          onClick={() => onSelectGenre(genre)}
-          className="flex items-center gap-2 text-sm font-semibold text-black hover:text-gray-600 transition-colors pl-3 border-l-2 border-black cursor-pointer"
-        >
-          View All
-        </button>
       </div>
 
       {/* Carousel Container */}
@@ -139,6 +133,16 @@ function CategoryCarouselRow({ genre, books, onOpenBook, onSelectGenre }) {
             <ChevronRight size={18} />
           </button>
         )}
+      </div>
+
+      {/* View All Button at bottom right */}
+      <div className="flex justify-end mt-4 pr-1">
+        <button
+          onClick={() => onSelectGenre(genre)}
+          className="flex items-center gap-2 text-sm font-semibold text-black hover:text-gray-600 transition-colors pl-3 border-l-2 border-black cursor-pointer"
+        >
+          View All
+        </button>
       </div>
     </div>
   );
