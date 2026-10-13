@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../supabaseClient";
 import { 
   Search, ShieldCheck, ChevronLeft, ChevronRight, ChevronUp, ChevronDown,
@@ -739,29 +740,30 @@ export default function CatalogPage({ books, onNavigate }) {
                       </li>
                     ))}
                   </ul>
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="font-semibold text-black">From:</span>
+                  <div className="flex items-center gap-2 text-xs pt-1">
+                    <span className="font-semibold text-gray-700">From:</span>
                     <input 
                       type="number" 
                       placeholder="1996" 
-                      className="w-16 border border-gray-300 rounded px-2 py-1 outline-none focus:border-blue-500"
+                      className="w-16 h-8 border border-gray-300 rounded-md px-2 text-xs outline-none focus:border-black focus:ring-1 focus:ring-black/20 transition-all bg-white shadow-sm"
                       value={dateFrom}
                       onChange={e => setDateFrom(e.target.value)}
                     />
-                    <span className="font-semibold text-black ml-2">To:</span>
+                    <span className="font-semibold text-gray-700 ml-1">To:</span>
                     <input 
                       type="number" 
                       placeholder="2026" 
-                      className="w-16 border border-gray-300 rounded px-2 py-1 outline-none focus:border-blue-500"
+                      className="w-16 h-8 border border-gray-300 rounded-md px-2 text-xs outline-none focus:border-black focus:ring-1 focus:ring-black/20 transition-all bg-white shadow-sm"
                       value={dateTo}
                       onChange={e => setDateTo(e.target.value)}
                     />
-                    <button 
-                      className="bg-[#0a3875] text-black px-3 py-1 font-bold text-xs rounded hover:bg-blue-900 ml-1"
+                    <AnimatedSweepButton 
                       onClick={() => setDateFilter("Custom")}
+                      variant="black"
+                      className="h-8 px-3.5 text-xs font-bold rounded-md shadow-sm ml-1"
                     >
                       Go
-                    </button>
+                    </AnimatedSweepButton>
                   </div>
                 </div>
               )}
@@ -791,75 +793,81 @@ export default function CatalogPage({ books, onNavigate }) {
               </div>
             </div>
             
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6">
-              {paginatedBooks.map(b => (
-                <div 
-                  key={b.id} 
-                  onClick={() => onNavigate("book-details", b.id)}
-                  className="book-card group/card flex flex-col p-3 bg-white border border-black rounded-xl cursor-pointer hover:shadow-lg transition-shadow"
-                >
-                  <div className="w-full aspect-[2/3] rounded-md mb-4 overflow-hidden shadow-sm">
-                    <BookCover book={b} className="w-full h-full transition-transform duration-300 group-hover/card:scale-105" />
+            <AnimatePresence mode="wait">
+              <motion.div 
+                key={currentPage + "_" + pageSize}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.22, ease: "easeOut" }}
+                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6"
+                id="catalog-grid"
+              >
+                {paginatedBooks.map(b => (
+                  <div 
+                    key={b.id} 
+                    onClick={() => onNavigate("book-details", b.id)}
+                    className="book-card group/card flex flex-col p-3 bg-white border border-black rounded-xl cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
+                  >
+                    <div className="w-full aspect-[2/3] rounded-md mb-4 overflow-hidden shadow-sm">
+                      <BookCover book={b} className="w-full h-full transition-transform duration-300 group-hover/card:scale-105" />
+                    </div>
+                    <h3 className="font-bold text-sm leading-tight line-clamp-2 group-hover/card:underline transition-colors" style={fontDisplay}>{b.title}</h3>
+                    <p className="text-xs text-black mt-1 truncate">{b.author}</p>
+                    <div className="mt-4 flex items-center justify-between">
+                      <span className="font-bold text-sm">₹{b.price}.00</span>
+                      <AnimatedSweepButton 
+                        onClick={(e) => { e.stopPropagation(); onNavigate("book-details", b.id); }}
+                        variant="card-outline"
+                        className="text-[10px] sm:text-xs rounded px-2.5 py-1 whitespace-nowrap"
+                      >
+                        View book
+                      </AnimatedSweepButton>
+                    </div>
                   </div>
-                  <h3 className="font-bold text-sm leading-tight line-clamp-2 group-hover/card:underline transition-colors" style={fontDisplay}>{b.title}</h3>
-                  <p className="text-xs text-black mt-1 truncate">{b.author}</p>
-                  <div className="mt-4 flex items-center justify-between">
-                    <span className="font-bold text-sm">₹{b.price}.00</span>
-                    <AnimatedSweepButton 
-                      onClick={(e) => { e.stopPropagation(); onNavigate("book-details", b.id); }}
-                      variant="card-outline"
-                      className="text-[10px] sm:text-xs rounded px-2.5 py-1 whitespace-nowrap"
-                    >
-                      View book
-                    </AnimatedSweepButton>
+                ))}
+                {filtered.length === 0 && (
+                  <div className="col-span-full py-20 text-center">
+                    <p className="text-black">No titles match the selected filters.</p>
+                    <AnimatedSweepButton onClick={resetFilters} variant="yellow" className="mt-4 px-6 py-2 rounded-md font-bold text-sm">Reset Filters</AnimatedSweepButton>
                   </div>
-                </div>
-              ))}
-              {filtered.length === 0 && (
-                <div className="col-span-full py-20 text-center">
-                  <p className="text-black">No titles match the selected filters.</p>
-                  <AnimatedSweepButton onClick={resetFilters} variant="yellow" className="mt-4 px-6 py-2 rounded-md font-bold text-sm">Reset Filters</AnimatedSweepButton>
-                </div>
-              )}
-            </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
 
             {/* PAGINATION CONTROLS */}
             {totalPages > 1 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t border-gray-200">
-                <span className="text-xs text-gray-500 order-2 sm:order-1">
-                  Page <span className="font-semibold text-black">{currentPage}</span> of{" "}
-                  <span className="font-semibold text-black">{totalPages}</span>
-                </span>
-
-                <div className="flex items-center gap-1.5 order-1 sm:order-2 flex-wrap justify-center">
+              <div className="flex flex-col items-center justify-center gap-3 mt-10 pt-8 border-t border-gray-200">
+                <div className="flex items-center gap-2 flex-wrap justify-center">
                   <button
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
                     aria-label="Previous page"
-                    className="h-9 px-3 flex items-center justify-center gap-1 rounded-md border border-gray-300 text-black text-xs font-semibold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors cursor-pointer bg-white shadow-sm"
+                    className="group/prev h-9 px-3.5 flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 text-black text-xs font-semibold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 hover:border-black transition-all duration-200 cursor-pointer bg-white shadow-sm hover:shadow active:scale-95 disabled:active:scale-100"
                   >
-                    <ChevronLeft size={16} />
-                    <span className="hidden sm:inline">Prev</span>
+                    <ChevronLeft size={16} className="transition-transform duration-200 group-hover/prev:-translate-x-0.5" />
+                    <span>Prev</span>
                   </button>
 
                   {pageNumbers.map((page, idx) => {
                     if (page === '...') {
                       return (
-                        <span key={`ellipsis-${idx}`} className="w-8 h-9 flex items-center justify-center text-gray-400 text-xs">
+                        <span key={`ellipsis-${idx}`} className="w-9 h-9 flex items-center justify-center text-gray-400 text-xs font-bold select-none">
                           …
                         </span>
                       );
                     }
+                    const isActive = currentPage === page;
                     return (
                       <button
                         key={page}
                         onClick={() => handlePageChange(page)}
                         aria-label={`Page ${page}`}
-                        aria-current={currentPage === page ? "page" : undefined}
-                        className={`min-w-9 h-9 px-2.5 flex items-center justify-center rounded-md text-xs font-bold transition-all cursor-pointer ${
-                          currentPage === page
-                            ? "bg-black text-white shadow-sm"
-                            : "border border-gray-300 bg-white text-gray-800 hover:bg-gray-100 hover:text-black"
+                        aria-current={isActive ? "page" : undefined}
+                        className={`w-9 h-9 flex items-center justify-center rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 ${
+                          isActive
+                            ? "bg-black text-white border border-black shadow-md scale-105"
+                            : "border border-gray-300 bg-white text-gray-800 hover:border-black hover:bg-gray-100 hover:text-black hover:shadow-sm hover:-translate-y-0.5"
                         }`}
                       >
                         {page}
@@ -871,12 +879,17 @@ export default function CatalogPage({ books, onNavigate }) {
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
                     aria-label="Next page"
-                    className="h-9 px-3 flex items-center justify-center gap-1 rounded-md border border-gray-300 text-black text-xs font-semibold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors cursor-pointer bg-white shadow-sm"
+                    className="group/next h-9 px-3.5 flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 text-black text-xs font-semibold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 hover:border-black transition-all duration-200 cursor-pointer bg-white shadow-sm hover:shadow active:scale-95 disabled:active:scale-100"
                   >
-                    <span className="hidden sm:inline">Next</span>
-                    <ChevronRight size={16} />
+                    <span>Next</span>
+                    <ChevronRight size={16} className="transition-transform duration-200 group-hover/next:translate-x-0.5" />
                   </button>
                 </div>
+
+                <p className="text-xs text-gray-500 font-medium">
+                  Page <span className="font-bold text-black">{currentPage}</span> of{" "}
+                  <span className="font-bold text-black">{totalPages}</span> ({filtered.length} total titles)
+                </p>
               </div>
             )}
           </div>
