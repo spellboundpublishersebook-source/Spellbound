@@ -78,19 +78,64 @@ export function StatCard({ label, value, icon: Icon }) {
   );
 }
 
-export function Modal({ title, onClose, children, wide }) {
+export function Modal({ title, onClose, children, wide, maxWidth = null }) {
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && onClose) {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  // Lock body scroll while modal is active
+  React.useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, []);
+
+  const widthClass = maxWidth 
+    ? maxWidth 
+    : wide 
+      ? "max-w-2xl lg:max-w-3xl" 
+      : "max-w-md";
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div 
+      className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-5 md:p-6 bg-black/65 backdrop-blur-sm transition-opacity duration-200"
+      onClick={onClose}
+    >
       <div
-        className={`w-full ${wide ? "max-w-3xl" : "max-w-md"} rounded-2xl p-6 md:p-8 max-h-[90vh] overflow-y-auto bg-white shadow-2xl border border-gray-100`}
+        className={`w-full ${widthClass} flex flex-col max-h-[82vh] sm:max-h-[85vh] rounded-2xl bg-white shadow-2xl border border-gray-200 overflow-hidden relative animate-in fade-in zoom-in-95 duration-150`}
+        onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
-          <h3 className="text-xl font-bold text-[#111111]">{title}</h3>
-          <button onClick={onClose} className="text-sm font-semibold text-black hover:text-black bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-md transition-colors">
-            Close
+        {/* Sticky Header with Title and Prominent, Always-Visible Close Button */}
+        <div className="flex-shrink-0 flex items-center justify-between px-5 py-3.5 sm:px-6 sm:py-4 border-b border-gray-200 bg-gray-50/95 backdrop-blur-sm z-20">
+          <h3 className="text-base sm:text-lg md:text-xl font-bold text-[#111111] truncate pr-4">
+            {title}
+          </h3>
+          <button
+            onClick={onClose}
+            type="button"
+            aria-label="Close modal"
+            className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-gray-700 hover:text-black bg-white hover:bg-gray-100 active:scale-95 px-3 py-1.5 rounded-lg border border-gray-300 shadow-sm transition-all duration-150 cursor-pointer flex-shrink-0"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+            <span>Close</span>
           </button>
         </div>
-        {children}
+
+        {/* Scrollable Modal Content */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 text-black">
+          {children}
+        </div>
       </div>
     </div>
   );

@@ -920,11 +920,11 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
 
       {/* MODALS */}
       {showCategoryModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
-            <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-2xl font-bold" style={fontDisplay}>All Categories</h2>
-              <button onClick={() => setShowCategoryModal(false)} className="text-black hover:text-black transition-colors cursor-pointer"><X size={24} /></button>
+        <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-3 sm:p-5 backdrop-blur-sm" onClick={() => setShowCategoryModal(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl border border-gray-200" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50/90">
+              <h2 className="text-xl font-bold" style={fontDisplay}>All Categories</h2>
+              <button onClick={() => setShowCategoryModal(false)} className="flex items-center gap-1.5 text-xs font-bold text-gray-700 hover:text-black bg-white hover:bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-300 shadow-sm transition-all cursor-pointer"><X size={15} /><span>Close</span></button>
             </div>
             <div className="p-8 overflow-y-auto">
               <div className="flex gap-4 mb-6">
@@ -963,11 +963,11 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
       )}
 
       {showAuthorModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
-            <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-2xl font-bold" style={fontDisplay}>All Authors</h2>
-              <button onClick={() => setShowAuthorModal(false)} className="text-black hover:text-black transition-colors cursor-pointer"><X size={24} /></button>
+        <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-3 sm:p-5 backdrop-blur-sm" onClick={() => setShowAuthorModal(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl border border-gray-200" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50/90">
+              <h2 className="text-xl font-bold" style={fontDisplay}>All Authors</h2>
+              <button onClick={() => setShowAuthorModal(false)} className="flex items-center gap-1.5 text-xs font-bold text-gray-700 hover:text-black bg-white hover:bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-300 shadow-sm transition-all cursor-pointer"><X size={15} /><span>Close</span></button>
             </div>
             <div className="p-8 overflow-y-auto">
               <div className="flex gap-4 mb-6">
@@ -1006,11 +1006,11 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
       )}
 
       {showYearModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
-            <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-2xl font-bold" style={fontDisplay}>All Publication Years</h2>
-              <button onClick={() => setShowYearModal(false)} className="text-black hover:text-black transition-colors cursor-pointer"><X size={24} /></button>
+        <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-3 sm:p-5 backdrop-blur-sm" onClick={() => setShowYearModal(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl border border-gray-200" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50/90">
+              <h2 className="text-xl font-bold" style={fontDisplay}>All Publication Years</h2>
+              <button onClick={() => setShowYearModal(false)} className="flex items-center gap-1.5 text-xs font-bold text-gray-700 hover:text-black bg-white hover:bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-300 shadow-sm transition-all cursor-pointer"><X size={15} /><span>Close</span></button>
             </div>
             <div className="p-8 overflow-y-auto">
               <div className="flex gap-4 mb-6">
