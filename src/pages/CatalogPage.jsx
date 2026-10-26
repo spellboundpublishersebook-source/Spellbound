@@ -508,8 +508,7 @@ export default function CatalogPage({ books, onNavigate }) {
               <div className="flex flex-col flex-1">
                 <h3 className="font-bold text-sm leading-tight mb-1 group-hover/card:underline transition-colors" style={fontDisplay}>{b.title}</h3>
                 <p className="text-xs text-black mb-2">{b.author}</p>
-                <div className="mt-auto">
-                  <div className="font-bold text-sm mb-3">₹{b.price}.00</div>
+                <div className="mt-auto pt-2">
                   <AnimatedSweepButton 
                     onClick={(e) => { e.stopPropagation(); onNavigate("book-details", b.id); }}
                     variant="card-subtle"
@@ -851,12 +850,11 @@ export default function CatalogPage({ books, onNavigate }) {
                     </div>
                     <h3 className="font-bold text-sm leading-tight line-clamp-2 group-hover/card:underline transition-colors" style={fontDisplay}>{b.title}</h3>
                     <p className="text-xs text-black mt-1 truncate">{b.author}</p>
-                    <div className="mt-4 flex items-center justify-between">
-                      <span className="font-bold text-sm">₹{b.price}.00</span>
+                    <div className="mt-4 flex items-center justify-end">
                       <AnimatedSweepButton 
                         onClick={(e) => { e.stopPropagation(); onNavigate("book-details", b.id); }}
                         variant="card-outline"
-                        className="text-[10px] sm:text-xs rounded px-2.5 py-1 whitespace-nowrap"
+                        className="text-[10px] sm:text-xs rounded px-2.5 py-1 whitespace-nowrap w-full justify-center"
                       >
                         View book
                       </AnimatedSweepButton>
@@ -975,8 +973,7 @@ export default function CatalogPage({ books, onNavigate }) {
                    <div className="flex flex-col flex-1 py-1">
                      <h3 className="font-bold text-sm leading-tight mb-2 line-clamp-2" style={fontDisplay}>{b.title}</h3>
                      <p className="text-xs text-black mb-auto line-clamp-2">{b.author}</p>
-                     <div className="font-bold text-sm mt-2 flex items-center justify-between">
-                       <span>₹{b.price}.00</span>
+                     <div className="mt-2 flex items-center justify-end">
                        <span className="text-xs font-semibold text-gray-700 flex items-center gap-0.5 hover:text-black">
                          Details <ChevronRight size={14} />
                        </span>

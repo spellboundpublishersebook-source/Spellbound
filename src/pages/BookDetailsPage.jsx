@@ -59,7 +59,6 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
             <BookCover book={book} className="w-full max-w-sm aspect-[2/3] rounded-lg mb-8" />
             
             <div className="w-full bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-              <div className="text-2xl font-bold mb-4 text-center">₹{book.price}.00</div>
               {session ? (
                 (session.role === "admin" || session.role === "uploader" || session.bookIds === "all" || session.bookIds?.includes(book.id)) ? (
                   <AnimatedSweepButton 

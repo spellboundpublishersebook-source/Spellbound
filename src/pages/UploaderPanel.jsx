@@ -170,7 +170,7 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#D4A017] mb-1">{pendingUpload.genre}</span>
                 <span className="font-bold text-sm leading-tight text-[#111111]" style={fontDisplay}>{pendingUpload.title}</span>
                 <span className="text-xs text-black mt-0.5">{pendingUpload.author} · {pendingUpload.publisher}</span>
-                <span className="text-xs text-black mt-0.5">{pendingUpload.totalPages || pendingUpload.pages?.length || 0} pages · ₹{pendingUpload.price}</span>
+                <span className="text-xs text-black mt-0.5">{pendingUpload.totalPages || pendingUpload.pages?.length || 0} pages</span>
                 
                 <div className="mt-auto pt-3 flex items-center gap-2 text-xs font-semibold text-black hover:text-black transition-colors">
                   {uploadProgress < 100 ? `Uploading... ${uploadProgress}%` : "Finished!"}
@@ -189,7 +189,7 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#D4A017] mb-1">{b.genre}</span>
                 <span className="font-bold text-sm leading-tight text-[#111111]" style={fontDisplay}>{b.title}</span>
                 <span className="text-xs text-black mt-0.5">{b.author} · {b.publisher}</span>
-                <span className="text-xs text-black mt-0.5">{b.totalPages || b.pages?.length || 0} pages · ₹{b.price}</span>
+                <span className="text-xs text-black mt-0.5">{b.totalPages || b.pages?.length || 0} pages</span>
                 
                 <div className="mt-auto pt-3 flex items-center gap-4">
                   <button
@@ -278,7 +278,6 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
               <Field label="Copyright (e.g. © 2026)" value={form.copyright} onChange={(e) => setForm({ ...form, copyright: e.target.value })} />
               <Field label="Online ISBN (eISBN)" value={form.onlineIsbn} onChange={(e) => setForm({ ...form, onlineIsbn: e.target.value })} />
               <Field label="Total Pages (Number)" type="number" min="1" value={form.totalPages} onChange={(e) => setForm({ ...form, totalPages: e.target.value })} />
-              <Field label="List price (individual, ₹)" type="number" min="0" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
               <div className="mb-4">
                 <label className="block text-sm font-semibold mb-1.5 text-black">Cover color</label>
                 <div className="flex gap-2 flex-wrap">

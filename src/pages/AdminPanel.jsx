@@ -271,7 +271,7 @@ function InstitutionsTab({
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              {["Institution", "Login ID", "Password", "Active Readers", "Books", "Price", "Term", "Status", ""].map((h) => (
+              {["Institution", "Login ID", "Password", "Active Readers", "Books", "Term", "Status", ""].map((h) => (
                 <th key={h} className="text-left px-4 py-3 font-bold text-black uppercase tracking-wider text-[11px]">{h}</th>
               ))}
             </tr>
@@ -302,7 +302,6 @@ function InstitutionsTab({
                     </div>
                   </td>
                   <td className="px-4 py-3">{l.bookIds.length} titles</td>
-                  <td className="px-4 py-3">₹{l.price.toLocaleString()}</td>
                   <td className="px-4 py-3">{l.startDate.slice(0, 10)} → {l.endDate.slice(0, 10)}</td>
                   <td className="px-4 py-3">
                     {isOffline ? <Badge tone="bad">Offline</Badge> : expired ? <Badge tone="bad">Expired</Badge> : soon ? <Badge tone="warn">{left}d left</Badge> : <Badge tone="good">Active</Badge>}
@@ -335,7 +334,7 @@ function InstitutionsTab({
               );
             })}
             {licenses.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-6 text-center text-black">No institutions yet.</td></tr>
+              <tr><td colSpan={7} className="px-4 py-6 text-center text-black">No institutions yet.</td></tr>
             )}
           </tbody>
         </table>
@@ -363,7 +362,6 @@ function InstitutionsTab({
                 <Field label="Custom Password (optional)" placeholder="Leave blank to auto-generate" value={customPassword} onChange={(e) => setCustomPassword(e.target.value)} />
                 <Field label="Contact Email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
                 <Field label="Number of seats" type="number" min="1" required value={seats} onChange={(e) => setSeats(e.target.value)} />
-                <Field label="Custom price for this bundle (₹)" type="number" min="0" required value={price} onChange={(e) => setPrice(e.target.value)} />
                 <Field label="Start date" type="date" required={!isTest} disabled={isTest} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
                 <Field label="Duration (months)" type="number" min="1" max="240" required={!isTest} disabled={isTest} value={duration} onChange={(e) => setDuration(e.target.value)} />
               </div>
@@ -691,7 +689,7 @@ function ReadersTab({
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              {["User", "Login ID", "Password", "Books", "Price", "Term", "Status", ""].map((h) => (
+              {["User", "Login ID", "Password", "Books", "Term", "Status", ""].map((h) => (
                 <th key={h} className="text-left px-4 py-3 font-bold text-black uppercase tracking-wider text-[11px]">{h}</th>
               ))}
             </tr>
@@ -712,7 +710,6 @@ function ReadersTab({
                   <td className="px-4 py-3"><code>{r.loginId}</code></td>
                   <td className="px-4 py-3"><code>{r.password}</code></td>
                   <td className="px-4 py-3">{bookCount} titles</td>
-                  <td className="px-4 py-3">₹{Number(r.price || 0).toLocaleString()}</td>
                   <td className="px-4 py-3 text-xs">
                     {r.startDate ? r.startDate.slice(0, 10) : "—"} → {r.endDate ? r.endDate.slice(0, 10) : "—"}
                   </td>
@@ -722,7 +719,7 @@ function ReadersTab({
                     ) : expired ? (
                       <Badge tone="bad">Expired</Badge>
                     ) : soon ? (
-                      <Badge tone="warn">{left}d left</Badge>
+                       <Badge tone="warn">{left}d left</Badge>
                     ) : (
                       <Badge tone="good">Active</Badge>
                     )}
@@ -766,7 +763,7 @@ function ReadersTab({
             })}
             {readers.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-black">No individual users yet.</td>
+                <td colSpan={7} className="px-4 py-8 text-center text-black">No individual users yet.</td>
               </tr>
             )}
           </tbody>
@@ -795,8 +792,7 @@ function ReadersTab({
                 <Field label="Full name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="e.g. John Doe" />
                 <Field label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="john@example.com" />
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <Field label="Price (₹)" type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="e.g. 999" />
+              <div className="grid grid-cols-2 gap-4">
                 <Field label="Start date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
                 <Select label="Duration" value={duration} onChange={(e) => setDuration(Number(e.target.value))}>
                   <option value={1}>1 month</option>
