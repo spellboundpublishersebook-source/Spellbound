@@ -20,18 +20,18 @@ const samplePages = (title) => [
 ];
 
 export const initialBooks = [
-  { id: "b1", title: "The Long Ledger", author: "Marguerite Faye", genre: "Fiction", publisher: "Aldine House", price: 12, color: spineColors[0], pages: samplePages("The Long Ledger") },
-  { id: "b2", title: "Pricing Without Guesswork", author: "D. R. Okafor", genre: "Business", publisher: "Meridian Press", price: 24, color: spineColors[1], pages: samplePages("Pricing Without Guesswork") },
-  { id: "b3", title: "A Short History of Tides", author: "Wren Callahan", genre: "Science", publisher: "Northlight Books", price: 18, color: spineColors[2], pages: samplePages("A Short History of Tides") },
-  { id: "b4", title: "The Weight of Empires", author: "Halden Voss", genre: "History", publisher: "Aldine House", price: 21, color: spineColors[3], pages: samplePages("The Weight of Empires") },
-  { id: "b5", title: "Citation & Style, Revised", author: "Athenaeum Editorial", genre: "Reference", publisher: "Athenaeum Press", price: 9, color: spineColors[4], pages: samplePages("Citation & Style, Revised") },
-  { id: "b6", title: "Small Hours", author: "Ines Larkspur", genre: "Poetry", publisher: "Northlight Books", price: 10, color: spineColors[5], pages: samplePages("Small Hours") },
-  { id: "b7", title: "Nine Winters in Kestrel Bay", author: "Marguerite Faye", genre: "Fiction", publisher: "Meridian Press", price: 13, color: spineColors[6], pages: samplePages("Nine Winters in Kestrel Bay") },
-  { id: "b8", title: "The Founder's Ledger", author: "D. R. Okafor", genre: "Business", publisher: "Aldine House", price: 26, color: spineColors[7], pages: samplePages("The Founder's Ledger") },
-  { id: "b9", title: "Field Notes on Rivers", author: "Wren Callahan", genre: "Science", publisher: "Northlight Books", price: 16, color: spineColors[8], pages: samplePages("Field Notes on Rivers") },
-  { id: "b10", title: "Letters from the Interior", author: "Halden Voss", genre: "History", publisher: "Meridian Press", price: 19, color: spineColors[9], pages: samplePages("Letters from the Interior") },
-  { id: "b11", title: "The Quiet Ledger of Debts", author: "Ines Larkspur", genre: "Fiction", publisher: "Athenaeum Press", price: 14, color: spineColors[10], pages: samplePages("The Quiet Ledger of Debts") },
-  { id: "b12", title: "Systems, Briefly", author: "D. R. Okafor", genre: "Reference", publisher: "Meridian Press", price: 11, color: spineColors[11], pages: samplePages("Systems, Briefly") },
+  { id: "b1", title: "The Long Ledger", author: "Marguerite Faye", genre: "Fiction", publisher: "Aldine House", onlineIsbn: "978-1-954321-01-2", color: spineColors[0], pages: samplePages("The Long Ledger") },
+  { id: "b2", title: "Pricing Without Guesswork", author: "D. R. Okafor", genre: "Business", publisher: "Meridian Press", onlineIsbn: "978-1-954321-02-9", color: spineColors[1], pages: samplePages("Pricing Without Guesswork") },
+  { id: "b3", title: "A Short History of Tides", author: "Wren Callahan", genre: "Science", publisher: "Northlight Books", onlineIsbn: "978-1-954321-03-6", color: spineColors[2], pages: samplePages("A Short History of Tides") },
+  { id: "b4", title: "The Weight of Empires", author: "Halden Voss", genre: "History", publisher: "Aldine House", onlineIsbn: "978-1-954321-04-3", color: spineColors[3], pages: samplePages("The Weight of Empires") },
+  { id: "b5", title: "Citation & Style, Revised", author: "Athenaeum Editorial", genre: "Reference", publisher: "Athenaeum Press", onlineIsbn: "978-1-954321-05-0", color: spineColors[4], pages: samplePages("Citation & Style, Revised") },
+  { id: "b6", title: "Small Hours", author: "Ines Larkspur", genre: "Poetry", publisher: "Northlight Books", onlineIsbn: "978-1-954321-06-7", color: spineColors[5], pages: samplePages("Small Hours") },
+  { id: "b7", title: "Nine Winters in Kestrel Bay", author: "Marguerite Faye", genre: "Fiction", publisher: "Meridian Press", onlineIsbn: "978-1-954321-07-4", color: spineColors[6], pages: samplePages("Nine Winters in Kestrel Bay") },
+  { id: "b8", title: "The Founder's Ledger", author: "D. R. Okafor", genre: "Business", publisher: "Aldine House", onlineIsbn: "978-1-954321-08-1", color: spineColors[7], pages: samplePages("The Founder's Ledger") },
+  { id: "b9", title: "Field Notes on Rivers", author: "Wren Callahan", genre: "Science", publisher: "Northlight Books", onlineIsbn: "978-1-954321-09-8", color: spineColors[8], pages: samplePages("Field Notes on Rivers") },
+  { id: "b10", title: "Letters from the Interior", author: "Halden Voss", genre: "History", publisher: "Meridian Press", onlineIsbn: "978-1-954321-10-4", color: spineColors[9], pages: samplePages("Letters from the Interior") },
+  { id: "b11", title: "The Quiet Ledger of Debts", author: "Ines Larkspur", genre: "Fiction", publisher: "Athenaeum Press", onlineIsbn: "978-1-954321-11-1", color: spineColors[10], pages: samplePages("The Quiet Ledger of Debts") },
+  { id: "b12", title: "Systems, Briefly", author: "D. R. Okafor", genre: "Reference", publisher: "Meridian Press", onlineIsbn: "978-1-954321-12-8", color: spineColors[11], pages: samplePages("Systems, Briefly") },
 ];
 
 // Super admin — in a real system this is a securely hashed credential, not a
