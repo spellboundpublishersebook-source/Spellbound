@@ -40,8 +40,7 @@ export default function Header({ session, view, onNavigate, onLogout }) {
   return (
     <>
       <header
-        style={{ backgroundColor: "#FFFFFF", borderBottom: "1px solid #E5E7EB" }}
-        className="sticky top-0 z-[100] shadow-sm relative w-full max-w-full"
+        className="sticky top-0 z-[100] bg-white/75 backdrop-blur-xl border-b border-white/80 shadow-[0_8px_24px_-14px_rgba(15,23,42,0.16)] relative w-full max-w-full"
       >
         <div className="max-w-7xl mx-auto px-3 sm:px-4 flex items-center justify-between h-auto py-1">
 
@@ -99,7 +98,7 @@ export default function Header({ session, view, onNavigate, onLogout }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="lg:hidden absolute top-full left-0 right-0 bg-white border-b border-gray-200 shadow-2xl z-50 overflow-hidden"
+              className="lg:hidden absolute top-full left-0 right-0 bg-white/90 backdrop-blur-xl border-b border-white/80 shadow-2xl z-50 overflow-hidden"
             >
               <div className="p-4 flex flex-col gap-1.5 max-h-[calc(100vh-80px)] overflow-y-auto">
                 <DrawerItem
@@ -318,7 +317,7 @@ function NavLinks({ session, view, onNavigate, onLogout }) {
             
             {/* Dropdown menu */}
             {profileOpen && (
-              <div className="absolute top-full right-0 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-2xl z-[120]">
+              <div className="absolute top-full right-0 mt-2 w-56 bg-white/90 backdrop-blur-xl border border-white rounded-2xl shadow-2xl z-[120]">
                 <div className="px-4 py-3 border-b border-gray-100">
                   <p className="text-sm font-bold text-black truncate">{session.name}</p>
                   <p className="text-xs text-gray-500 capitalize">{session.role} Account</p>

@@ -124,33 +124,32 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
     }
   }
 
-  const containerCls = embedded ? "" : "max-w-6xl mx-auto px-6 py-10";
-  const wrapperStyle = embedded ? {} : { backgroundColor: palette.paper, minHeight: "calc(100vh - 64px)" };
+  const containerCls = embedded ? "" : "max-w-6xl mx-auto admin-glass-shell rounded-[28px] p-6 sm:p-8";
 
   const dbIndicator = (
-    <div className={`flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full ${dbStatus === 'connected' ? 'bg-green-100 text-green-700' : dbStatus === 'error' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+    <div className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border backdrop-blur-md ${dbStatus === 'connected' ? 'bg-emerald-100/80 text-emerald-800 border-emerald-200/80' : dbStatus === 'error' ? 'bg-rose-100/80 text-rose-800 border-rose-200/80' : 'bg-amber-100/80 text-amber-800 border-amber-200/80'}`}>
       <span className="relative flex h-2 w-2">
-        {dbStatus === 'connected' && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
-        {dbStatus === 'checking' && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>}
-        <span className={`relative inline-flex rounded-full h-2 w-2 ${dbStatus === 'connected' ? 'bg-green-500' : dbStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'}`}></span>
+        {dbStatus === 'connected' && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>}
+        {dbStatus === 'checking' && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>}
+        <span className={`relative inline-flex rounded-full h-2 w-2 ${dbStatus === 'connected' ? 'bg-emerald-500' : dbStatus === 'error' ? 'bg-rose-500' : 'bg-amber-500'}`}></span>
       </span>
       {dbStatus === 'connected' ? 'DB Connected' : dbStatus === 'error' ? 'DB Error - Using Mock Data' : 'Checking DB...'}
     </div>
   );
 
   return (
-    <div style={wrapperStyle}>
+    <div className={embedded ? "" : "admin-glass-backdrop min-h-[calc(100vh-64px)] py-8 px-4 sm:px-6"}>
       <div className={containerCls}>
         {!embedded && (
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-8 pb-5 border-b border-black/10">
             <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-semibold text-[#111111]" style={fontDisplay}>Uploader panel</h1>
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-2xl sm:text-3xl font-bold text-[#111214]" style={fontDisplay}>Uploader panel</h1>
                 {dbIndicator}
               </div>
-              <p className="text-sm mt-1 text-black">Add new titles to the catalog with cover color, genre, and page content.</p>
+              <p className="text-sm mt-1 text-slate-700">Add new titles to the catalog with cover artwork, metadata, and PDF content.</p>
             </div>
-            <Button onClick={() => { setEditingId(null); setForm(getFreshDefaultForm()); setShowForm(true); }}><Plus size={16} strokeWidth={2} /> Add book</Button>
+            <Button onClick={() => { setEditingId(null); setForm(getFreshDefaultForm()); setShowForm(true); }}><Plus size={16} strokeWidth={2.2} /> Publish new book</Button>
           </div>
         )}
         {embedded && (
@@ -256,11 +255,11 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
               <Field label="Author" required value={form.author} onChange={(e) => setForm({ ...form, author: e.target.value })} />
               
               <div className="mb-4">
-                <label className="block text-sm font-semibold mb-1.5 text-black">Subject / Genre</label>
+                <label htmlFor="book-genre-input" className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-700">Subject / Genre</label>
                 <input
+                  id="book-genre-input"
                   list="genres-list"
-                  className="w-full px-3.5 py-2.5 rounded border text-sm outline-none"
-                  style={{ backgroundColor: palette.cream, borderColor: palette.line, color: palette.ink }}
+                  className="glass-field-control"
                   required
                   value={form.genre}
                   onChange={(e) => setForm({ ...form, genre: e.target.value })}
@@ -272,11 +271,11 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-semibold mb-1.5 text-black">Publication Type</label>
+                <label htmlFor="book-pubtype-input" className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-700">Publication Type</label>
                 <input
+                  id="book-pubtype-input"
                   list="pubtype-list"
-                  className="w-full px-3.5 py-2.5 rounded border text-sm outline-none"
-                  style={{ backgroundColor: palette.cream, borderColor: palette.line, color: palette.ink }}
+                  className="glass-field-control"
                   required
                   value={form.pubType}
                   onChange={(e) => setForm({ ...form, pubType: e.target.value })}
@@ -289,11 +288,11 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
 
               {customHeadings.map(h => (
                 <div key={h.id} className="mb-4">
-                  <label className="block text-sm font-semibold mb-1.5 text-black">{h.name}</label>
+                  <label htmlFor={`custom-field-${h.id}`} className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-700">{h.name}</label>
                   <input
+                    id={`custom-field-${h.id}`}
                     list={`custom-list-${h.id}`}
-                    className="w-full px-3.5 py-2.5 rounded border text-sm outline-none"
-                    style={{ backgroundColor: palette.cream, borderColor: palette.line, color: palette.ink }}
+                    className="glass-field-control"
                     value={form.customFields[h.name] || ""}
                     onChange={(e) => setForm({ ...form, customFields: { ...form.customFields, [h.name]: e.target.value } })}
                     placeholder={`Select or type ${h.name}...`}
@@ -315,16 +314,18 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
               <Field label="First Publish (e.g. YYYY)" value={form.firstPublish} onChange={(e) => setForm({ ...form, firstPublish: e.target.value })} />
               <Field label="Online ISBN (eISBN)" value={form.onlineIsbn} onChange={(e) => setForm({ ...form, onlineIsbn: e.target.value })} />
               <Field label="Total Pages (Number)" type="number" min="1" value={form.totalPages} onChange={(e) => setForm({ ...form, totalPages: e.target.value })} />
-              <div className="mb-4">
-                <label className="block text-sm font-semibold mb-1.5 text-black">Cover color</label>
-                <div className="flex gap-2 flex-wrap">
+              <div className="mb-4 sm:col-span-2">
+                <span className="block text-xs font-bold uppercase tracking-wider mb-2 text-slate-700">Cover accent color</span>
+                <div className="flex gap-2.5 flex-wrap p-3 rounded-2xl bg-white/60 border border-white/80">
                   {spineChoices.map((c) => (
                     <button
                       type="button"
                       key={c}
+                      aria-label={`Select cover accent ${c}`}
+                      aria-pressed={form.color === c}
                       onClick={() => setForm({ ...form, color: c })}
-                      className="w-8 h-8 rounded-full border-2"
-                      style={{ backgroundColor: c, borderColor: form.color === c ? palette.ink : "transparent" }}
+                      className={`w-8 h-8 rounded-full transition-all cursor-pointer ${form.color === c ? "ring-2 ring-offset-2 ring-[#111214] scale-110 shadow-md" : "opacity-85 hover:opacity-100 hover:scale-105"}`}
+                      style={{ backgroundColor: c }}
                     />
                   ))}
                 </div>
@@ -338,47 +339,53 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
               onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
 
-            <div className="grid sm:grid-cols-2 gap-x-4 mb-4">
-              <div className="mb-4">
+            <div className="grid sm:grid-cols-2 gap-4 mb-4">
+              <div>
                 <div className="flex justify-between items-center mb-1.5">
-                  <label className="block text-sm font-semibold text-black">Book Cover Image {editingId && !form.coverUrl && <span className="text-xs font-normal text-black">(Optional)</span>}</label>
+                  <label htmlFor="book-cover-file" className="block text-xs font-bold uppercase tracking-wider text-slate-700">Book Cover Image {editingId && !form.coverUrl && <span className="text-[11px] font-normal normal-case text-slate-500">(Optional)</span>}</label>
                   {editingId && form.coverUrl && (
-                    <button type="button" onClick={() => setForm({...form, coverUrl: null, coverImage: null})} className="text-xs text-red-500 hover:underline">Remove Cover</button>
+                    <button type="button" onClick={() => setForm({...form, coverUrl: null, coverImage: null})} className="text-xs font-semibold text-rose-600 hover:underline cursor-pointer">Remove Cover</button>
                   )}
                 </div>
                 {editingId && form.coverUrl ? (
-                  <div className="text-sm px-3 py-2 bg-green-50 text-green-700 border border-green-200 rounded flex items-center justify-between">
-                    <span>✓ Current Cover Saved</span>
-                    <span className="text-xs text-black">(To change it, click Remove Cover first)</span>
+                  <div className="text-xs px-3.5 py-3 bg-emerald-100/75 text-emerald-900 border border-emerald-200 rounded-2xl flex items-center justify-between gap-2">
+                    <span className="font-semibold">Current Cover Saved</span>
+                    <span className="text-[11px] text-emerald-800/80">Remove first to replace</span>
                   </div>
                 ) : (
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    className="w-full text-sm" 
-                    onChange={(e) => setForm({ ...form, coverImage: e.target.files[0] })}
-                  />
+                  <div className="rounded-2xl border border-dashed border-slate-300/90 bg-white/65 hover:border-[#111214] p-3.5 transition-colors">
+                    <input 
+                      id="book-cover-file"
+                      type="file" 
+                      accept="image/*" 
+                      className="w-full text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#111214] file:text-[#F5F23B] hover:file:opacity-90 cursor-pointer" 
+                      onChange={(e) => setForm({ ...form, coverImage: e.target.files[0] })}
+                    />
+                  </div>
                 )}
               </div>
-              <div className="mb-4">
+              <div>
                 <div className="flex justify-between items-center mb-1.5">
-                  <label className="block text-sm font-semibold text-black">E-book PDF File {editingId && !form.pdfUrl && <span className="text-xs font-normal text-black">(Optional)</span>}</label>
+                  <label htmlFor="book-pdf-file" className="block text-xs font-bold uppercase tracking-wider text-slate-700">E-book PDF File {editingId && !form.pdfUrl && <span className="text-[11px] font-normal normal-case text-slate-500">(Optional)</span>}</label>
                   {editingId && form.pdfUrl && (
-                    <button type="button" onClick={() => setForm({...form, pdfUrl: null, pdfFile: null})} className="text-xs text-red-500 hover:underline">Remove PDF</button>
+                    <button type="button" onClick={() => setForm({...form, pdfUrl: null, pdfFile: null})} className="text-xs font-semibold text-rose-600 hover:underline cursor-pointer">Remove PDF</button>
                   )}
                 </div>
                 {editingId && form.pdfUrl ? (
-                  <div className="text-sm px-3 py-2 bg-green-50 text-green-700 border border-green-200 rounded flex items-center justify-between">
-                    <span>✓ Current PDF Saved</span>
-                    <span className="text-xs text-black">(To change it, click Remove PDF first)</span>
+                  <div className="text-xs px-3.5 py-3 bg-emerald-100/75 text-emerald-900 border border-emerald-200 rounded-2xl flex items-center justify-between gap-2">
+                    <span className="font-semibold">Current PDF Saved</span>
+                    <span className="text-[11px] text-emerald-800/80">Remove first to replace</span>
                   </div>
                 ) : (
-                  <input 
-                    type="file" 
-                    accept="application/pdf" 
-                    className="w-full text-sm" 
-                    onChange={(e) => setForm({ ...form, pdfFile: e.target.files[0] })}
-                  />
+                  <div className="rounded-2xl border border-dashed border-slate-300/90 bg-white/65 hover:border-[#111214] p-3.5 transition-colors">
+                    <input 
+                      id="book-pdf-file"
+                      type="file" 
+                      accept="application/pdf" 
+                      className="w-full text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#111214] file:text-[#F5F23B] hover:file:opacity-90 cursor-pointer" 
+                      onChange={(e) => setForm({ ...form, pdfFile: e.target.files[0] })}
+                    />
+                  </div>
                 )}
               </div>
             </div>

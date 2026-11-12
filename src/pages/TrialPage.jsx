@@ -33,15 +33,8 @@ export default function TrialPage({ onRequestTrial, onNavigate }) {
   };
 
   return (
-    <div style={{
-      minHeight: "calc(100vh - 80px)",
-      background: "#F9FAFB",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "60px 16px",
-    }}>
-      <div style={{ width: "100%", maxWidth: "480px" }}>
+    <div className="admin-glass-backdrop min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-14" style={fontBody}>
+      <div className="w-full max-w-[500px]">
         {!sent ? (
           <motion.div
             variants={containerVariants}
@@ -49,124 +42,91 @@ export default function TrialPage({ onRequestTrial, onNavigate }) {
             animate="show"
           >
             {/* Header (Outside Card) */}
-            <motion.div variants={itemVariants} style={{ textAlign: "center", marginBottom: "32px" }}>
-              <div style={{
-                width: "56px", height: "56px", borderRadius: "16px",
-                background: "#111111",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                margin: "0 auto 24px",
-                boxShadow: "0 8px 16px rgba(17,17,17,0.15)",
-              }}>
-                <Sparkles size={24} color="#FDD132" strokeWidth={2} />
+            <motion.div variants={itemVariants} className="text-center mb-7">
+              <div className="w-14 h-14 rounded-2xl bg-[#111214] text-[#F5F23B] flex items-center justify-center mx-auto mb-5 shadow-lg">
+                <Sparkles size={24} strokeWidth={2} />
               </div>
-              <h1 style={{ ...fontDisplay, color: "#111111", fontSize: "32px", fontWeight: "800", letterSpacing: "0.02em", margin: "0 0 12px" }}>
+              <h1 style={fontDisplay} className="text-3xl sm:text-4xl font-extrabold text-[#111214] mb-2">
                 Start Your Free Trial
               </h1>
-              <p style={{ color: "#000000", fontSize: "16px", margin: 0, lineHeight: "1.6", fontWeight: "500" }}>
-                30 days of full access to <span className="font-black uppercase text-red-600" style={fontBody}>SPELLBOUND</span>'s library.<br />
+              <p className="text-slate-700 text-sm sm:text-base font-medium leading-relaxed">
+                30 days of full access to <span className="font-black uppercase text-red-600">SPELLBOUND</span>'s library.<br />
                 Approved within one business day.
               </p>
             </motion.div>
 
             {/* Feature pills */}
-            <motion.div variants={itemVariants} style={{ display: "flex", gap: "10px", marginBottom: "32px", justifyContent: "center", flexWrap: "wrap" }}>
+            <motion.div variants={itemVariants} className="flex gap-2.5 mb-7 justify-center flex-wrap">
               {["Full catalog access", "No credit card", "Cancel anytime"].map(f => (
-                <div key={f} style={{
-                  background: "#FFFFFF", border: "1px solid #E5E7EB",
-                  borderRadius: "100px", padding: "6px 16px",
-                  fontSize: "13px", fontWeight: "700", color: "#000000",
-                  display: "flex", alignItems: "center", gap: "6px",
-                  boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
-                }}>
-                  <span style={{ color: "#111111", fontWeight: "900" }}>✓</span> {f}
+                <div key={f} className="admin-glass-pill rounded-full px-4 py-1.5 text-xs font-bold text-[#111214] flex items-center gap-1.5">
+                  <span className="font-black">✓</span> {f}
                 </div>
               ))}
             </motion.div>
 
             {/* Form Card */}
-            <motion.div variants={itemVariants} style={{
-              background: "#FFFFFF",
-              border: "1px solid #E5E7EB",
-              borderRadius: "16px",
-              padding: "40px",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.02), 0 1px 3px rgba(0,0,0,0.04)",
-            }}>
-              <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            <motion.div variants={itemVariants} className="admin-glass-panel rounded-[26px] p-7 sm:p-9">
+              <form onSubmit={handleSubmit} className="flex flex-col gap-5">
                 
-                <div style={{ position: "relative" }}>
-                  <label style={{ display: "block", color: "#000000", fontSize: "13px", fontWeight: "700", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: "8px" }}>
+                <div>
+                  <label htmlFor="trial-full-name" className="block text-slate-700 text-xs font-bold tracking-wider uppercase mb-1.5">
                     Full Name
                   </label>
-                  <motion.input 
-                    whileFocus={{ scale: 1.01 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                    style={{
-                      width: "100%", background: "#FFFFFF", border: "1px solid #D1D5DB",
-                      padding: "14px 16px", color: "#111111", fontSize: "15px", outline: "none", borderRadius: "10px",
-                      transition: "border-color 0.2s, box-shadow 0.2s"
-                    }}
-                    onFocusCapture={e => { e.target.style.borderColor = "#111111"; e.target.style.boxShadow = "0 0 0 4px rgba(17,17,17,0.05)"; }}
-                    onBlurCapture={e => { e.target.style.borderColor = "#D1D5DB"; e.target.style.boxShadow = "none"; }}
-                    placeholder="John Smith" required
-                    value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+                  <input 
+                    id="trial-full-name"
+                    className="glass-field-control"
+                    placeholder="John Smith"
+                    required
+                    autoComplete="name"
+                    value={form.name}
+                    onChange={e => setForm({ ...form, name: e.target.value })}
                   />
                 </div>
 
-                <div style={{ position: "relative" }}>
-                  <label style={{ display: "block", color: "#000000", fontSize: "13px", fontWeight: "700", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: "8px" }}>
+                <div>
+                  <label htmlFor="trial-email" className="block text-slate-700 text-xs font-bold tracking-wider uppercase mb-1.5">
                     Email Address
                   </label>
-                  <motion.input 
-                    whileFocus={{ scale: 1.01 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                    style={{
-                      width: "100%", background: "#FFFFFF", border: "1px solid #D1D5DB",
-                      padding: "14px 16px", color: "#111111", fontSize: "15px", outline: "none", borderRadius: "10px",
-                      transition: "border-color 0.2s, box-shadow 0.2s"
-                    }}
-                    onFocusCapture={e => { e.target.style.borderColor = "#111111"; e.target.style.boxShadow = "0 0 0 4px rgba(17,17,17,0.05)"; }}
-                    onBlurCapture={e => { e.target.style.borderColor = "#D1D5DB"; e.target.style.boxShadow = "none"; }}
-                    placeholder="you@institution.edu" type="email" required
-                    value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
+                  <input 
+                    id="trial-email"
+                    className="glass-field-control"
+                    placeholder="you@institution.edu"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    value={form.email}
+                    onChange={e => setForm({ ...form, email: e.target.value })}
                   />
                 </div>
 
-                <div style={{ position: "relative" }}>
-                  <label style={{ display: "block", color: "#000000", fontSize: "13px", fontWeight: "700", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: "8px" }}>
-                    Institution <span style={{ color: "#000000", fontWeight: "400", textTransform: "none", letterSpacing: 0 }}>(optional)</span>
+                <div>
+                  <label htmlFor="trial-institution" className="block text-slate-700 text-xs font-bold tracking-wider uppercase mb-1.5">
+                    Institution <span className="font-normal normal-case tracking-normal text-slate-500">(optional)</span>
                   </label>
-                  <motion.input 
-                    whileFocus={{ scale: 1.01 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                    style={{
-                      width: "100%", background: "#FFFFFF", border: "1px solid #D1D5DB",
-                      padding: "14px 16px", color: "#111111", fontSize: "15px", outline: "none", borderRadius: "10px",
-                      transition: "border-color 0.2s, box-shadow 0.2s"
-                    }}
-                    onFocusCapture={e => { e.target.style.borderColor = "#111111"; e.target.style.boxShadow = "0 0 0 4px rgba(17,17,17,0.05)"; }}
-                    onBlurCapture={e => { e.target.style.borderColor = "#D1D5DB"; e.target.style.boxShadow = "none"; }}
+                  <input 
+                    id="trial-institution"
+                    className="glass-field-control"
                     placeholder="University or organization name"
-                    value={form.institution} onChange={e => setForm({ ...form, institution: e.target.value })}
+                    autoComplete="organization"
+                    value={form.institution}
+                    onChange={e => setForm({ ...form, institution: e.target.value })}
                   />
                 </div>
 
                 <motion.button
-                  whileHover={{ scale: 1.02 }}
+                  whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                   type="submit"
                   disabled={loading}
-                  style={{
-                    width: "100%", background: loading ? "#4B5563" : "#111111", color: "#FFFFFF", fontWeight: "700", fontSize: "15px",
-                    padding: "16px", borderRadius: "12px", border: "none", cursor: loading ? "not-allowed" : "pointer",
-                    marginTop: "8px", boxShadow: "0 4px 12px rgba(17,17,17,0.15)", display: "flex", justifyContent: "center", alignItems: "center", gap: "8px"
-                  }}
-                  onMouseEnter={e => { if (!loading) e.target.style.background = "#000000"; }}
-                  onMouseLeave={e => { if (!loading) e.target.style.background = "#111111"; }}
+                  className="w-full bg-[#111214] text-[#F5F23B] hover:opacity-95 disabled:opacity-60 font-bold text-sm py-3.5 px-6 rounded-full border-none cursor-pointer shadow-lg transition-all mt-1"
                 >
                   {loading ? "Submitting…" : "Request Free Trial →"}
                 </motion.button>
 
-                <p style={{ color: "#000000", fontSize: "13px", textAlign: "center", marginTop: "8px", marginBottom: 0 }}>
+                <p className="text-slate-600 text-xs text-center mt-1 mb-0">
                   You'll receive login credentials via email after approval.
                 </p>
               </form>
@@ -175,36 +135,25 @@ export default function TrialPage({ onRequestTrial, onNavigate }) {
         ) : (
           /* Success State */
           <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.94 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            style={{ textAlign: "center", padding: "40px 0" }}
+            className="admin-glass-panel rounded-[26px] p-8 sm:p-10 text-center"
           >
-            <div style={{
-              width: "80px", height: "80px", borderRadius: "50%",
-              background: "#F0FDF4",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              margin: "0 auto 24px",
-              boxShadow: "0 4px 20px rgba(22, 163, 74, 0.2)"
-            }}>
+            <div className="w-20 h-20 rounded-full bg-emerald-100/90 border border-emerald-200 flex items-center justify-center mx-auto mb-6 shadow-md">
               <CheckCircle2 size={40} color="#16A34A" strokeWidth={2} />
             </div>
-            <h2 style={{ ...fontDisplay, color: "#111111", fontSize: "28px", fontWeight: "800", margin: "0 0 12px" }}>
+            <h2 style={fontDisplay} className="text-[#111214] text-2xl sm:text-3xl font-extrabold mb-3">
               Request Submitted!
             </h2>
-            <p style={{ color: "#374151", fontSize: "15px", lineHeight: "1.6", margin: "0 auto 32px", maxWidth: "360px" }}>
+            <p className="text-slate-600 text-sm leading-relaxed mx-auto mb-7 max-w-[360px]">
               We've received your request for a 30-day trial. Once the admin approves it, you'll receive your login credentials by email.
             </p>
-            <div style={{
-              background: "#111111", border: "1px solid #2B2D31",
-              borderRadius: "14px", padding: "14px 28px",
-              display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px",
-              boxShadow: "0 4px 14px rgba(0,0,0,0.12)", marginBottom: "28px"
-            }}>
-              <span style={{ color: "#E5E7EB", fontSize: "14px", fontWeight: "500" }}>
+            <div className="bg-[#111214] rounded-2xl px-6 py-3.5 inline-flex items-center justify-center gap-2 shadow-lg mb-7">
+              <span className="text-slate-300 text-xs font-medium">
                 Sent to
               </span>
-              <strong style={{ color: "#FDD132", fontSize: "14px", fontWeight: "700" }}>
+              <strong className="text-[#F5F23B] text-xs font-bold">
                 {submittedEmail || form.email}
               </strong>
             </div>
@@ -216,16 +165,7 @@ export default function TrialPage({ onRequestTrial, onNavigate }) {
                   if (onNavigate) onNavigate("catalog");
                   else window.location.hash = "catalog";
                 }}
-                style={{
-                  background: "#FDD132", color: "#111111",
-                  fontSize: "14px", fontWeight: "700",
-                  padding: "12px 28px", borderRadius: "10px",
-                  border: "none", cursor: "pointer",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-                  transition: "all 0.2s ease"
-                }}
-                onMouseEnter={e => e.target.style.filter = "brightness(0.95)"}
-                onMouseLeave={e => e.target.style.filter = "none"}
+                className="bg-[#F5F23B] text-[#111214] font-bold text-sm px-7 py-3 rounded-full border border-black/10 cursor-pointer shadow-md hover:opacity-95 transition-all"
               >
                 Browse Catalog →
               </button>

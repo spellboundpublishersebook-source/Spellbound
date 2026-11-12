@@ -159,3 +159,139 @@ header {
     transform: none !important;
   }
 }
+
+/* ================================================================
+   BRAND-CONSISTENT GLASS FORMS & NATIVE DIALOGS
+   ================================================================ */
+
+:root {
+  --brand-accent: #111214;
+  accent-color: var(--brand-accent);
+  color-scheme: light;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--brand-accent);
+}
+
+@supports not (accent-color: #111214) {
+  input[type="checkbox"].brand-check-fallback {
+    appearance: none;
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+    border: 2px solid #475569;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.85);
+    display: inline-grid;
+    place-content: center;
+    cursor: pointer;
+  }
+  input[type="checkbox"].brand-check-fallback:checked {
+    background: #111214;
+    border-color: #111214;
+  }
+  input[type="checkbox"].brand-check-fallback:checked::after {
+    content: "";
+    inline-size: 0.45rem;
+    block-size: 0.25rem;
+    border: solid #f5f23b;
+    border-width: 0 0 2px 2px;
+    transform: rotate(-45deg) translateY(-1px);
+  }
+}
+
+.glass-field-control {
+  font: inherit;
+  font-size: max(1rem, 0.875rem);
+  min-height: 44px;
+  width: 100%;
+  padding: 0.625rem 0.9375rem;
+  border-radius: 14px;
+  color: #111214;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.86) 0%, rgba(241, 245, 249, 0.68) 100%);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(15, 23, 42, 0.13);
+  box-shadow:
+    0 2px 10px -4px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.glass-field-control::placeholder {
+  color: #64748b;
+}
+
+.glass-field-control:hover {
+  border-color: rgba(15, 23, 42, 0.24);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 250, 252, 0.82) 100%);
+}
+
+.glass-field-control:focus-visible {
+  outline: 2px solid #111214;
+  outline-offset: 2px;
+  border-color: #111214;
+  box-shadow:
+    0 0 0 4px rgba(245, 242, 59, 0.45),
+    0 8px 20px -10px rgba(15, 23, 42, 0.18);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.glass-field-control:user-invalid {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.14);
+}
+
+textarea.glass-field-control {
+  min-height: 96px;
+}
+
+:where(dialog.app-glass-dialog) {
+  padding: 0;
+  margin: auto;
+  border: none;
+  background: transparent;
+  max-width: min(94vw, 600px);
+  width: 100%;
+  max-height: 88vh;
+  overflow: visible;
+  color: #111214;
+}
+
+dialog.app-glass-dialog.app-glass-dialog-wide {
+  max-width: min(94vw, 820px);
+}
+
+dialog.app-glass-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+dialog.app-glass-dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog.app-glass-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.46);
+  backdrop-filter: blur(8px) saturate(135%);
+  -webkit-backdrop-filter: blur(8px) saturate(135%);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.app-glass-dialog-surface {
+  background: linear-gradient(155deg, rgba(248, 250, 252, 0.90) 0%, rgba(232, 237, 243, 0.82) 100%);
+  backdrop-filter: blur(28px) saturate(165%);
+  -webkit-backdrop-filter: blur(28px) saturate(165%);
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  border-radius: 26px;
+  box-shadow:
+    0 30px 70px -20px rgba(15, 23, 42, 0.34),
+    0 0 0 1px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}

@@ -830,13 +830,13 @@ function InstitutionsTab({
         <Modal title="Create institution license" onClose={() => { setShowForm(false); setIssuedCreds(null); }} wide>
           {issuedCreds ? (
             <div>
-              <p className="text-sm mb-4 text-black">
-                License created. Send these credentials to the institution — shown only once here, same as a real system would do.
+              <p className="text-sm mb-4 text-slate-700">
+                License created. Send these credentials to the institution — shown only once here.
               </p>
-              <div className="rounded-md border p-4 mb-5 text-sm space-y-1 bg-[#FFF9E6] border-[#FDEB9E]">
-                <div>Login ID: <code>{issuedCreds.id}</code></div>
-                <div>Password: <code>{issuedCreds.password}</code></div>
-                <div>Access until: <code>{issuedCreds.endDate}</code></div>
+              <div className="rounded-2xl border border-amber-300/70 p-4 mb-5 text-sm space-y-2 bg-[#F5F23B]/20 backdrop-blur-md">
+                <div>Login ID: <code className="px-2 py-0.5 rounded bg-white/80 font-mono text-xs">{issuedCreds.id}</code></div>
+                <div>Password: <code className="px-2 py-0.5 rounded bg-white/80 font-mono text-xs">{issuedCreds.password}</code></div>
+                <div>Access until: <code className="px-2 py-0.5 rounded bg-white/80 font-mono text-xs">{issuedCreds.endDate}</code></div>
               </div>
               <Button onClick={() => { setShowForm(false); setIssuedCreds(null); }} className="w-full">Done</Button>
             </div>
@@ -844,70 +844,72 @@ function InstitutionsTab({
             <form onSubmit={handleCreate}>
               <div className="grid sm:grid-cols-2 gap-x-4">
                 <Field label="Institution name" required value={name} onChange={(e) => setName(e.target.value)} />
-                <Field label="Custom Login ID (optional)" placeholder="Leave blank to auto-generate" value={customId} onChange={(e) => setCustomId(e.target.value)} />
-                <Field label="Custom Password (optional)" placeholder="Leave blank to auto-generate" value={customPassword} onChange={(e) => setCustomPassword(e.target.value)} />
-                <Field label="Contact Email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Field label="Custom Login ID (optional)" placeholder="Leave blank to auto-generate" autoCorrect="off" autoCapitalize="none" spellCheck={false} value={customId} onChange={(e) => setCustomId(e.target.value)} />
+                <Field label="Custom Password (optional)" placeholder="Leave blank to auto-generate" autoCorrect="off" autoCapitalize="none" spellCheck={false} value={customPassword} onChange={(e) => setCustomPassword(e.target.value)} />
+                <Field label="Contact Email" type="email" required autoCorrect="off" autoCapitalize="none" spellCheck={false} value={email} onChange={(e) => setEmail(e.target.value)} />
                 <Field label="Number of seats" type="number" min="1" required value={seats} onChange={(e) => setSeats(e.target.value)} />
                 <Field label="Start date" type="date" required={!isTest} disabled={isTest} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
                 <Field label="Duration (months)" type="number" min="1" max="240" required={!isTest} disabled={isTest} value={duration} onChange={(e) => setDuration(e.target.value)} />
               </div>
 
-              <div className="mt-2 mb-3 flex items-center justify-between">
-                <label className="text-sm flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={isTest} onChange={(e) => setIsTest(e.target.checked)} />
-                  <span className="text-black">Create as 5-minute test license</span>
-                </label>
-              </div>
+              <label className="mt-1 mb-4 flex items-center gap-2.5 p-3 rounded-2xl bg-[#F5F23B]/25 border border-[#F5F23B]/70 cursor-pointer transition-colors hover:bg-[#F5F23B]/35">
+                <input type="checkbox" checked={isTest} onChange={(e) => setIsTest(e.target.checked)} className="brand-check-fallback cursor-pointer" />
+                <span className="text-xs font-bold text-[#111214]">⚡ Create as 5-minute test license</span>
+              </label>
 
-              <div className="mb-3 flex items-center justify-between">
-                <span className="text-sm font-semibold text-black">Select books for this bundle — {selected.length} of {books.length} selected
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-bold text-[#111214]">
+                  Select books for this bundle — {selected.length} of {books.length} selected
                 </span>
-                <div className="flex gap-3">
-                  <button type="button" onClick={() => setSelected(Array.from(new Set([...selected, ...filteredBooks.map(b => b.id)])))} className="text-xs text-blue-600 hover:underline font-semibold">Select Filtered</button>
-                  <button type="button" onClick={() => setSelected([])} className="text-xs text-red-600 hover:underline font-semibold">Clear All</button>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setSelected(Array.from(new Set([...selected, ...filteredBooks.map(b => b.id)])))} className="px-3 py-1 rounded-full bg-white/80 hover:bg-[#111214] hover:text-[#F5F23B] text-xs font-semibold text-[#111214] border border-white transition-colors cursor-pointer">Select Filtered</button>
+                  <button type="button" onClick={() => setSelected([])} className="px-3 py-1 rounded-full bg-rose-100/80 hover:bg-rose-200 text-xs font-semibold text-rose-700 transition-colors cursor-pointer">Clear All</button>
                 </div>
               </div>
-              <div className="space-y-2 mb-3">
-                <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3">
-                  <Search size={14} className="text-black flex-shrink-0" />
+              <search className="block space-y-2 mb-3">
+                <div className="relative flex items-center">
+                  <Search size={15} className="text-slate-500 absolute left-3.5 pointer-events-none" />
                   <input
+                    type="search"
                     value={search} onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search titles or authors…"
-                    className="flex-1 py-2.5 text-sm outline-none bg-transparent"
+                    aria-label="Search titles or authors"
+                    autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                    className="glass-field-control pl-9"
                   />
                 </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <select value={genreFilter} onChange={(e) => setGenreFilter(e.target.value)} className="rounded-lg border border-gray-200 px-2 py-2 text-xs text-black bg-white">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <select aria-label="Filter by genre" value={genreFilter} onChange={(e) => setGenreFilter(e.target.value)} className="glass-field-control text-xs">
                     <option value="All">All Genres</option>
                     {getGenres().map((g) => <option key={g} value={g}>{g}</option>)}
                   </select>
-                  <select value={pubTypeFilter} onChange={(e) => setPubTypeFilter(e.target.value)} className="rounded-lg border border-gray-200 px-2 py-2 text-xs text-black bg-white">
+                  <select aria-label="Filter by publication type" value={pubTypeFilter} onChange={(e) => setPubTypeFilter(e.target.value)} className="glass-field-control text-xs">
                     <option value="All">All Pub Types</option>
                     {allPubTypes.map((p) => <option key={p} value={p}>{p}</option>)}
                   </select>
-                  <select value={authorFilter} onChange={(e) => setAuthorFilter(e.target.value)} className="rounded-lg border border-gray-200 px-2 py-2 text-xs text-black bg-white">
+                  <select aria-label="Filter by author" value={authorFilter} onChange={(e) => setAuthorFilter(e.target.value)} className="glass-field-control text-xs">
                     <option value="All">All Authors</option>
                     {allAuthors.map((a) => <option key={a} value={a}>{a.length > 18 ? a.substring(0,18)+"…" : a}</option>)}
                   </select>
                 </div>
-              </div>
+              </search>
 
-              <div className="rounded-lg border border-gray-200 max-h-56 overflow-y-auto mb-4">
+              <div className="rounded-2xl border border-white/90 bg-white/65 backdrop-blur-md max-h-56 overflow-y-auto mb-5 shadow-inner divide-y divide-slate-200/60">
                 {filteredBooks.map((b) => (
-                  <label key={b.id} className="flex items-center gap-3 px-3 py-2.5 text-sm border-b border-gray-100 cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" checked={selected.includes(b.id)} onChange={() => toggle(b.id)} />
+                  <label key={b.id} className="flex items-center gap-3 px-3.5 py-2.5 text-sm cursor-pointer hover:bg-white/90 transition-colors">
+                    <input type="checkbox" className="brand-check-fallback shrink-0" checked={selected.includes(b.id)} onChange={() => toggle(b.id)} />
                     <span 
-                      className="w-5 h-7 rounded-sm flex-shrink-0 bg-cover bg-center shadow-sm" 
+                      className="w-6 h-8 rounded overflow-hidden flex-shrink-0 bg-cover bg-center shadow-sm" 
                       style={{ 
-                        backgroundColor: b.color,
+                        backgroundColor: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? "transparent" : b.color,
                         backgroundImage: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? `url(${b.coverUrl})` : 'none'
                       }} 
                     />
-                    <span className="flex-1">{b.title}</span>
-                    <span className="text-black">{b.genre}</span>
+                    <span className="flex-1 font-medium text-[#111214] truncate">{b.title}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 shrink-0">{b.genre}</span>
                   </label>
                 ))}
-                {filteredBooks.length === 0 && <div className="px-3 py-6 text-sm text-center text-black">No matches found.</div>}
+                {filteredBooks.length === 0 && <div className="px-3 py-6 text-sm text-center text-slate-600">No matches found.</div>}
               </div>
 
               <Button type="submit" className="w-full" disabled={selected.length === 0}>
@@ -919,31 +921,31 @@ function InstitutionsTab({
       )}
       {showEditAccessModal && (
         <Modal title="Edit Institution Access" onClose={() => setShowEditAccessModal(false)} wide>
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-semibold text-sm">Select Books ({selected.length} chosen of {books.length} total)</h3>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-bold text-sm text-[#111214]">Select Books ({selected.length} chosen of {books.length} total)</h3>
             <div className="flex gap-2">
-              <button type="button" onClick={() => setSelected(books.map(b => b.id))} className="text-xs font-semibold text-blue-600 hover:underline">Select All</button>
+              <button type="button" onClick={() => setSelected(books.map(b => b.id))} className="px-3 py-1 rounded-full bg-white/80 hover:bg-[#111214] hover:text-[#F5F23B] text-xs font-semibold text-[#111214] border border-white transition-colors cursor-pointer">Select All</button>
               {search || genreFilter !== "All" || pubTypeFilter !== "All" || authorFilter !== "All" ? (
-                <button type="button" onClick={() => setSelected(Array.from(new Set([...selected, ...filteredBooks.map(b => b.id)])))} className="text-xs font-semibold text-blue-600 hover:underline">Select Filtered</button>
+                <button type="button" onClick={() => setSelected(Array.from(new Set([...selected, ...filteredBooks.map(b => b.id)])))} className="px-3 py-1 rounded-full bg-white/80 hover:bg-[#111214] hover:text-[#F5F23B] text-xs font-semibold text-[#111214] border border-white transition-colors cursor-pointer">Select Filtered</button>
               ) : null}
-              <button type="button" onClick={() => setSelected([])} className="text-xs font-semibold text-red-600 hover:underline">Clear All</button>
+              <button type="button" onClick={() => setSelected([])} className="px-3 py-1 rounded-full bg-rose-100/80 hover:bg-rose-200 text-xs font-semibold text-rose-700 transition-colors cursor-pointer">Clear All</button>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2 mb-4">
-            <input type="text" placeholder="Search books or authors..." className="flex-1 min-w-[150px] px-3 py-2 border rounded-md text-sm outline-none" value={search} onChange={e => setSearch(e.target.value)} />
-            <select className="border rounded-md px-3 py-2 text-sm max-w-[130px] outline-none" value={genreFilter} onChange={e => setGenreFilter(e.target.value)}>
+          <search className="flex flex-wrap gap-2 mb-4">
+            <input type="search" placeholder="Search books or authors..." aria-label="Search books or authors" autoCorrect="off" autoCapitalize="none" spellCheck={false} className="glass-field-control flex-1 min-w-[170px]" value={search} onChange={e => setSearch(e.target.value)} />
+            <select aria-label="Filter by genre" className="glass-field-control w-auto min-w-[130px] text-xs" value={genreFilter} onChange={e => setGenreFilter(e.target.value)}>
               <option value="All">All Genres</option>
               {getGenres().map(g => <option key={g} value={g}>{g}</option>)}
             </select>
-            <select className="border rounded-md px-3 py-2 text-sm max-w-[130px] outline-none" value={pubTypeFilter} onChange={e => setPubTypeFilter(e.target.value)}>
+            <select aria-label="Filter by publication type" className="glass-field-control w-auto min-w-[130px] text-xs" value={pubTypeFilter} onChange={e => setPubTypeFilter(e.target.value)}>
               <option value="All">All Pub Types</option>
               {allPubTypes.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
-            <select className="border rounded-md px-3 py-2 text-sm max-w-[130px] outline-none" value={authorFilter} onChange={e => setAuthorFilter(e.target.value)}>
+            <select aria-label="Filter by author" className="glass-field-control w-auto min-w-[130px] text-xs" value={authorFilter} onChange={e => setAuthorFilter(e.target.value)}>
               <option value="All">All Authors</option>
               {allAuthors.map(a => <option key={a} value={a}>{a.length > 15 ? a.substring(0,15)+"..." : a}</option>)}
             </select>
-          </div>
+          </search>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6 max-h-64 overflow-y-auto p-1">
             {filteredBooks.map((b) => {
               const isChecked = selected.includes(b.id);
@@ -951,24 +953,24 @@ function InstitutionsTab({
                 <div 
                   key={b.id} 
                   onClick={() => toggle(b.id)} 
-                  className={`border rounded p-2 flex items-start gap-2 cursor-pointer transition-colors ${isChecked ? 'bg-blue-50 border-blue-400 shadow-sm' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'}`}
+                  className={`rounded-2xl border p-2.5 flex items-start gap-2.5 cursor-pointer transition-all ${isChecked ? 'bg-[#F5F23B]/30 border-[#111214]/40 shadow-sm' : 'bg-white/70 border-white/90 hover:bg-white/95'}`}
                 >
                   <input 
                     type="checkbox" 
                     checked={isChecked} 
                     onChange={() => {}} 
-                    className="mt-1 shrink-0 pointer-events-none" 
+                    className="mt-1 shrink-0 pointer-events-none brand-check-fallback" 
                   />
                   <div
-                    className="w-8 h-11 rounded overflow-hidden shrink-0 shadow-sm bg-cover bg-center"
+                    className="w-8 h-11 rounded-md overflow-hidden shrink-0 shadow-sm bg-cover bg-center"
                     style={{
                       backgroundColor: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? "transparent" : b.color,
                       backgroundImage: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? `url(${b.coverUrl})` : 'none'
                     }}
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-semibold leading-tight truncate text-black">{b.title}</div>
-                    <div className="text-[10px] text-black mt-1 truncate">{b.author}</div>
+                    <div className="text-xs font-bold leading-tight truncate text-[#111214]">{b.title}</div>
+                    <div className="text-[10px] text-slate-600 mt-1 truncate">{b.author}</div>
                   </div>
                 </div>
               );
@@ -1375,10 +1377,10 @@ function ReadersTab({
         <Modal title="Create individual user / order" onClose={() => { setShowForm(false); setIssuedCreds(null); }} wide>
           {issuedCreds ? (
             <div>
-              <p className="text-sm mb-4 text-black">
+              <p className="text-sm mb-4 text-slate-700">
                 Credentials issued successfully. Share these with the user or check email:
               </p>
-              <div className="rounded-lg bg-gray-50 p-4 border border-gray-200 mb-4 space-y-2 text-sm font-mono text-black">
+              <div className="rounded-2xl bg-[#F5F23B]/20 p-4 border border-amber-300/70 mb-5 space-y-2 text-sm font-mono text-[#111214]">
                 <div><strong>Login ID:</strong> {issuedCreds.id}</div>
                 <div><strong>Password:</strong> {issuedCreds.password}</div>
                 <div><strong>Expires:</strong> {issuedCreds.endDate.slice(0, 10)}</div>
@@ -1389,11 +1391,11 @@ function ReadersTab({
             </div>
           ) : (
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid sm:grid-cols-2 gap-x-4">
                 <Field label="Full name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="e.g. John Doe" />
-                <Field label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="john@example.com" />
+                <Field label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoCorrect="off" autoCapitalize="none" spellCheck={false} placeholder="john@example.com" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid sm:grid-cols-2 gap-x-4">
                 <Field label="Start date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
                 <Select label="Duration" value={duration} onChange={(e) => setDuration(Number(e.target.value))}>
                   <option value={1}>1 month</option>
@@ -1405,68 +1407,71 @@ function ReadersTab({
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <Field label="Custom Login ID (optional)" value={customId} onChange={(e) => setCustomId(e.target.value)} placeholder="Auto-generated if empty" />
-                <Field label="Custom Password (optional)" value={customPassword} onChange={(e) => setCustomPassword(e.target.value)} placeholder="Auto-generated if empty" />
+              <div className="grid sm:grid-cols-2 gap-x-4">
+                <Field label="Custom Login ID (optional)" value={customId} onChange={(e) => setCustomId(e.target.value)} autoCorrect="off" autoCapitalize="none" spellCheck={false} placeholder="Auto-generated if empty" />
+                <Field label="Custom Password (optional)" value={customPassword} onChange={(e) => setCustomPassword(e.target.value)} autoCorrect="off" autoCapitalize="none" spellCheck={false} placeholder="Auto-generated if empty" />
               </div>
 
-              <div className="flex items-center gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <input type="checkbox" id="testReaderOrder" checked={isTest} onChange={e => setIsTest(e.target.checked)} className="cursor-pointer" />
-                <label htmlFor="testReaderOrder" className="text-xs font-semibold text-yellow-800 cursor-pointer">
+              <label htmlFor="testReaderOrder" className="flex items-center gap-2.5 p-3 bg-[#F5F23B]/25 border border-[#F5F23B]/70 rounded-2xl cursor-pointer hover:bg-[#F5F23B]/35 transition-colors">
+                <input type="checkbox" id="testReaderOrder" checked={isTest} onChange={e => setIsTest(e.target.checked)} className="brand-check-fallback cursor-pointer" />
+                <span className="text-xs font-bold text-[#111214]">
                   ⚡ 5-Minute Test Order (for instant expiration testing)
-                </label>
-              </div>
+                </span>
+              </label>
 
-              <div className="mb-3 flex items-center justify-between">
-                <span className="text-sm font-semibold text-black">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-bold text-[#111214]">
                   Select books for this user — {selected.length} of {books.length} selected
                 </span>
-                <div className="flex gap-3">
-                  <button type="button" onClick={() => setSelected(Array.from(new Set([...selected, ...filteredBooks.map(b => b.id)])))} className="text-xs text-blue-600 hover:underline font-semibold">Select Filtered</button>
-                  <button type="button" onClick={() => setSelected([])} className="text-xs text-red-600 hover:underline font-semibold">Clear All</button>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setSelected(Array.from(new Set([...selected, ...filteredBooks.map(b => b.id)])))} className="px-3 py-1 rounded-full bg-white/80 hover:bg-[#111214] hover:text-[#F5F23B] text-xs font-semibold text-[#111214] border border-white transition-colors cursor-pointer">Select Filtered</button>
+                  <button type="button" onClick={() => setSelected([])} className="px-3 py-1 rounded-full bg-rose-100/80 hover:bg-rose-200 text-xs font-semibold text-rose-700 transition-colors cursor-pointer">Clear All</button>
                 </div>
               </div>
-              <div className="space-y-2 mb-3">
-                <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3">
-                  <Search size={14} className="text-black flex-shrink-0" />
+              <search className="block space-y-2 mb-3">
+                <div className="relative flex items-center">
+                  <Search size={15} className="text-slate-500 absolute left-3.5 pointer-events-none" />
                   <input
+                    type="search"
                     value={search} onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search titles or authors…"
-                    className="flex-1 py-2.5 text-sm outline-none bg-transparent"
+                    aria-label="Search titles or authors"
+                    autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                    className="glass-field-control pl-9"
                   />
                 </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <select value={genreFilter} onChange={(e) => setGenreFilter(e.target.value)} className="rounded-lg border border-gray-200 px-2 py-2 text-xs text-black bg-white">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <select aria-label="Filter by genre" value={genreFilter} onChange={(e) => setGenreFilter(e.target.value)} className="glass-field-control text-xs">
                     <option value="All">All Genres</option>
                     {getGenres().map((g) => <option key={g} value={g}>{g}</option>)}
                   </select>
-                  <select value={pubTypeFilter} onChange={(e) => setPubTypeFilter(e.target.value)} className="rounded-lg border border-gray-200 px-2 py-2 text-xs text-black bg-white">
+                  <select aria-label="Filter by publication type" value={pubTypeFilter} onChange={(e) => setPubTypeFilter(e.target.value)} className="glass-field-control text-xs">
                     <option value="All">All Pub Types</option>
                     {allPubTypes.map((p) => <option key={p} value={p}>{p}</option>)}
                   </select>
-                  <select value={authorFilter} onChange={(e) => setAuthorFilter(e.target.value)} className="rounded-lg border border-gray-200 px-2 py-2 text-xs text-black bg-white">
+                  <select aria-label="Filter by author" value={authorFilter} onChange={(e) => setAuthorFilter(e.target.value)} className="glass-field-control text-xs">
                     <option value="All">All Authors</option>
                     {allAuthors.map((a) => <option key={a} value={a}>{a.length > 18 ? a.substring(0,18)+"…" : a}</option>)}
                   </select>
                 </div>
-              </div>
+              </search>
 
-              <div className="rounded-lg border border-gray-200 max-h-56 overflow-y-auto mb-4">
+              <div className="rounded-2xl border border-white/90 bg-white/65 backdrop-blur-md max-h-56 overflow-y-auto mb-5 shadow-inner divide-y divide-slate-200/60">
                 {filteredBooks.map((b) => (
-                  <label key={b.id} className="flex items-center gap-3 px-3 py-2.5 text-sm border-b border-gray-100 cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" checked={selected.includes(b.id)} onChange={() => toggle(b.id)} />
+                  <label key={b.id} className="flex items-center gap-3 px-3.5 py-2.5 text-sm cursor-pointer hover:bg-white/90 transition-colors">
+                    <input type="checkbox" className="brand-check-fallback shrink-0" checked={selected.includes(b.id)} onChange={() => toggle(b.id)} />
                     <span 
-                      className="w-5 h-7 rounded-sm flex-shrink-0 bg-cover bg-center shadow-sm" 
+                      className="w-6 h-8 rounded overflow-hidden flex-shrink-0 bg-cover bg-center shadow-sm" 
                       style={{ 
-                        backgroundColor: b.color,
+                        backgroundColor: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? "transparent" : b.color,
                         backgroundImage: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? `url(${b.coverUrl})` : 'none'
                       }} 
                     />
-                    <span className="flex-1 text-black font-medium">{b.title}</span>
-                    <span className="text-gray-500 text-xs">{b.genre}</span>
+                    <span className="flex-1 text-[#111214] font-medium truncate">{b.title}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 shrink-0">{b.genre}</span>
                   </label>
                 ))}
-                {filteredBooks.length === 0 && <div className="px-3 py-6 text-sm text-center text-black">No matches found.</div>}
+                {filteredBooks.length === 0 && <div className="px-3 py-6 text-sm text-center text-slate-600">No matches found.</div>}
               </div>
 
               <Button type="submit" className="w-full" disabled={selected.length === 0}>
@@ -1479,41 +1484,44 @@ function ReadersTab({
 
       {showEditAccessModal && (
         <Modal title="Edit Individual User Access" onClose={() => setShowEditAccessModal(false)} wide>
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-semibold text-sm">Select Books ({selected.length} chosen of {books.length} total)</h3>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-bold text-sm text-[#111214]">Select Books ({selected.length} chosen of {books.length} total)</h3>
             <div className="flex gap-2">
-              <button type="button" onClick={() => setSelected(books.map(b => b.id))} className="text-xs font-semibold text-blue-600 hover:underline">Select All</button>
+              <button type="button" onClick={() => setSelected(books.map(b => b.id))} className="px-3 py-1 rounded-full bg-white/80 hover:bg-[#111214] hover:text-[#F5F23B] text-xs font-semibold text-[#111214] border border-white transition-colors cursor-pointer">Select All</button>
               {search || genreFilter !== "All" || pubTypeFilter !== "All" || authorFilter !== "All" ? (
-                <button type="button" onClick={() => setSelected(Array.from(new Set([...selected, ...filteredBooks.map(b => b.id)])))} className="text-xs font-semibold text-blue-600 hover:underline">Select Filtered</button>
+                <button type="button" onClick={() => setSelected(Array.from(new Set([...selected, ...filteredBooks.map(b => b.id)])))} className="px-3 py-1 rounded-full bg-white/80 hover:bg-[#111214] hover:text-[#F5F23B] text-xs font-semibold text-[#111214] border border-white transition-colors cursor-pointer">Select Filtered</button>
               ) : null}
-              <button type="button" onClick={() => setSelected([])} className="text-xs font-semibold text-red-600 hover:underline">Clear All</button>
+              <button type="button" onClick={() => setSelected([])} className="px-3 py-1 rounded-full bg-rose-100/80 hover:bg-rose-200 text-xs font-semibold text-rose-700 transition-colors cursor-pointer">Clear All</button>
             </div>
           </div>
 
-          <div className="space-y-2 mb-3">
-            <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3">
-              <Search size={14} className="text-black flex-shrink-0" />
+          <search className="block space-y-2 mb-4">
+            <div className="relative flex items-center">
+              <Search size={15} className="text-slate-500 absolute left-3.5 pointer-events-none" />
               <input
+                type="search"
                 value={search} onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search titles or authors…"
-                className="flex-1 py-2 text-sm outline-none bg-transparent"
+                aria-label="Search titles or authors"
+                autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                className="glass-field-control pl-9"
               />
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              <select value={genreFilter} onChange={(e) => setGenreFilter(e.target.value)} className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs text-black bg-white">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <select aria-label="Filter by genre" value={genreFilter} onChange={(e) => setGenreFilter(e.target.value)} className="glass-field-control text-xs">
                 <option value="All">All Genres</option>
                 {getGenres().map((g) => <option key={g} value={g}>{g}</option>)}
               </select>
-              <select value={pubTypeFilter} onChange={(e) => setPubTypeFilter(e.target.value)} className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs text-black bg-white">
+              <select aria-label="Filter by publication type" value={pubTypeFilter} onChange={(e) => setPubTypeFilter(e.target.value)} className="glass-field-control text-xs">
                 <option value="All">All Pub Types</option>
                 {allPubTypes.map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
-              <select value={authorFilter} onChange={(e) => setAuthorFilter(e.target.value)} className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs text-black bg-white">
+              <select aria-label="Filter by author" value={authorFilter} onChange={(e) => setAuthorFilter(e.target.value)} className="glass-field-control text-xs">
                 <option value="All">All Authors</option>
                 {allAuthors.map((a) => <option key={a} value={a}>{a.length > 18 ? a.substring(0,18)+"…" : a}</option>)}
               </select>
             </div>
-          </div>
+          </search>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6 max-h-60 overflow-y-auto p-1">
             {filteredBooks.map((b) => {
@@ -1522,24 +1530,24 @@ function ReadersTab({
                 <div 
                   key={b.id} 
                   onClick={() => toggle(b.id)} 
-                  className={`border rounded p-2 flex items-start gap-2 cursor-pointer transition-colors ${isChecked ? 'bg-blue-50 border-blue-400 shadow-sm' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'}`}
+                  className={`rounded-2xl border p-2.5 flex items-start gap-2.5 cursor-pointer transition-all ${isChecked ? 'bg-[#F5F23B]/30 border-[#111214]/40 shadow-sm' : 'bg-white/70 border-white/90 hover:bg-white/95'}`}
                 >
                   <input 
                     type="checkbox" 
                     checked={isChecked} 
                     onChange={() => {}} 
-                    className="mt-1 shrink-0 pointer-events-none" 
+                    className="mt-1 shrink-0 pointer-events-none brand-check-fallback" 
                   />
                   <div
-                    className="w-8 h-11 rounded overflow-hidden shrink-0 shadow-sm bg-cover bg-center"
+                    className="w-8 h-11 rounded-md overflow-hidden shrink-0 shadow-sm bg-cover bg-center"
                     style={{
                       backgroundColor: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? "transparent" : b.color,
                       backgroundImage: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? `url(${b.coverUrl})` : 'none'
                     }}
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-semibold leading-tight truncate text-black">{b.title}</div>
-                    <div className="text-[10px] text-black mt-1 truncate">{b.author}</div>
+                    <div className="text-xs font-bold leading-tight truncate text-[#111214]">{b.title}</div>
+                    <div className="text-[10px] text-slate-600 mt-1 truncate">{b.author}</div>
                   </div>
                 </div>
               );
@@ -1968,28 +1976,28 @@ function TrialsTab({ books, trialRequests, onApproveTrial, onRejectTrial, onDele
 
       {(showApproveModal || showEditModal) && (
         <Modal title={showApproveModal ? "Approve Trial & Select Books" : "Edit Trial Access"} onClose={() => { setShowApproveModal(false); setShowEditModal(false); }} wide>
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-semibold text-sm">Select Books ({selected.length} chosen)</h3>
-            <div className="flex gap-3">
-              <button type="button" onClick={() => setSelected(Array.from(new Set([...selected, ...filteredBooks.map(b => b.id)])))} className="text-xs text-blue-600 hover:underline font-semibold">Select Filtered</button>
-              <button type="button" onClick={() => setSelected([])} className="text-xs text-red-600 hover:underline font-semibold">Clear All</button>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-bold text-sm text-[#111214]">Select Books ({selected.length} chosen)</h3>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setSelected(Array.from(new Set([...selected, ...filteredBooks.map(b => b.id)])))} className="px-3 py-1 rounded-full bg-white/80 hover:bg-[#111214] hover:text-[#F5F23B] text-xs font-semibold text-[#111214] border border-white transition-colors cursor-pointer">Select Filtered</button>
+              <button type="button" onClick={() => setSelected([])} className="px-3 py-1 rounded-full bg-rose-100/80 hover:bg-rose-200 text-xs font-semibold text-rose-700 transition-colors cursor-pointer">Clear All</button>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2 mb-4">
-            <input type="text" placeholder="Search titles or authors..." className="flex-1 min-w-[150px] px-3 py-2 border rounded-md text-sm" value={search} onChange={e => setSearch(e.target.value)} />
-            <select className="border rounded-md px-3 py-2 text-sm max-w-[120px]" value={genreFilter} onChange={e => setGenreFilter(e.target.value)}>
+          <search className="flex flex-wrap gap-2 mb-4">
+            <input type="search" placeholder="Search titles or authors..." aria-label="Search titles or authors" autoCorrect="off" autoCapitalize="none" spellCheck={false} className="glass-field-control flex-1 min-w-[170px]" value={search} onChange={e => setSearch(e.target.value)} />
+            <select aria-label="Filter by genre" className="glass-field-control w-auto min-w-[120px] text-xs" value={genreFilter} onChange={e => setGenreFilter(e.target.value)}>
               <option value="All">All Genres</option>
               {getGenres().map(g => <option key={g} value={g}>{g}</option>)}
             </select>
-            <select className="border rounded-md px-3 py-2 text-sm max-w-[120px]" value={pubTypeFilter} onChange={e => setPubTypeFilter(e.target.value)}>
+            <select aria-label="Filter by publication type" className="glass-field-control w-auto min-w-[120px] text-xs" value={pubTypeFilter} onChange={e => setPubTypeFilter(e.target.value)}>
               <option value="All">All Pub Types</option>
               {allPubTypes.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
-            <select className="border rounded-md px-3 py-2 text-sm max-w-[120px]" value={authorFilter} onChange={e => setAuthorFilter(e.target.value)}>
+            <select aria-label="Filter by author" className="glass-field-control w-auto min-w-[120px] text-xs" value={authorFilter} onChange={e => setAuthorFilter(e.target.value)}>
               <option value="All">All Authors</option>
               {allAuthors.map(a => <option key={a} value={a}>{a.length > 15 ? a.substring(0,15)+"..." : a}</option>)}
             </select>
-          </div>
+          </search>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6 max-h-60 overflow-y-auto p-1">
             {filteredBooks.map((b) => {
               const isChecked = selected.includes(b.id);
@@ -1997,24 +2005,24 @@ function TrialsTab({ books, trialRequests, onApproveTrial, onRejectTrial, onDele
                 <div 
                   key={b.id} 
                   onClick={() => toggle(b.id)} 
-                  className={`border rounded p-2 flex items-start gap-2 cursor-pointer transition-colors ${isChecked ? 'bg-blue-50 border-blue-400 shadow-sm' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'}`}
+                  className={`rounded-2xl border p-2.5 flex items-start gap-2.5 cursor-pointer transition-all ${isChecked ? 'bg-[#F5F23B]/30 border-[#111214]/40 shadow-sm' : 'bg-white/70 border-white/90 hover:bg-white/95'}`}
                 >
                   <input 
                     type="checkbox" 
                     checked={isChecked} 
                     onChange={() => {}} 
-                    className="mt-1 shrink-0 pointer-events-none" 
+                    className="mt-1 shrink-0 pointer-events-none brand-check-fallback" 
                   />
                   <div
-                    className="w-8 h-11 rounded overflow-hidden shrink-0 shadow-sm bg-cover bg-center"
+                    className="w-8 h-11 rounded-md overflow-hidden shrink-0 shadow-sm bg-cover bg-center"
                     style={{
                       backgroundColor: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? "transparent" : b.color,
                       backgroundImage: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? `url(${b.coverUrl})` : 'none'
                     }}
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-semibold leading-tight truncate text-black">{b.title}</div>
-                    <div className="text-[10px] text-black mt-1 truncate">{b.author}</div>
+                    <div className="text-xs font-bold leading-tight truncate text-[#111214]">{b.title}</div>
+                    <div className="text-[10px] text-slate-600 mt-1 truncate">{b.author}</div>
                   </div>
                 </div>
               );
@@ -3120,13 +3128,14 @@ function FeaturedAuthorsTab({ books = [], authors = [], onAddAuthor, onRemoveAut
       {showForm && (
         <Modal onClose={() => setShowForm(false)} title="Add Featured Author">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="mb-4">
-              <label className="block text-sm font-semibold mb-1.5 text-black">Author Name</label>
+            <div>
+              <label htmlFor="featured-author-name" className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-700">Author Name</label>
               <input
+                id="featured-author-name"
                 list="existing-authors-admin"
                 type="text"
                 required
-                className="w-full px-3 py-2 border rounded-md"
+                className="glass-field-control"
                 value={name}
                 onChange={e => setName(e.target.value)}
                 placeholder="Select or type author name..."
@@ -3135,38 +3144,40 @@ function FeaturedAuthorsTab({ books = [], authors = [], onAddAuthor, onRemoveAut
                 {allAuthors.map(a => <option key={a} value={a} />)}
               </datalist>
             </div>
-            <div className="mb-4">
-              <label className="block text-sm font-semibold mb-1.5 text-black">Author Photo</label>
+            <div>
+              <label htmlFor="featured-author-photo" className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-700">Author Photo</label>
               {photoUrl ? (
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 p-3 rounded-2xl bg-white/65 border border-white/90">
                   <img src={photoUrl} alt="Preview" className="w-16 h-16 rounded-full object-cover shadow" />
-                  <button type="button" onClick={() => setPhotoUrl("")} className="text-sm text-red-500 underline">Remove Photo</button>
+                  <button type="button" onClick={() => setPhotoUrl("")} className="text-xs font-semibold text-rose-600 hover:underline cursor-pointer">Remove Photo</button>
                 </div>
               ) : (
-                <div className="relative">
+                <div className="rounded-2xl border border-dashed border-slate-300/90 bg-white/65 hover:border-[#111214] p-3.5 transition-colors">
                   <input
+                    id="featured-author-photo"
                     type="file"
                     accept="image/*"
                     onChange={handlePhotoUpload}
-                    className="w-full px-3 py-2 border rounded-md"
+                    className="w-full text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#111214] file:text-[#F5F23B] hover:file:opacity-90 cursor-pointer"
                     disabled={uploading}
                   />
-                  {uploading && <span className="text-sm text-blue-500 mt-2 block">Uploading...</span>}
+                  {uploading && <span className="text-xs font-medium text-slate-600 mt-2 block">Uploading...</span>}
                 </div>
               )}
             </div>
-            <div className="mb-4">
-              <label className="block text-sm font-semibold mb-1.5 text-black">Short Bio (Optional)</label>
+            <div>
+              <label htmlFor="featured-author-bio" className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-700">Short Bio (Optional)</label>
               <textarea
-                className="w-full px-3 py-2 border rounded-md"
+                id="featured-author-bio"
+                className="glass-field-control resize-y"
                 rows={3}
                 value={bio}
                 onChange={e => setBio(e.target.value)}
                 placeholder="Expert in workplace software..."
               />
             </div>
-            <div className="pt-4 flex justify-end gap-3">
-              <Button type="button" variant="ghost" onClick={() => setShowForm(false)}>Cancel</Button>
+            <div className="pt-2 flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
               <Button type="submit" disabled={uploading}>Add Author</Button>
             </div>
           </form>

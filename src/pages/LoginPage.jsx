@@ -127,61 +127,50 @@ export default function LoginPage({ onLogin, mode = "all" }) {
   };
 
   return (
-    <div style={{ minHeight: "calc(100vh - 64px)", backgroundColor: "#F9FAFB", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
+    <div className="admin-glass-backdrop min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-10">
       <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-        style={{ 
-          display: "flex", 
-          width: "100%", 
-          maxWidth: "840px", 
-          minHeight: "520px",
-          backgroundColor: "#E8E8E8", 
-          borderRadius: "24px", 
-          overflow: "hidden", 
-          boxShadow: "0 24px 50px rgba(0,0,0,0.1)" 
-        }}
+        transition={{ duration: 0.45, ease: 'easeOut' }}
+        className="admin-glass-shell flex w-full max-w-[860px] min-h-[540px] rounded-[28px] overflow-hidden"
       >
         
         {/* Left Side: Animated Graphics */}
-        <div className="hidden md:flex flex-1 items-center justify-center relative">
+        <div className="hidden md:flex flex-1 items-center justify-center relative bg-white/25 border-r border-white/50">
           <AnimatedCharacters focusedField={focusedField} mousePos={mousePos} />
         </div>
 
         {/* Right Side: Form */}
-        <div style={{ flex: 1, backgroundColor: "transparent", padding: "48px 40px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+        <div className="flex-1 bg-white/35 backdrop-blur-md p-7 sm:p-10 flex flex-col justify-center">
           
           <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="show"
-            style={{ display: "flex", flexDirection: "column", width: "100%" }}
+            className="flex flex-col w-full"
           >
             {/* Logo / Header */}
-            <motion.div variants={itemVariants} style={{ textAlign: "center", marginBottom: "32px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <img src="/logo.png" alt="SpellBound" style={{ height: "140px", width: "auto", marginBottom: "16px", objectFit: "contain" }} />
-              <h2 className="text-3xl font-bold mb-2" style={{ ...fontDisplay, color: "#111111" }}>Welcome back!</h2>
-              <p style={{ color: "#000000", fontSize: "14px", fontWeight: "500" }}>Please enter your details</p>
+            <motion.div variants={itemVariants} className="text-center mb-7 flex flex-col items-center">
+              <img src="/logo.png" alt="SpellBound" className="h-28 w-auto mb-3 object-contain" />
+              <h2 className="text-3xl font-bold mb-1.5 text-[#111214]" style={fontDisplay}>Welcome back!</h2>
+              <p className="text-slate-600 text-sm font-medium">Please enter your credentials</p>
             </motion.div>
 
             {/* Tab Switcher */}
             {availableTabs.length > 1 && (
-              <motion.div variants={itemVariants} style={{ display: "flex", background: "#F5F6F8", borderRadius: "12px", padding: "4px", marginBottom: "24px", border: "1px solid #E5E7EB" }}>
+              <motion.div variants={itemVariants} className="flex bg-white/60 backdrop-blur-md rounded-full p-1 mb-6 border border-white/90 shadow-sm">
                 {availableTabs.map((t) => {
                   const active = tab === t.id;
                   return (
                     <button
+                      type="button"
                       key={t.id}
                       onClick={() => { setTab(t.id); setError(""); }}
-                      style={{
-                        flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px 16px",
-                        borderRadius: "10px", border: "none", cursor: "pointer", fontSize: "12px", fontWeight: "700",
-                        transition: "all 0.2s", background: active ? "#111111" : "transparent", color: active ? "#FFFFFF" : "#6B7280",
-                        boxShadow: active ? "0 2px 8px rgba(0,0,0,0.15)" : "none",
-                      }}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                        active ? "bg-[#111214] text-[#F5F23B] shadow-md" : "text-slate-600 hover:text-[#111214]"
+                      }`}
                     >
-                      <t.icon size={16} strokeWidth={2} />
+                      <t.icon size={15} strokeWidth={2} />
                       {t.label}
                     </button>
                   );
@@ -189,91 +178,85 @@ export default function LoginPage({ onLogin, mode = "all" }) {
               </motion.div>
             )}
 
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
               {/* ID Field */}
-              <motion.div variants={itemVariants} style={{ position: "relative" }}>
-                <label style={{ display: "block", color: "#000000", fontSize: "13px", fontWeight: "600", marginBottom: "8px" }}>
+              <motion.div variants={itemVariants}>
+                <label htmlFor="login-id-input" className="block text-slate-700 text-xs font-bold uppercase tracking-wider mb-1.5">
                   {labelFor(tab)}
                 </label>
-                <motion.input
-                  whileFocus={{ scale: 1.02 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                <input
+                  id="login-id-input"
+                  className="glass-field-control"
                   value={id}
                   onChange={e => setId(e.target.value)}
                   required
+                  autoComplete="username"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
                   onFocus={() => setFocusedField("id")}
                   onBlur={() => setFocusedField(null)}
-                  style={{
-                    width: "100%", background: "#F3F6FA", border: "none",
-                    padding: "14px 16px", color: "#111111", fontSize: "15px", outline: "none", borderRadius: "8px",
-                  }}
-                  onFocusCapture={e => { e.target.style.background = "#EBF0F6"; }}
-                  onBlurCapture={e => { e.target.style.background = "#F3F6FA"; }}
                 />
               </motion.div>
 
               {/* Password Field */}
-              <motion.div variants={itemVariants} style={{ position: "relative" }}>
-                <label style={{ display: "block", color: "#000000", fontSize: "13px", fontWeight: "600", marginBottom: "8px" }}>
+              <motion.div variants={itemVariants}>
+                <label htmlFor="login-password-input" className="block text-slate-700 text-xs font-bold uppercase tracking-wider mb-1.5">
                   Password
                 </label>
-                <div style={{ position: "relative" }}>
-                  <motion.input
-                    whileFocus={{ scale: 1.02 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                <div className="relative">
+                  <input
+                    id="login-password-input"
+                    className="glass-field-control pr-12"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     type={showPw ? "text" : "password"}
                     required
+                    autoComplete="current-password"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
                     onFocus={() => setFocusedField("password")}
                     onBlur={() => setFocusedField(null)}
-                    style={{
-                      width: "100%", background: "#F3F6FA", border: "none",
-                      padding: "14px 44px 14px 16px", color: "#111111", fontSize: "15px", outline: "none", borderRadius: "8px",
-                    }}
-                    onFocusCapture={e => { e.target.style.background = "#EBF0F6"; }}
-                    onBlurCapture={e => { e.target.style.background = "#F3F6FA"; }}
                   />
                   <button
                     type="button"
+                    aria-pressed={showPw}
+                    aria-label={showPw ? "Hide password" : "Show password"}
                     onClick={() => setShowPw(p => !p)}
-                    style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#000000", cursor: "pointer", padding: "8px" }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-2 rounded-full text-slate-600 hover:text-[#111214] hover:bg-white/70 transition-colors cursor-pointer"
                   >
                     {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
               </motion.div>
 
-              <motion.div variants={itemVariants} style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", fontSize: "13px" }}>
-                <button type="button" style={{ background: "none", border: "none", color: "#000000", cursor: "pointer", padding: 0 }}>
+              <motion.div variants={itemVariants} className="flex justify-end items-center text-xs">
+                <button type="button" className="text-slate-600 hover:text-[#111214] font-semibold cursor-pointer">
                   Forgot password?
                 </button>
               </motion.div>
 
               {error && (
-                <motion.div variants={itemVariants} style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", padding: "12px 16px", color: "#DC2626", fontSize: "14px" }}>
+                <motion.div variants={itemVariants} role="alert" className="rounded-2xl bg-rose-50/90 border border-rose-200 px-4 py-3 text-rose-700 text-sm font-medium">
                   {error}
                 </motion.div>
               )}
 
               <motion.button
                 variants={itemVariants}
-                whileHover={{ scale: 1.02 }}
+                whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
                 type="submit"
                 disabled={loading}
-                style={{
-                  width: "100%", background: loading ? "#4B5563" : "#1A1A1A", color: "#FFFFFF", fontWeight: "700", fontSize: "15px",
-                  padding: "16px", borderRadius: "100px", border: "none", cursor: loading ? "not-allowed" : "pointer",
-                  marginTop: "8px", boxShadow: "0 4px 12px rgba(26,26,26,0.15)"
-                }}
+                className="w-full bg-[#111214] text-[#F5F23B] hover:opacity-95 disabled:opacity-60 font-bold text-sm py-3.5 px-6 rounded-full border-none cursor-pointer shadow-lg transition-all mt-1"
               >
                 {loading ? "Signing in…" : "Log In"}
               </motion.button>
             </form>
             
-            <motion.div variants={itemVariants} style={{ marginTop: "32px", textAlign: "center", fontSize: "13px", color: "#000000" }}>
-              Don't have an account? <span style={{ fontWeight: "600", color: "#111111", cursor: "pointer" }}>Contact us for a free trial or institution access</span>
+            <motion.div variants={itemVariants} className="mt-7 text-center text-xs text-slate-600">
+              Don't have an account? <span className="font-bold text-[#111214]">Contact us for a free trial or institution access</span>
             </motion.div>
           </motion.div>
         </div>

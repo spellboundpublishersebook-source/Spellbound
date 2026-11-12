@@ -23,7 +23,7 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
   };
 
   return (
-    <div className="bg-[#f8f9fa] min-h-screen text-[#131313]" style={fontBody}>
+    <div className="admin-glass-backdrop min-h-screen text-[#111214] pb-14" style={fontBody}>
       {/* Fullscreen Book Loading Animation when opening reader */}
       {openingReader && (
         <BookLoader 
@@ -36,40 +36,41 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
       )}
 
       {/* Header / Breadcrumb */}
-      <div className="bg-white border-b border-gray-200 py-4 px-6">
-        <div className="max-w-7xl mx-auto flex items-center gap-2 text-sm text-black">
+      <div className="bg-white/70 backdrop-blur-xl border-b border-white/80 py-3.5 px-6">
+        <div className="max-w-7xl mx-auto flex items-center gap-2 text-sm text-slate-700">
           <button 
+            type="button"
             onClick={() => onNavigate(session?.role === "reader" ? "reader-dashboard" : "catalog")} 
-            className="hover:text-black transition-colors flex items-center gap-1 font-medium cursor-pointer"
+            className="hover:text-[#111214] transition-colors flex items-center gap-1 font-semibold cursor-pointer"
           >
             <ChevronLeft size={16} /> {session?.role === "reader" ? "Back to Library" : "Back to Catalog"}
           </button>
           <span>/</span>
           <span>{book.genre}</span>
           <span>/</span>
-          <span className="text-black font-semibold truncate">{book.title}</span>
+          <span className="text-[#111214] font-bold truncate">{book.title}</span>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        <div className="flex flex-col md:flex-row gap-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10">
+        <div className="admin-glass-shell rounded-[28px] p-6 sm:p-10 flex flex-col md:flex-row gap-10">
           
           {/* Left Column - Cover */}
           <div className="md:w-1/3 flex flex-col items-center">
-            <BookCover book={book} className="w-full max-w-sm aspect-[2/3] rounded-lg mb-8" />
+            <BookCover book={book} className="w-full max-w-sm aspect-[2/3] rounded-2xl mb-6 shadow-lg" />
             
-            <div className="w-full bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <div className="w-full admin-glass-panel p-5 rounded-2xl">
               {session ? (
                 (session.role === "admin" || session.role === "uploader" || session.bookIds === "all" || session.bookIds?.includes(book.id)) ? (
                   <AnimatedSweepButton 
                     onClick={handleOpenReader} 
                     variant="yellow"
-                    className="w-full font-bold py-3 rounded-md mb-3 text-sm shadow-sm"
+                    className="w-full font-bold py-3 rounded-full mb-1 text-sm shadow-sm"
                   >
                     <BookOpen size={18} /> {book.pdfUrl ? "View PDF" : "Read Book"}
                   </AnimatedSweepButton>
                 ) : (
-                  <div className="w-full bg-gray-100 text-black font-bold py-3 rounded-md text-center mb-3 border border-gray-200 text-sm">
+                  <div className="w-full bg-white/70 text-[#111214] font-bold py-3 rounded-full text-center border border-white text-sm">
                     Not available for your institution
                   </div>
                 )
@@ -78,14 +79,14 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
                   <AnimatedSweepButton 
                     onClick={() => onNavigate("login-reader")} 
                     variant="yellow"
-                    className="w-full font-bold py-3 rounded-md mb-3 text-sm shadow-sm"
+                    className="w-full font-bold py-3 rounded-full mb-3 text-sm shadow-sm"
                   >
                     Access via Institution
                   </AnimatedSweepButton>
                   <AnimatedSweepButton 
                     onClick={() => onNavigate("trial")} 
                     variant="black"
-                    className="w-full font-bold py-3 rounded-md text-sm shadow-sm"
+                    className="w-full font-bold py-3 rounded-full text-sm shadow-sm"
                   >
                     Request Free Trial
                   </AnimatedSweepButton>
@@ -96,16 +97,16 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
 
           {/* Right Column - Details */}
           <div className="md:w-2/3">
-            <h1 className="text-4xl md:text-5xl font-bold mb-2" style={fontDisplay}>{book.title}</h1>
-            <div className="flex items-center gap-4 mb-6">
-              <h2 className="text-xl text-black font-semibold">by {book.author}</h2>
-              <button onClick={() => setShowCite(true)} className="flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-100 transition-colors text-black">
+            <h1 className="text-3xl md:text-5xl font-bold mb-2 text-[#111214]" style={fontDisplay}>{book.title}</h1>
+            <div className="flex flex-wrap items-center gap-4 mb-6">
+              <h2 className="text-xl text-slate-700 font-semibold">by {book.author}</h2>
+              <button type="button" onClick={() => setShowCite(true)} className="admin-glass-pill flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-full text-[#111214] hover:bg-[#111214] hover:text-[#F5F23B] transition-colors cursor-pointer">
                 <Quote size={14} /> Cite this book
               </button>
             </div>
             
-            <div className="prose max-w-none text-black leading-relaxed mb-10">
-              <h3 className="text-lg font-bold text-black mb-3 border-b border-gray-200 pb-2">Description</h3>
+            <div className="prose max-w-none text-slate-800 leading-relaxed mb-8">
+              <h3 className="text-base font-bold text-[#111214] mb-3 border-b border-black/10 pb-2">Description</h3>
               <p>
                 {book.description || 
                  "No description provided for this title. This book is part of the SpellBound ( Publishers and Distributors ) catalog and offers an in-depth exploration of its subject matter, meticulously crafted by the author."}
@@ -113,47 +114,46 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
             </div>
 
             {/* Book Metadata Grid */}
-            <h3 className="text-lg font-bold text-black mb-4 border-b border-gray-200 pb-2">Book Details</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-10">
+            <h3 className="text-base font-bold text-[#111214] mb-4 border-b border-black/10 pb-2">Book Details</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               
-              <div className="flex items-start gap-3">
-                <BookOpen className="text-black mt-1" size={20} />
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white/60 border border-white/80">
+                <BookOpen className="text-[#111214] mt-0.5 shrink-0" size={18} />
                 <div>
-                  <div className="text-xs text-black uppercase tracking-wider font-bold">Publisher</div>
-                  <div className="font-semibold text-black">{book.publisher || "Not specified"}</div>
+                  <div className="text-[11px] text-slate-600 uppercase tracking-wider font-bold">Publisher</div>
+                  <div className="font-semibold text-[#111214]">{book.publisher || "Not specified"}</div>
                 </div>
               </div>
               
-              <div className="flex items-start gap-3">
-                <Tag className="text-black mt-1" size={20} />
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white/60 border border-white/80">
+                <Tag className="text-[#111214] mt-0.5 shrink-0" size={18} />
                 <div>
-                  <div className="text-xs text-black uppercase tracking-wider font-bold">Genre</div>
-                  <div className="font-semibold text-black">{book.genre}</div>
+                  <div className="text-[11px] text-slate-600 uppercase tracking-wider font-bold">Genre</div>
+                  <div className="font-semibold text-[#111214]">{book.genre}</div>
                 </div>
               </div>
               
-              <div className="flex items-start gap-3">
-                <Calendar className="text-black mt-1" size={20} />
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white/60 border border-white/80">
+                <Calendar className="text-[#111214] mt-0.5 shrink-0" size={18} />
                 <div>
-                  <div className="text-xs text-black uppercase tracking-wider font-bold">First Published</div>
-                  <div className="font-semibold text-black">{book.firstPublish || "N/A"}</div>
+                  <div className="text-[11px] text-slate-600 uppercase tracking-wider font-bold">First Published</div>
+                  <div className="font-semibold text-[#111214]">{book.firstPublish || "N/A"}</div>
                 </div>
               </div>
               
-              <div className="flex items-start gap-3">
-                <Info className="text-black mt-1" size={20} />
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white/60 border border-white/80">
+                <Info className="text-[#111214] mt-0.5 shrink-0" size={18} />
                 <div>
-                  <div className="text-xs text-black uppercase tracking-wider font-bold">Pages</div>
-                  <div className="font-semibold text-black">{book.totalPages || (book.pages ? book.pages.length : "N/A")}</div>
+                  <div className="text-[11px] text-slate-600 uppercase tracking-wider font-bold">Pages</div>
+                  <div className="font-semibold text-[#111214]">{book.totalPages || (book.pages ? book.pages.length : "N/A")}</div>
                 </div>
               </div>
-              
 
-              <div className="flex items-start gap-3">
-                <div className="text-black mt-1 font-bold text-sm">eISBN</div>
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white/60 border border-white/80 sm:col-span-2">
+                <div className="text-[#111214] mt-0.5 font-bold text-xs px-1.5 py-0.5 rounded bg-[#F5F23B]">eISBN</div>
                 <div>
-                  <div className="text-xs text-black uppercase tracking-wider font-bold">Online ISBN</div>
-                  <div className="font-semibold text-black">{book.onlineIsbn || "N/A"}</div>
+                  <div className="text-[11px] text-slate-600 uppercase tracking-wider font-bold">Online ISBN</div>
+                  <div className="font-semibold text-[#111214]">{book.onlineIsbn || "N/A"}</div>
                 </div>
               </div>
 
@@ -164,26 +164,26 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
 
       {showCite && (
         <Modal title="Cite this book" onClose={() => setShowCite(false)}>
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div>
-              <h4 className="font-bold text-sm mb-2 text-black uppercase tracking-wider">APA</h4>
-              <div className="p-3 bg-gray-50 border rounded text-sm relative group flex justify-between items-start gap-4">
+              <h4 className="font-bold text-xs mb-2 text-slate-600 uppercase tracking-wider">APA</h4>
+              <div className="p-3.5 bg-white/75 border border-white/90 rounded-2xl text-sm flex justify-between items-start gap-4">
                 <span>{book.author.split(' ').pop()}, {book.author.split(' ')[0][0]}. ({book.firstPublish?.slice(0, 4) || new Date().getFullYear()}). <i>{book.title}</i>. {book.publisher}.</span>
-                <button onClick={() => navigator.clipboard.writeText(`${book.author.split(' ').pop()}, ${book.author.split(' ')[0][0]}. (${book.firstPublish?.slice(0, 4) || new Date().getFullYear()}). ${book.title}. ${book.publisher}.`)} className="text-black hover:text-black shrink-0"><Copy size={16} /></button>
+                <button type="button" aria-label="Copy APA citation" onClick={() => navigator.clipboard.writeText(`${book.author.split(' ').pop()}, ${book.author.split(' ')[0][0]}. (${book.firstPublish?.slice(0, 4) || new Date().getFullYear()}). ${book.title}. ${book.publisher}.`)} className="p-1.5 rounded-full hover:bg-slate-200 text-[#111214] shrink-0 cursor-pointer"><Copy size={15} /></button>
               </div>
             </div>
             <div>
-              <h4 className="font-bold text-sm mb-2 text-black uppercase tracking-wider">MLA</h4>
-              <div className="p-3 bg-gray-50 border rounded text-sm relative group flex justify-between items-start gap-4">
+              <h4 className="font-bold text-xs mb-2 text-slate-600 uppercase tracking-wider">MLA</h4>
+              <div className="p-3.5 bg-white/75 border border-white/90 rounded-2xl text-sm flex justify-between items-start gap-4">
                 <span>{book.author.split(' ').pop()}, {book.author}. <i>{book.title}</i>. {book.publisher}, {book.firstPublish?.slice(0, 4) || new Date().getFullYear()}.</span>
-                <button onClick={() => navigator.clipboard.writeText(`${book.author.split(' ').pop()}, ${book.author}. ${book.title}. ${book.publisher}, ${book.firstPublish?.slice(0, 4) || new Date().getFullYear()}.`)} className="text-black hover:text-black shrink-0"><Copy size={16} /></button>
+                <button type="button" aria-label="Copy MLA citation" onClick={() => navigator.clipboard.writeText(`${book.author.split(' ').pop()}, ${book.author}. ${book.title}. ${book.publisher}, ${book.firstPublish?.slice(0, 4) || new Date().getFullYear()}.`)} className="p-1.5 rounded-full hover:bg-slate-200 text-[#111214] shrink-0 cursor-pointer"><Copy size={15} /></button>
               </div>
             </div>
             <div>
-              <h4 className="font-bold text-sm mb-2 text-black uppercase tracking-wider">Chicago</h4>
-              <div className="p-3 bg-gray-50 border rounded text-sm relative group flex justify-between items-start gap-4">
+              <h4 className="font-bold text-xs mb-2 text-slate-600 uppercase tracking-wider">Chicago</h4>
+              <div className="p-3.5 bg-white/75 border border-white/90 rounded-2xl text-sm flex justify-between items-start gap-4">
                 <span>{book.author.split(' ').pop()}, {book.author}. {book.firstPublish?.slice(0, 4) || new Date().getFullYear()}. <i>{book.title}</i>. {book.publisher}.</span>
-                <button onClick={() => navigator.clipboard.writeText(`${book.author.split(' ').pop()}, ${book.author}. ${book.firstPublish?.slice(0, 4) || new Date().getFullYear()}. ${book.title}. ${book.publisher}.`)} className="text-black hover:text-black shrink-0"><Copy size={16} /></button>
+                <button type="button" aria-label="Copy Chicago citation" onClick={() => navigator.clipboard.writeText(`${book.author.split(' ').pop()}, ${book.author}. ${book.firstPublish?.slice(0, 4) || new Date().getFullYear()}. ${book.title}. ${book.publisher}.`)} className="p-1.5 rounded-full hover:bg-slate-200 text-[#111214] shrink-0 cursor-pointer"><Copy size={15} /></button>
               </div>
             </div>
           </div>

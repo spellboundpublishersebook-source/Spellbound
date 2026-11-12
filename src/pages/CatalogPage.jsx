@@ -249,25 +249,30 @@ export default function CatalogPage({ books, onNavigate }) {
   }, [books, homepageConfig]);
 
   return (
-    <div className="bg-[#f8f9fa] min-h-screen text-[#131313] w-full max-w-full overflow-x-hidden" style={fontBody}>
+    <div className="admin-glass-backdrop min-h-screen text-[#111214] w-full max-w-full overflow-x-hidden" style={fontBody}>
       
       {/* HERO SECTION */}
-      <section className="bg-[#F9FAFB] text-black py-8 sm:py-12 md:py-20 px-4 sm:px-6 relative z-30 overflow-visible w-full max-w-full">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 lg:gap-12 items-center relative z-30">
+      <section className="text-[#111214] py-8 sm:py-12 md:py-16 px-4 sm:px-6 relative z-30 overflow-visible w-full max-w-full">
+        <div className="max-w-7xl mx-auto admin-glass-shell rounded-[30px] p-6 sm:p-10 md:p-12 flex flex-col lg:flex-row gap-8 lg:gap-12 items-center relative z-30">
           
           <div className="lg:w-1/2 z-30 w-full relative">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight uppercase" style={fontDisplay}>
-              Start Your Reading <span className="text-[#FDD132]">Adventure</span> Invest In Books Today
+              Start Your Reading <span className="inline-block bg-[#F5F23B] px-2.5 py-0.5 rounded-xl text-[#111214] shadow-sm">Adventure</span> Invest In Books Today
             </h1>
-            <p className="mt-4 sm:mt-6 text-sm md:text-base text-black max-w-lg leading-relaxed">
+            <p className="mt-4 sm:mt-6 text-sm md:text-base text-slate-700 max-w-lg leading-relaxed">
               Every title in the catalog, open to browse. Anyone can look through the full list below. 
               Reading a book requires an account — issued to your institution, or a free 30-day trial you can request yourself.
             </p>
             
-            <div className="mt-6 sm:mt-8 relative max-w-lg w-full z-40" ref={searchContainerRef}>
-              <div className="flex items-center bg-white rounded-md p-1.5 w-full relative z-20 shadow-sm border border-gray-200">
-                <Search size={20} className="ml-3 text-black flex-shrink-0" />
+            <search className="block mt-6 sm:mt-8 relative max-w-lg w-full z-40" ref={searchContainerRef}>
+              <div className="flex items-center admin-glass-panel rounded-full p-1.5 w-full relative z-20">
+                <Search size={18} className="ml-3.5 text-slate-600 flex-shrink-0" />
                 <input
+                  type="search"
+                  aria-label="Search catalog titles, authors, or subjects"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
                   value={query}
                   onChange={(e) => {
                     setQuery(e.target.value);
@@ -275,7 +280,7 @@ export default function CatalogPage({ books, onNavigate }) {
                   }}
                   onFocus={() => setIsSearchOpen(true)}
                   placeholder="Search book here..."
-                  className="flex-1 bg-transparent border-none outline-none px-3 py-2.5 sm:py-3 text-black w-full text-sm"
+                  className="flex-1 bg-transparent border-none outline-none px-3 py-2 text-[#111214] placeholder:text-slate-500 w-full text-sm font-medium"
                 />
                 <AnimatedSweepButton 
                   onClick={() => {
@@ -283,7 +288,7 @@ export default function CatalogPage({ books, onNavigate }) {
                     document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth" });
                   }}
                   variant="yellow"
-                  className="font-semibold px-5 sm:px-8 py-2.5 sm:py-3 rounded-md text-sm flex-shrink-0"
+                  className="font-bold px-5 sm:px-7 py-2.5 rounded-full text-sm flex-shrink-0"
                 >
                   Search
                 </AnimatedSweepButton>
@@ -291,9 +296,9 @@ export default function CatalogPage({ books, onNavigate }) {
 
               {/* Live Search Dropdown */}
               {isSearchOpen && query.trim().length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-md shadow-2xl z-50 max-h-80 overflow-y-auto border border-gray-200">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white/92 backdrop-blur-xl rounded-2xl shadow-2xl z-50 max-h-80 overflow-y-auto border border-white">
                   {filtered.length > 0 ? (
-                    <ul className="py-2 divide-y divide-gray-100">
+                    <ul className="py-2 divide-y divide-slate-200/70">
                       {filtered.slice(0, 10).map((b) => (
                         <li 
                           key={b.id} 
@@ -302,22 +307,22 @@ export default function CatalogPage({ books, onNavigate }) {
                             setQuery("");
                             onNavigate("book-details", b.id);
                           }}
-                          className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-start gap-4 transition-colors"
+                          className="px-4 py-3 hover:bg-white cursor-pointer flex items-start gap-4 transition-colors"
                         >
-                          <BookCover book={b} className="w-10 h-14 flex-shrink-0 text-[10px] rounded shadow-sm" />
+                          <BookCover book={b} className="w-10 h-14 flex-shrink-0 text-[10px] rounded-md shadow-sm" />
                           <div className="flex-1 min-w-0 pt-1">
-                            <h4 className="text-black font-bold truncate text-sm">{b.title}</h4>
-                            <p className="text-gray-600 text-xs truncate">{b.author}</p>
-                            <p className="text-gray-500 text-[10px] mt-1 uppercase font-semibold">{b.genre}</p>
+                            <h4 className="text-[#111214] font-bold truncate text-sm">{b.title}</h4>
+                            <p className="text-slate-600 text-xs truncate">{b.author}</p>
+                            <p className="text-slate-500 text-[10px] mt-1 uppercase font-bold">{b.genre}</p>
                           </div>
-                          <div className="flex-shrink-0 text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-100">
+                          <div className="flex-shrink-0 text-[11px] font-bold text-[#111214] bg-[#F5F23B] px-3 py-1 rounded-full shadow-xs">
                             View Access
                           </div>
                         </li>
                       ))}
                       {filtered.length > 10 && (
                         <li 
-                          className="px-4 py-3 text-center text-sm font-semibold text-black hover:bg-gray-100 cursor-pointer bg-gray-50"
+                          className="px-4 py-3 text-center text-xs font-bold text-[#111214] hover:bg-white cursor-pointer bg-slate-100/70"
                           onClick={() => {
                             setIsSearchOpen(false);
                             document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth" });
@@ -328,26 +333,26 @@ export default function CatalogPage({ books, onNavigate }) {
                       )}
                     </ul>
                   ) : (
-                    <div className="px-4 py-6 text-center text-gray-500 text-sm">
+                    <div className="px-4 py-6 text-center text-slate-500 text-sm">
                       No books found matching "{query}"
                     </div>
                   )}
                 </div>
               )}
-            </div>
+            </search>
             
             <div className="mt-6 sm:mt-8 flex flex-wrap sm:flex-nowrap gap-3 sm:gap-4">
               <AnimatedSweepButton 
                 onClick={() => onNavigate("trial")}
                 variant="outline"
-                className="text-xs sm:text-sm rounded px-4 py-2"
+                className="text-xs sm:text-sm rounded-full px-5 py-2.5 bg-white/75 backdrop-blur-md border-white"
               >
                 Request free trial
               </AnimatedSweepButton>
               <AnimatedSweepButton 
                 onClick={() => onNavigate("login-reader")}
                 variant="outline"
-                className="text-xs sm:text-sm rounded px-4 py-2"
+                className="text-xs sm:text-sm rounded-full px-5 py-2.5 bg-white/75 backdrop-blur-md border-white"
               >
                 Institution login
               </AnimatedSweepButton>
@@ -439,7 +444,7 @@ export default function CatalogPage({ books, onNavigate }) {
       </section>
 
       {/* STATS STRIP */}
-      <section className="bg-[#FDD132] text-black py-4 relative z-10">
+      <section className="bg-[#F5F23B]/95 backdrop-blur-md text-[#111214] py-4 relative z-10 border-y border-white/70">
         <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-around items-center text-sm md:text-base font-bold uppercase tracking-wide gap-4 text-center">
           <div className="flex items-center gap-2"><BookOpen size={20} /> 10,000+ Titles</div>
           <div className="hidden sm:block w-px h-6 bg-black/20"></div>
@@ -452,21 +457,22 @@ export default function CatalogPage({ books, onNavigate }) {
       </section>
 
       {/* NEW RELEASES */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 border-b border-gray-200 pb-4 gap-4">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 border-b border-black/10 pb-4 gap-4">
           <div>
-            <h2 className="text-2xl font-bold" style={fontDisplay}>New Releases</h2>
-            <p className="text-sm text-black mt-2">What's new? Browse latest titles in the new releases category to discover your next read!</p>
+            <h2 className="text-2xl font-bold text-[#111214]" style={fontDisplay}>New Releases</h2>
+            <p className="text-sm text-slate-700 mt-2">What's new? Browse latest titles in the new releases category to discover your next read!</p>
           </div>
           <button 
-            className="group inline-flex items-center gap-1.5 text-sm font-semibold text-gray-700 hover:text-black px-3.5 py-1.5 rounded-full border border-transparent hover:border-[#FDD132] hover:bg-[#FDD132]/10 hover:shadow-sm transition-all duration-200 cursor-pointer active:scale-95 flex-shrink-0"
+            type="button"
+            className="admin-glass-pill group inline-flex items-center gap-1.5 text-xs font-bold text-[#111214] hover:bg-[#111214] hover:text-[#F5F23B] px-4 py-2 rounded-full transition-all duration-200 cursor-pointer active:scale-95 flex-shrink-0"
             onClick={() => {
               setDateFilter("Last 3 Months");
               document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth" });
             }}
           >
             <span>View all</span>
-            <ChevronRight size={16} className="text-gray-500 group-hover:text-black transform transition-transform duration-200 ease-out group-hover:translate-x-1" />
+            <ChevronRight size={15} className="transform transition-transform duration-200 ease-out group-hover:translate-x-1" />
           </button>
         </div>
 
@@ -475,22 +481,22 @@ export default function CatalogPage({ books, onNavigate }) {
             <div 
               key={b.id} 
               onClick={() => onNavigate("book-details", b.id)}
-              className="book-card group/card p-4 flex gap-4"
+              className="admin-glass-panel rounded-2xl group/card p-4 flex gap-4 cursor-pointer hover:border-[#111214]/40 hover:-translate-y-1 transition-all duration-200"
             >
-              <div className="w-24 h-36 rounded-md overflow-hidden flex-shrink-0 shadow-sm">
+              <div className="w-24 h-36 rounded-xl overflow-hidden flex-shrink-0 shadow-sm">
                 <BookCover book={b} className="w-full h-full transition-transform duration-300 group-hover/card:scale-105" />
               </div>
-              <div className="flex flex-col flex-1">
-                <h3 className="font-bold text-sm leading-tight mb-1 group-hover/card:underline transition-colors" style={fontDisplay}>{b.title}</h3>
-                <p className="text-xs text-black mb-2">{b.author}</p>
+              <div className="flex flex-col flex-1 min-w-0">
+                <h3 className="font-bold text-sm leading-tight mb-1 text-[#111214] group-hover/card:underline transition-colors line-clamp-2" style={fontDisplay}>{b.title}</h3>
+                <p className="text-xs text-slate-600 mb-2 truncate">{b.author}</p>
                 <div className="mt-auto">
-                  <div className="text-xs font-semibold text-black truncate mb-2" title={b.onlineIsbn ? `eISBN: ${b.onlineIsbn}` : ""}>
+                  <div className="text-[11px] font-semibold text-slate-700 truncate mb-2" title={b.onlineIsbn ? `eISBN: ${b.onlineIsbn}` : ""}>
                     <span className="font-bold">eISBN:</span> {b.onlineIsbn || "—"}
                   </div>
                   <AnimatedSweepButton 
                     onClick={(e) => { e.stopPropagation(); onNavigate("book-details", b.id); }}
                     variant="card-subtle"
-                    className="text-xs px-3 py-2 rounded w-full justify-center"
+                    className="text-xs px-3 py-2 rounded-full w-full justify-center"
                   >
                     <BookOpen size={14} /> View book
                   </AnimatedSweepButton>
@@ -503,18 +509,19 @@ export default function CatalogPage({ books, onNavigate }) {
 
       {/* FEATURED AUTHORS */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 border-b border-gray-200 pb-4 gap-4">
-          <h2 className="text-2xl font-bold" style={fontDisplay}>Featured Authors</h2>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 border-b border-black/10 pb-4 gap-4">
+          <h2 className="text-2xl font-bold text-[#111214]" style={fontDisplay}>Featured Authors</h2>
           <button 
-            className="group inline-flex items-center gap-1.5 text-sm font-semibold text-gray-700 hover:text-black px-3.5 py-1.5 rounded-full border border-transparent hover:border-[#FDD132] hover:bg-[#FDD132]/10 hover:shadow-sm transition-all duration-200 cursor-pointer active:scale-95 flex-shrink-0"
+            type="button"
+            className="admin-glass-pill group inline-flex items-center gap-1.5 text-xs font-bold text-[#111214] hover:bg-[#111214] hover:text-[#F5F23B] px-4 py-2 rounded-full transition-all duration-200 cursor-pointer active:scale-95 flex-shrink-0"
             onClick={() => onNavigate("authors")}
           >
             <span>View all authors</span>
-            <ChevronRight size={16} className="text-gray-500 group-hover:text-black transform transition-transform duration-200 ease-out group-hover:translate-x-1" />
+            <ChevronRight size={15} className="transform transition-transform duration-200 ease-out group-hover:translate-x-1" />
           </button>
         </div>
         
-        <div className="flex flex-wrap gap-8 md:gap-12 justify-center md:justify-start py-4">
+        <div className="flex flex-wrap gap-6 md:gap-8 justify-center md:justify-start py-2">
           {topAuthors.map((authorRaw, idx) => {
             const author = String(authorRaw || "");
             const words = author.split(/[\s,-]+/).filter(Boolean);
@@ -525,21 +532,19 @@ export default function CatalogPage({ books, onNavigate }) {
             return (
               <div 
                 key={idx} 
-                className="flex flex-col items-center group/author cursor-pointer max-w-[140px] select-none transition-all duration-300 ease-out hover:-translate-y-2.5 active:scale-95"
+                className="admin-glass-panel rounded-2xl p-4 w-[136px] flex flex-col items-center group/author cursor-pointer select-none transition-all duration-300 ease-out hover:-translate-y-2 active:scale-95"
                 onClick={() => {
                   setSelectedAuthor(author);
                   document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth" });
                 }}
               >
-                <div className="relative w-24 h-24 rounded-full bg-gradient-to-tr from-gray-200 via-gray-100 to-gray-300 group-hover/author:from-[#FDD132] group-hover/author:via-amber-200 group-hover/author:to-yellow-300 flex items-center justify-center text-2xl font-bold text-black mb-3 border-4 border-white shadow-md group-hover/author:shadow-[0_16px_32px_-8px_rgba(0,0,0,0.3)] ring-2 ring-transparent group-hover/author:ring-[#FDD132] group-hover/author:ring-offset-2 transition-all duration-300 ease-out transform group-hover/author:scale-108">
-                  <span className="transform transition-transform duration-300 group-hover/author:scale-110">
-                    {initials}
-                  </span>
+                <div className="relative w-20 h-20 rounded-full bg-gradient-to-tr from-slate-200 via-white to-amber-100 group-hover/author:from-[#F5F23B] group-hover/author:to-amber-200 flex items-center justify-center text-xl font-bold text-[#111214] mb-3 border-2 border-white shadow-sm transition-all duration-300 ease-out group-hover/author:scale-105">
+                  <span>{initials}</span>
                 </div>
-                <p className="font-semibold text-sm text-center text-gray-800 group-hover/author:text-black group-hover/author:font-bold transition-all duration-200 line-clamp-2">
+                <p className="font-bold text-xs text-center text-[#111214] transition-all duration-200 line-clamp-2">
                   {author}
                 </p>
-                <span className="text-[11px] font-bold text-amber-700 opacity-0 group-hover/author:opacity-100 transition-opacity duration-200 mt-0.5">
+                <span className="text-[11px] font-bold text-slate-700 opacity-0 group-hover/author:opacity-100 transition-opacity duration-200 mt-1">
                   View titles →
                 </span>
               </div>
@@ -550,10 +555,11 @@ export default function CatalogPage({ books, onNavigate }) {
 
       {/* CATALOG SECTION WITH SIDEBAR */}
       <section id="results-section" className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 border-b border-gray-200 pb-4 gap-4">
-          <h2 className="text-2xl font-bold" style={fontDisplay}>Browse Catalog</h2>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 border-b border-black/10 pb-4 gap-4">
+          <h2 className="text-2xl font-bold text-[#111214]" style={fontDisplay}>Browse Catalog</h2>
           <button 
-            className="group inline-flex items-center gap-1.5 text-sm font-semibold text-gray-700 hover:text-black px-3.5 py-1.5 rounded-full border border-transparent hover:border-[#FDD132] hover:bg-[#FDD132]/15 hover:shadow-sm transition-all duration-200 cursor-pointer active:scale-95 flex-shrink-0"
+            type="button"
+            className="admin-glass-pill group inline-flex items-center gap-1.5 text-xs font-bold text-[#111214] hover:bg-[#111214] hover:text-[#F5F23B] px-4 py-2 rounded-full transition-all duration-200 cursor-pointer active:scale-95 flex-shrink-0"
             onClick={() => {
               setGenre("All");
               setSelectedAuthor("All");
@@ -566,17 +572,18 @@ export default function CatalogPage({ books, onNavigate }) {
             }}
           >
             <span>Clear Filters</span>
-            <ChevronRight size={16} className="text-gray-500 group-hover:text-black transform transition-transform duration-200 ease-out group-hover:translate-x-1" />
+            <ChevronRight size={15} className="transform transition-transform duration-200 ease-out group-hover:translate-x-1" />
           </button>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-10">
+        <div className="flex flex-col lg:flex-row gap-8">
           
           {/* LEFT SIDEBAR - FILTERS */}
-          <div className="lg:w-1/4 flex-shrink-0">
+          <aside className="lg:w-1/4 flex-shrink-0">
             {/* Mobile filter toggle */}
             <button
-              className="lg:hidden w-full flex items-center justify-between bg-white border border-gray-200 rounded-xl px-4 py-3 mb-4 font-bold text-sm text-black"
+              type="button"
+              className="lg:hidden w-full flex items-center justify-between admin-glass-panel rounded-2xl px-4 py-3 mb-4 font-bold text-sm text-[#111214]"
               onClick={() => setMobileFiltersOpen(o => !o)}
             >
               <span className="flex items-center gap-2">
@@ -585,12 +592,12 @@ export default function CatalogPage({ books, onNavigate }) {
               </span>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transform: mobileFiltersOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s'}}><polyline points="6 9 12 15 18 9"/></svg>
             </button>
-            <div className={`${mobileFiltersOpen ? 'block' : 'hidden'} lg:block`}>
-            <div className="mb-4 text-sm font-bold text-black uppercase tracking-wider flex justify-between items-center">
+            <div className={`${mobileFiltersOpen ? 'block' : 'hidden'} lg:block admin-glass-panel rounded-[24px] p-5`}>
+            <div className="mb-3 text-xs font-bold text-[#111214] uppercase tracking-wider flex justify-between items-center">
               Filters
             </div>
-            <p className="text-xs text-black mb-6 pb-4 border-b border-gray-200">
-              Selecting a filter will automatically update the results below. All data is populated dynamically and can be updated via the admin/uploader panel.
+            <p className="text-xs text-slate-600 mb-5 pb-4 border-b border-black/10">
+              Selecting a filter updates results automatically.
             </p>
 
             {/* Alphanumeric Filter */}
@@ -731,50 +738,52 @@ export default function CatalogPage({ books, onNavigate }) {
             </div>
 
             {/* Publication Date */}
-            <div className="mb-4">
+            <div className="mb-2">
               <div 
-                className="flex justify-between items-center cursor-pointer border-2 border-blue-600 p-3 rounded"
+                className="flex justify-between items-center cursor-pointer border-b border-black/10 pb-3"
                 onClick={() => toggleFilter('date')}
               >
-                <h3 className="font-bold text-base text-black">Publication Date</h3>
-                <span className="text-black">
-                  {openFilters.date ? <ChevronUp size={18} className="text-blue-600" /> : <ChevronDown size={18} className="text-blue-600" />}
+                <h3 className="font-bold text-base text-[#111214]">Publication Date</h3>
+                <span className="text-[#111214]">
+                  {openFilters.date ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </span>
               </div>
               {openFilters.date && (
-                <div className="pt-4 pb-4 border-b border-gray-200">
+                <div className="pt-4 pb-2">
                   <ul className="space-y-2 text-sm mb-4">
                     {["All", "Last Week", "Last Month", "Last 3 Months", "Last 6 Months", "Last 12 Months", "Last 2 Years", "Last 5 Years"].map(d => (
                       <li 
                         key={d}
-                        className={`flex justify-between cursor-pointer hover:text-[#FDD132] ${dateFilter === d ? "font-bold text-black" : "text-black"}`}
+                        className={`flex justify-between cursor-pointer hover:text-[#111214] ${dateFilter === d ? "font-bold text-[#111214]" : "text-slate-700"}`}
                         onClick={() => setDateFilter(d)}
                       >
                         <span className="text-sm">{d === "All" ? "Any Date" : d}</span>
                       </li>
                     ))}
                   </ul>
-                  <div className="flex items-center gap-2 text-xs pt-1">
-                    <span className="font-semibold text-gray-700">From:</span>
+                  <div className="flex flex-wrap items-center gap-2 text-xs pt-1">
+                    <label htmlFor="cat-date-from" className="font-semibold text-slate-700">From:</label>
                     <input 
+                      id="cat-date-from"
                       type="number" 
                       placeholder="1996" 
-                      className="w-16 h-8 border border-gray-300 rounded-md px-2 text-xs outline-none focus:border-black focus:ring-1 focus:ring-black/20 transition-all bg-white shadow-sm"
+                      className="w-16 h-8 border border-slate-300/80 rounded-xl px-2 text-xs outline-none focus:border-[#111214] bg-white/80"
                       value={dateFrom}
                       onChange={e => setDateFrom(e.target.value)}
                     />
-                    <span className="font-semibold text-gray-700 ml-1">To:</span>
+                    <label htmlFor="cat-date-to" className="font-semibold text-slate-700">To:</label>
                     <input 
+                      id="cat-date-to"
                       type="number" 
                       placeholder="2026" 
-                      className="w-16 h-8 border border-gray-300 rounded-md px-2 text-xs outline-none focus:border-black focus:ring-1 focus:ring-black/20 transition-all bg-white shadow-sm"
+                      className="w-16 h-8 border border-slate-300/80 rounded-xl px-2 text-xs outline-none focus:border-[#111214] bg-white/80"
                       value={dateTo}
                       onChange={e => setDateTo(e.target.value)}
                     />
                     <AnimatedSweepButton 
                       onClick={() => setDateFilter("Custom")}
                       variant="black"
-                      className="h-8 px-3.5 text-xs font-bold rounded-md shadow-sm ml-1"
+                      className="h-8 px-3.5 text-xs font-bold rounded-full shadow-sm"
                     >
                       Go
                     </AnimatedSweepButton>
@@ -783,22 +792,23 @@ export default function CatalogPage({ books, onNavigate }) {
               )}
             </div>
             </div>{/* end mobile collapsible */}
-          </div>
+          </aside>
 
           {/* RIGHT CONTENT - RESULTS */}
           <div className="lg:w-3/4">
-            <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white p-3.5 rounded-lg border border-gray-200 shadow-sm">
-              <span className="text-sm text-gray-700">
-                Showing <span className="font-bold text-black">{startItem}–{endItem}</span> of{" "}
-                <span className="font-bold text-black">{filtered.length}</span> results
+            <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 admin-glass-panel p-3.5 rounded-2xl">
+              <span className="text-sm text-slate-700">
+                Showing <span className="font-bold text-[#111214]">{startItem}–{endItem}</span> of{" "}
+                <span className="font-bold text-[#111214]">{filtered.length}</span> results
               </span>
-              <div className="flex items-center gap-2 text-xs text-gray-600">
-                <span className="font-medium">Show:</span>
+              <div className="flex items-center gap-2 text-xs text-slate-600">
+                <label htmlFor="catalog-page-size" className="font-semibold">Show:</label>
                 <select
+                  id="catalog-page-size"
                   value={pageSize}
                   onChange={(e) => setPageSize(Number(e.target.value))}
                   aria-label="Books per page"
-                  className="bg-gray-50 border border-gray-300 rounded px-2.5 py-1 text-black font-semibold text-xs focus:outline-none focus:border-black cursor-pointer hover:bg-gray-100 transition-colors"
+                  className="bg-white/80 border border-white rounded-full px-3 py-1.5 text-[#111214] font-bold text-xs focus:outline-none focus:border-[#111214] cursor-pointer transition-colors"
                 >
                   <option value={15}>15 per page</option>
                   <option value={30}>30 per page</option>
@@ -814,28 +824,28 @@ export default function CatalogPage({ books, onNavigate }) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.22, ease: "easeOut" }}
-                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6"
+                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5"
                 id="catalog-grid"
               >
                 {paginatedBooks.map(b => (
                   <div 
                     key={b.id} 
                     onClick={() => onNavigate("book-details", b.id)}
-                    className="book-card group/card flex flex-col p-3 bg-white border border-black rounded-xl cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
+                    className="admin-glass-panel group/card flex flex-col p-3 rounded-2xl cursor-pointer hover:border-[#111214]/40 hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
                   >
-                    <div className="w-full aspect-[2/3] rounded-md mb-4 overflow-hidden shadow-sm">
+                    <div className="w-full aspect-[2/3] rounded-xl mb-3 overflow-hidden shadow-sm">
                       <BookCover book={b} className="w-full h-full transition-transform duration-300 group-hover/card:scale-105" />
                     </div>
-                    <h3 className="font-bold text-sm leading-tight line-clamp-2 group-hover/card:underline transition-colors" style={fontDisplay}>{b.title}</h3>
-                    <p className="text-xs text-black mt-1 truncate">{b.author}</p>
+                    <h3 className="font-bold text-sm leading-tight line-clamp-2 text-[#111214] group-hover/card:underline transition-colors" style={fontDisplay}>{b.title}</h3>
+                    <p className="text-xs text-slate-600 mt-1 truncate">{b.author}</p>
                     <div className="mt-4 flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-semibold text-black truncate" title={b.onlineIsbn ? `eISBN: ${b.onlineIsbn}` : ""}>
+                      <span className="text-[11px] font-semibold text-slate-700 truncate" title={b.onlineIsbn ? `eISBN: ${b.onlineIsbn}` : ""}>
                         <span className="font-bold">eISBN:</span> {b.onlineIsbn || "—"}
                       </span>
                       <AnimatedSweepButton 
                         onClick={(e) => { e.stopPropagation(); onNavigate("book-details", b.id); }}
                         variant="card-outline"
-                        className="text-[10px] sm:text-xs rounded px-2.5 py-1 whitespace-nowrap shrink-0"
+                        className="text-[10px] sm:text-xs rounded-full px-2.5 py-1 whitespace-nowrap shrink-0"
                       >
                         View book
                       </AnimatedSweepButton>
@@ -843,9 +853,9 @@ export default function CatalogPage({ books, onNavigate }) {
                   </div>
                 ))}
                 {filtered.length === 0 && (
-                  <div className="col-span-full py-20 text-center">
-                    <p className="text-black">No titles match the selected filters.</p>
-                    <AnimatedSweepButton onClick={resetFilters} variant="yellow" className="mt-4 px-6 py-2 rounded-md font-bold text-sm">Reset Filters</AnimatedSweepButton>
+                  <div className="col-span-full py-20 text-center admin-glass-panel rounded-2xl">
+                    <p className="text-[#111214] font-semibold">No titles match the selected filters.</p>
+                    <AnimatedSweepButton onClick={resetFilters} variant="yellow" className="mt-4 px-6 py-2 rounded-full font-bold text-sm">Reset Filters</AnimatedSweepButton>
                   </div>
                 )}
               </motion.div>
@@ -853,22 +863,23 @@ export default function CatalogPage({ books, onNavigate }) {
 
             {/* PAGINATION CONTROLS */}
             {totalPages > 1 && (
-              <div className="flex flex-col items-center justify-center gap-3 mt-10 pt-8 border-t border-gray-200">
+              <div className="flex flex-col items-center justify-center gap-3 mt-10 pt-8 border-t border-black/10">
                 <div className="flex items-center gap-2 flex-wrap justify-center">
                   <button
+                    type="button"
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
                     aria-label="Previous page"
-                    className="group/prev h-9 px-3.5 flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 text-black text-xs font-semibold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 hover:border-black transition-all duration-200 cursor-pointer bg-white shadow-sm hover:shadow active:scale-95 disabled:active:scale-100"
+                    className="group/prev h-9 px-4 flex items-center justify-center gap-1.5 rounded-full admin-glass-pill text-[#111214] text-xs font-bold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white transition-all duration-200 cursor-pointer"
                   >
-                    <ChevronLeft size={16} className="transition-transform duration-200 group-hover/prev:-translate-x-0.5" />
+                    <ChevronLeft size={15} />
                     <span>Prev</span>
                   </button>
 
                   {pageNumbers.map((page, idx) => {
                     if (page === '...') {
                       return (
-                        <span key={`ellipsis-${idx}`} className="w-9 h-9 flex items-center justify-center text-gray-400 text-xs font-bold select-none">
+                        <span key={`ellipsis-${idx}`} className="w-9 h-9 flex items-center justify-center text-slate-500 text-xs font-bold select-none">
                           …
                         </span>
                       );
@@ -876,14 +887,15 @@ export default function CatalogPage({ books, onNavigate }) {
                     const isActive = currentPage === page;
                     return (
                       <button
+                        type="button"
                         key={page}
                         onClick={() => handlePageChange(page)}
                         aria-label={`Page ${page}`}
                         aria-current={isActive ? "page" : undefined}
-                        className={`w-9 h-9 flex items-center justify-center rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 ${
+                        className={`w-9 h-9 flex items-center justify-center rounded-full text-xs font-bold transition-all duration-200 cursor-pointer ${
                           isActive
-                            ? "bg-black text-white border border-black shadow-md scale-105"
-                            : "border border-gray-300 bg-white text-gray-800 hover:border-black hover:bg-gray-100 hover:text-black hover:shadow-sm hover:-translate-y-0.5"
+                            ? "bg-[#111214] text-[#F5F23B] shadow-md scale-105"
+                            : "admin-glass-pill text-[#111214] hover:bg-white"
                         }`}
                       >
                         {page}
@@ -892,19 +904,20 @@ export default function CatalogPage({ books, onNavigate }) {
                   })}
 
                   <button
+                    type="button"
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
                     aria-label="Next page"
-                    className="group/next h-9 px-3.5 flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 text-black text-xs font-semibold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 hover:border-black transition-all duration-200 cursor-pointer bg-white shadow-sm hover:shadow active:scale-95 disabled:active:scale-100"
+                    className="group/next h-9 px-4 flex items-center justify-center gap-1.5 rounded-full admin-glass-pill text-[#111214] text-xs font-bold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white transition-all duration-200 cursor-pointer"
                   >
                     <span>Next</span>
-                    <ChevronRight size={16} className="transition-transform duration-200 group-hover/next:translate-x-0.5" />
+                    <ChevronRight size={15} />
                   </button>
                 </div>
 
-                <p className="text-xs text-gray-500 font-medium">
-                  Page <span className="font-bold text-black">{currentPage}</span> of{" "}
-                  <span className="font-bold text-black">{totalPages}</span> ({filtered.length} total titles)
+                <p className="text-xs text-slate-600 font-medium">
+                  Page <span className="font-bold text-[#111214]">{currentPage}</span> of{" "}
+                  <span className="font-bold text-[#111214]">{totalPages}</span> ({filtered.length} total titles)
                 </p>
               </div>
             )}
@@ -915,10 +928,10 @@ export default function CatalogPage({ books, onNavigate }) {
 
       {/* CREATED FOR YOU BANNER */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        <div className="bg-gray-100 rounded-2xl p-8 md:p-12 flex flex-col md:flex-row items-center justify-between text-black relative z-20 shadow-xl">
-          <div className="md:w-1/3 z-10 mb-10 md:mb-0 text-center md:text-left">
-            <h2 className="text-3xl font-bold mb-4 uppercase tracking-wide" style={fontDisplay}>Created For You</h2>
-            <p className="text-black text-sm mb-8 leading-relaxed max-w-sm mx-auto md:mx-0">
+        <div className="admin-glass-shell rounded-[28px] p-7 sm:p-10 flex flex-col md:flex-row items-center justify-between text-[#111214] relative z-20">
+          <div className="md:w-1/3 z-10 mb-8 md:mb-0 text-center md:text-left">
+            <h2 className="text-3xl font-bold mb-3 uppercase tracking-wide" style={fontDisplay}>Created For You</h2>
+            <p className="text-slate-700 text-sm mb-7 leading-relaxed max-w-sm mx-auto md:mx-0">
               Discover titles tailored to your reading history and preferences based on your past activity.
             </p>
             <AnimatedSweepButton 
@@ -926,7 +939,7 @@ export default function CatalogPage({ books, onNavigate }) {
                 document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth" });
               }}
               variant="yellow"
-              className="font-bold px-8 py-3 rounded-md text-sm shadow-sm"
+              className="font-bold px-8 py-3 rounded-full text-sm shadow-sm"
             >
               Explore More
             </AnimatedSweepButton>
@@ -934,9 +947,10 @@ export default function CatalogPage({ books, onNavigate }) {
           
           <div className="md:w-2/3 flex gap-3 sm:gap-4 items-center justify-center z-10 w-full">
             <button 
+              type="button"
               onClick={() => scrollCreatedForYou("left")}
               aria-label="Previous recommendations"
-              className="p-2.5 bg-white text-black rounded-full hover:bg-gray-100 flex-shrink-0 transition-transform hover:scale-105 active:scale-95 shadow-md border border-gray-200 cursor-pointer"
+              className="p-2.5 admin-glass-pill text-[#111214] rounded-full hover:bg-[#111214] hover:text-[#F5F23B] flex-shrink-0 transition-all cursor-pointer"
             >
               <ChevronLeft size={18} />
             </button>
@@ -948,17 +962,17 @@ export default function CatalogPage({ books, onNavigate }) {
                 <div 
                   key={b.id} 
                   onClick={() => onNavigate("book-details", b.id)}
-                  className="book-card flex gap-4 w-60 sm:w-72 flex-shrink-0 p-4 text-black cursor-pointer hover:shadow-lg rounded-xl bg-white border border-gray-200 transition-all duration-200 hover:-translate-y-0.5"
+                  className="admin-glass-panel flex gap-4 w-60 sm:w-72 flex-shrink-0 p-4 text-[#111214] cursor-pointer hover:shadow-lg rounded-2xl transition-all duration-200 hover:-translate-y-0.5"
                 >
-                   <BookCover book={b} className="w-20 h-32 rounded flex-shrink-0 shadow-sm" />
-                   <div className="flex flex-col flex-1 py-1">
+                   <BookCover book={b} className="w-20 h-32 rounded-xl flex-shrink-0 shadow-sm" />
+                   <div className="flex flex-col flex-1 py-1 min-w-0">
                      <h3 className="font-bold text-sm leading-tight mb-2 line-clamp-2" style={fontDisplay}>{b.title}</h3>
-                     <p className="text-xs text-black mb-auto line-clamp-2">{b.author}</p>
+                     <p className="text-xs text-slate-600 mb-auto line-clamp-2">{b.author}</p>
                      <div className="mt-2 flex items-center justify-between gap-2">
-                       <span className="text-[11px] font-semibold text-black truncate" title={b.onlineIsbn ? `eISBN: ${b.onlineIsbn}` : ""}>
+                       <span className="text-[11px] font-semibold text-slate-700 truncate" title={b.onlineIsbn ? `eISBN: ${b.onlineIsbn}` : ""}>
                          <span className="font-bold">eISBN:</span> {b.onlineIsbn || "—"}
                        </span>
-                       <span className="text-xs font-semibold text-gray-700 flex items-center gap-0.5 hover:text-black shrink-0">
+                       <span className="text-xs font-bold text-[#111214] flex items-center gap-0.5 shrink-0">
                          Details <ChevronRight size={14} />
                        </span>
                      </div>
@@ -967,9 +981,10 @@ export default function CatalogPage({ books, onNavigate }) {
               ))}
             </div>
             <button 
+              type="button"
               onClick={() => scrollCreatedForYou("right")}
               aria-label="Next recommendations"
-              className="p-2.5 bg-white text-black rounded-full hover:bg-gray-100 flex-shrink-0 transition-transform hover:scale-105 active:scale-95 shadow-md border border-gray-200 cursor-pointer"
+              className="p-2.5 admin-glass-pill text-[#111214] rounded-full hover:bg-[#111214] hover:text-[#F5F23B] flex-shrink-0 transition-all cursor-pointer"
             >
               <ChevronRight size={18} />
             </button>
@@ -978,44 +993,38 @@ export default function CatalogPage({ books, onNavigate }) {
       </section>
 
       {/* WHY CHOOSE US / INFO SECTION */}
-      <section className="max-w-7xl mx-auto px-6 py-16 border-t border-gray-200 mt-8">
-        <div className="text-center mb-12">
-          <h2 className="text-2xl font-bold" style={fontDisplay}>Why Choose <span className="font-black uppercase text-red-600" style={fontBody}>SpellBound</span> <span className="italic">Publishers & Distributors</span>?</h2>
-          <p className="text-black text-sm mt-2">The premier online library platform for institutions and avid readers.</p>
+      <section className="max-w-7xl mx-auto px-6 py-14 border-t border-black/10 mt-6">
+        <div className="text-center mb-10">
+          <h2 className="text-2xl font-bold text-[#111214]" style={fontDisplay}>Why Choose <span className="font-black uppercase text-red-600" style={fontBody}>SpellBound</span> <span className="italic">Publishers & Distributors</span>?</h2>
+          <p className="text-slate-700 text-sm mt-2">The premier online library platform for institutions and avid readers.</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="group/benefit relative bg-white rounded-xl p-8 border border-gray-200 hover:border-[#FDD132] text-center flex flex-col items-center transition-all duration-300 ease-out hover:-translate-y-3 shadow-sm hover:shadow-[0_24px_48px_-12px_rgba(0,0,0,0.14),0_8px_20px_-6px_rgba(0,0,0,0.08)] overflow-hidden cursor-default select-none">
-            {/* Golden top accent bar on hover */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-[#FDD132] transform scale-x-0 group-hover/benefit:scale-x-100 transition-transform duration-300 ease-out origin-center" />
-            <div className="w-16 h-16 bg-[#fff9db] group-hover/benefit:bg-[#FDD132] rounded-full flex items-center justify-center mb-5 transition-all duration-300 ease-out group-hover/benefit:scale-110 group-hover/benefit:shadow-md">
-              <ShieldCheck size={32} className="text-[#B8860B] group-hover/benefit:text-black transition-all duration-300 group-hover/benefit:rotate-6" strokeWidth={2} />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="group/benefit relative admin-glass-panel rounded-2xl p-8 text-center flex flex-col items-center transition-all duration-300 ease-out hover:-translate-y-2 overflow-hidden cursor-default select-none">
+            <div className="w-16 h-16 bg-[#F5F23B] rounded-2xl flex items-center justify-center mb-5 shadow-sm transition-all duration-300 group-hover/benefit:scale-110">
+              <ShieldCheck size={30} className="text-[#111214]" strokeWidth={2} />
             </div>
-            <h3 className="font-bold text-lg mb-2 text-black transition-colors" style={fontDisplay}>Secure Browser Reading</h3>
-            <p className="text-sm text-gray-700 group-hover/benefit:text-black leading-relaxed transition-colors">
+            <h3 className="font-bold text-lg mb-2 text-[#111214]" style={fontDisplay}>Secure Browser Reading</h3>
+            <p className="text-sm text-slate-700 leading-relaxed">
               Every book here is read in-browser only — there's no download, ensuring content protection and easy access everywhere.
             </p>
           </div>
 
-          <div className="group/benefit relative bg-white rounded-xl p-8 border border-gray-200 hover:border-[#FDD132] text-center flex flex-col items-center transition-all duration-300 ease-out hover:-translate-y-3 shadow-sm hover:shadow-[0_24px_48px_-12px_rgba(0,0,0,0.14),0_8px_20px_-6px_rgba(0,0,0,0.08)] overflow-hidden cursor-default select-none">
-            {/* Golden top accent bar on hover */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-[#FDD132] transform scale-x-0 group-hover/benefit:scale-x-100 transition-transform duration-300 ease-out origin-center" />
-            <div className="w-16 h-16 bg-[#fff9db] group-hover/benefit:bg-[#FDD132] rounded-full flex items-center justify-center mb-5 transition-all duration-300 ease-out group-hover/benefit:scale-110 group-hover/benefit:shadow-md">
-              <Library size={32} className="text-[#B8860B] group-hover/benefit:text-black transition-all duration-300 group-hover/benefit:rotate-6" strokeWidth={2} />
+          <div className="group/benefit relative admin-glass-panel rounded-2xl p-8 text-center flex flex-col items-center transition-all duration-300 ease-out hover:-translate-y-2 overflow-hidden cursor-default select-none">
+            <div className="w-16 h-16 bg-[#F5F23B] rounded-2xl flex items-center justify-center mb-5 shadow-sm transition-all duration-300 group-hover/benefit:scale-110">
+              <Library size={30} className="text-[#111214]" strokeWidth={2} />
             </div>
-            <h3 className="font-bold text-lg mb-2 text-black transition-colors" style={fontDisplay}>Institutional Access</h3>
-            <p className="text-sm text-gray-700 group-hover/benefit:text-black leading-relaxed transition-colors">
+            <h3 className="font-bold text-lg mb-2 text-[#111214]" style={fontDisplay}>Institutional Access</h3>
+            <p className="text-sm text-slate-700 leading-relaxed">
               Tailored specifically for universities and schools. Institutions get a fixed set of titles for licensed terms effortlessly.
             </p>
           </div>
 
-          <div className="group/benefit relative bg-white rounded-xl p-8 border border-gray-200 hover:border-[#FDD132] text-center flex flex-col items-center transition-all duration-300 ease-out hover:-translate-y-3 shadow-sm hover:shadow-[0_24px_48px_-12px_rgba(0,0,0,0.14),0_8px_20px_-6px_rgba(0,0,0,0.08)] overflow-hidden cursor-default select-none">
-            {/* Golden top accent bar on hover */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-[#FDD132] transform scale-x-0 group-hover/benefit:scale-x-100 transition-transform duration-300 ease-out origin-center" />
-            <div className="w-16 h-16 bg-[#fff9db] group-hover/benefit:bg-[#FDD132] rounded-full flex items-center justify-center mb-5 transition-all duration-300 ease-out group-hover/benefit:scale-110 group-hover/benefit:shadow-md">
-              <BookmarkCheck size={32} className="text-[#B8860B] group-hover/benefit:text-black transition-all duration-300 group-hover/benefit:rotate-6" strokeWidth={2} />
+          <div className="group/benefit relative admin-glass-panel rounded-2xl p-8 text-center flex flex-col items-center transition-all duration-300 ease-out hover:-translate-y-2 overflow-hidden cursor-default select-none">
+            <div className="w-16 h-16 bg-[#F5F23B] rounded-2xl flex items-center justify-center mb-5 shadow-sm transition-all duration-300 group-hover/benefit:scale-110">
+              <BookmarkCheck size={30} className="text-[#111214]" strokeWidth={2} />
             </div>
-            <h3 className="font-bold text-lg mb-2 text-black transition-colors" style={fontDisplay}>Curated Collections</h3>
-            <p className="text-sm text-gray-700 group-hover/benefit:text-black leading-relaxed transition-colors">
+            <h3 className="font-bold text-lg mb-2 text-[#111214]" style={fontDisplay}>Curated Collections</h3>
+            <p className="text-sm text-slate-700 leading-relaxed">
               Access the most meticulously selected books across various genres. Free trial readers get thirty days to explore everything.
             </p>
           </div>
@@ -1023,20 +1032,20 @@ export default function CatalogPage({ books, onNavigate }) {
       </section>
 
       {/* FOOTER */}
-      <footer className="bg-white border-t border-gray-200 text-black pt-16 pb-8">
+      <footer className="bg-white/75 backdrop-blur-xl border-t border-white/80 text-[#111214] pt-14 pb-8">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-4 border-b border-gray-100 pb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-6 border-b border-black/10 pb-8">
             
             {/* Branding Column */}
             <div className="col-span-1 lg:col-span-1">
-              <div className="flex items-center gap-2 mb-6 cursor-pointer" onClick={() => onNavigate("catalog")}>
-                <img src="/logo.png" alt="SpellBound Logo" className="h-[120px]" />
+              <div className="flex items-center gap-2 mb-5 cursor-pointer" onClick={() => onNavigate("catalog")}>
+                <img src="/logo.png" alt="SpellBound Logo" className="h-[110px]" />
               </div>
-              <div className="text-sm text-black leading-relaxed mb-6 space-y-1">
+              <div className="text-sm text-slate-700 leading-relaxed space-y-1">
                 <p>
                   <span className="font-black text-red-600 uppercase text-2xl tracking-[0.12em]" style={fontBody}>SpellBound</span>
                   <br />
-                  <span className="text-black italic" style={fontDisplay}>Publishers & Distributors</span>
+                  <span className="text-[#111214] italic" style={fontDisplay}>Publishers & Distributors</span>
                 </p>
                 <p>
                   113, Vivekananda Rd, Manicktala,<br />
@@ -1053,30 +1062,30 @@ export default function CatalogPage({ books, onNavigate }) {
 
             {/* Quick Links */}
             <div>
-              <h4 className="text-black font-bold mb-6 tracking-wider text-sm uppercase">Quick Links</h4>
-              <ul className="space-y-3 text-sm text-black">
-                <li><button onClick={() => { onNavigate("catalog"); window.scrollTo(0,0); }} className="hover:text-[#FDD132] transition-colors">Home</button></li>
-                <li><button onClick={() => onNavigate("page:about-us")} className="hover:text-[#FDD132] transition-colors">About Us</button></li>
-                <li><button onClick={() => onNavigate("page:contact-us")} className="hover:text-[#FDD132] transition-colors">Contact Us</button></li>
-                <li><button onClick={() => { onNavigate("catalog"); setTimeout(() => document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth" }), 100); }} className="hover:text-[#FDD132] transition-colors">Categories</button></li>
-                <li><button onClick={() => onNavigate("login-reader")} className="hover:text-[#FDD132] transition-colors">Login / Sign In</button></li>
+              <h4 className="text-[#111214] font-bold mb-5 tracking-wider text-xs uppercase">Quick Links</h4>
+              <ul className="space-y-3 text-sm text-slate-700">
+                <li><button type="button" onClick={() => { onNavigate("catalog"); window.scrollTo(0,0); }} className="hover:text-[#111214] font-medium transition-colors cursor-pointer">Home</button></li>
+                <li><button type="button" onClick={() => onNavigate("page:about-us")} className="hover:text-[#111214] font-medium transition-colors cursor-pointer">About Us</button></li>
+                <li><button type="button" onClick={() => onNavigate("page:contact-us")} className="hover:text-[#111214] font-medium transition-colors cursor-pointer">Contact Us</button></li>
+                <li><button type="button" onClick={() => { onNavigate("catalog"); setTimeout(() => document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth" }), 100); }} className="hover:text-[#111214] font-medium transition-colors cursor-pointer">Categories</button></li>
+                <li><button type="button" onClick={() => onNavigate("login-reader")} className="hover:text-[#111214] font-medium transition-colors cursor-pointer">Login / Sign In</button></li>
               </ul>
             </div>
 
             {/* Customer Area */}
             <div>
-              <h4 className="text-black font-bold mb-6 tracking-wider text-sm uppercase">Customer Area</h4>
-              <ul className="space-y-3 text-sm text-black">
-                <li><button onClick={() => onNavigate("page:terms")} className="hover:text-[#FDD132] transition-colors">Terms</button></li>
-                <li><button onClick={() => onNavigate("page:privacy-policy")} className="hover:text-[#FDD132] transition-colors">Privacy Policy</button></li>
-                <li><button onClick={() => onNavigate("page:faqs")} className="hover:text-[#FDD132] transition-colors">FAQs</button></li>
+              <h4 className="text-[#111214] font-bold mb-5 tracking-wider text-xs uppercase">Customer Area</h4>
+              <ul className="space-y-3 text-sm text-slate-700">
+                <li><button type="button" onClick={() => onNavigate("page:terms")} className="hover:text-[#111214] font-medium transition-colors cursor-pointer">Terms</button></li>
+                <li><button type="button" onClick={() => onNavigate("page:privacy-policy")} className="hover:text-[#111214] font-medium transition-colors cursor-pointer">Privacy Policy</button></li>
+                <li><button type="button" onClick={() => onNavigate("page:faqs")} className="hover:text-[#111214] font-medium transition-colors cursor-pointer">FAQs</button></li>
               </ul>
             </div>
 
             {/* Location Map */}
             <div className="col-span-1 lg:col-span-1">
-              <h4 className="text-black font-bold mb-6 tracking-wider text-sm uppercase">Our Location</h4>
-              <div className="rounded-lg overflow-hidden border border-gray-200 opacity-80 hover:opacity-100 transition-opacity relative group">
+              <h4 className="text-[#111214] font-bold mb-5 tracking-wider text-xs uppercase">Our Location</h4>
+              <div className="rounded-2xl overflow-hidden border border-white opacity-90 hover:opacity-100 transition-opacity relative group shadow-sm">
                 <a 
                   href="https://maps.app.goo.gl/Jc5SNuV5v7ErsFGw5" 
                   target="_blank" 
@@ -1084,8 +1093,8 @@ export default function CatalogPage({ books, onNavigate }) {
                   className="absolute inset-0 z-10 block"
                   title="Open in Google Maps"
                 >
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                    <div className="bg-white text-[#FDD132] px-4 py-2 rounded-full text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0">
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors flex items-center justify-center">
+                    <div className="bg-[#111214] text-[#F5F23B] px-4 py-2 rounded-full text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">
                       View on Map ↗
                     </div>
                   </div>
@@ -1105,32 +1114,40 @@ export default function CatalogPage({ books, onNavigate }) {
 
             {/* Newsletter */}
             <div>
-              <h4 className="text-black font-bold mb-6 tracking-wider text-sm uppercase">Don't Miss Updates</h4>
-              <p className="text-sm text-black mb-4 leading-relaxed">
-                Subscribe to our newsletter to get the newest book updates and special offers directly in your inbox.
+              <h4 className="text-[#111214] font-bold mb-5 tracking-wider text-xs uppercase">Don't Miss Updates</h4>
+              <p className="text-sm text-slate-700 mb-4 leading-relaxed">
+                Subscribe to our newsletter to get the newest book updates directly in your inbox.
               </p>
-              <div className="flex flex-col gap-2">
+              <form
+                onSubmit={(e) => { e.preventDefault(); handleSubscribe(); }}
+                className="flex flex-col gap-2.5"
+              >
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 text-black" size={16} />
+                  <Mail className="absolute left-3.5 top-3.5 text-slate-500 pointer-events-none" size={16} />
                   <input 
+                    id="newsletter-email"
                     type="email" 
+                    aria-label="Newsletter email address"
+                    autoComplete="email"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
                     placeholder="Type your email here..." 
                     value={subscribeEmail}
                     onChange={(e) => setSubscribeEmail(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSubscribe()}
-                    className="w-full bg-gray-50 border border-gray-300 text-black rounded px-10 py-2.5 text-sm focus:outline-none focus:border-[#FDD132]"
+                    className="glass-field-control pl-10"
                   />
                 </div>
                 <AnimatedSweepButton 
-                  onClick={handleSubscribe} 
+                  type="submit"
                   disabled={subscribeStatus === 'loading'}
                   variant="yellow"
-                  className="font-bold py-2.5 rounded text-sm w-full"
+                  className="font-bold py-2.5 rounded-full text-sm w-full"
                 >
                   {subscribeStatus === 'loading' ? 'Subscribing...' : subscribeStatus === 'success' ? 'Subscribed! ✓' : 'Subscribe'}
                 </AnimatedSweepButton>
-                {subscribeStatus === 'error' && <span className="text-red-400 text-xs">Please enter a valid email.</span>}
-              </div>
+                {subscribeStatus === 'error' && <span role="alert" className="text-rose-600 text-xs font-medium">Please enter a valid email.</span>}
+              </form>
             </div>
             
           </div>

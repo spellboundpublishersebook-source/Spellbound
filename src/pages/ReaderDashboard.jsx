@@ -7,6 +7,7 @@ import { fontDisplay, fontBody } from "../theme";
 import { daysUntil } from "../data/mockData";
 import AnimatedSweepButton from "../components/AnimatedSweepButton";
 import BookCover from "../components/BookCover";
+import { Modal } from "../components/UI";
 
 // Wiley-Style Animated Details Button with Counter-Translation Mask
 function WileyDetailsButton({ onClick, className = "", fullWidth = false }) {
@@ -63,8 +64,8 @@ function CategoryCarouselRow({ genre, books, onOpenBook, onSelectGenre }) {
   return (
     <div className="mb-14 relative">
       {/* Category Header */}
-      <div className="pb-3 mb-6 border-b border-gray-200">
-        <h2 className="text-2xl md:text-3xl font-bold text-black tracking-tight" style={fontDisplay}>
+      <div className="pb-3 mb-6 border-b border-black/10 flex items-center justify-between gap-4">
+        <h2 className="text-2xl md:text-3xl font-bold text-[#111214] tracking-tight" style={fontDisplay}>
           {genre}
         </h2>
       </div>
@@ -74,9 +75,10 @@ function CategoryCarouselRow({ genre, books, onOpenBook, onSelectGenre }) {
         {/* Left Scroll Button */}
         {canScrollLeft && (
           <button
+            type="button"
             onClick={() => scroll("left")}
             aria-label="Previous books"
-            className="absolute -left-4 top-1/3 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black text-white flex items-center justify-center shadow-lg hover:bg-gray-800 transition-all cursor-pointer"
+            className="absolute -left-3 top-1/3 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-[#111214] text-[#F5F23B] flex items-center justify-center shadow-lg hover:scale-105 transition-all cursor-pointer"
           >
             <ChevronLeft size={18} />
           </button>
@@ -85,32 +87,32 @@ function CategoryCarouselRow({ genre, books, onOpenBook, onSelectGenre }) {
         {/* Scrollable Row */}
         <div
           ref={scrollRef}
-          className="flex gap-6 overflow-x-auto scrollbar-none scroll-smooth pb-4 px-1"
+          className="flex gap-5 overflow-x-auto scrollbar-none scroll-smooth pb-4 px-1"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {books.map((b) => (
             <div
               key={b.id}
-              className="w-[185px] sm:w-[200px] flex-shrink-0 flex flex-col bg-white p-3 rounded-xl border border-gray-200 hover:border-black transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl cursor-pointer group/card"
+              className="w-[188px] sm:w-[204px] flex-shrink-0 flex flex-col admin-glass-panel p-3.5 rounded-2xl hover:border-[#111214]/40 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl cursor-pointer group/card"
             >
               {/* Cover */}
               <div
                 onClick={() => onOpenBook(b.id)}
-                className="w-full aspect-[1/1.4] rounded bg-white shadow-sm border border-gray-200 overflow-hidden relative mb-3 cursor-pointer group/card"
+                className="w-full aspect-[1/1.4] rounded-xl bg-white/80 shadow-sm border border-white overflow-hidden relative mb-3 cursor-pointer group/card"
               >
                 <BookCover book={b} className="w-full h-full transition-transform duration-300 group-hover/card:scale-105" />
               </div>
 
               {/* Badges / Type */}
-              <div className="flex items-center justify-between text-[11px] font-bold text-gray-800 uppercase tracking-wider mb-1">
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
                 <span>{b.pubType?.toUpperCase() || "EBOOK"}</span>
-                <BookOpen size={13} className="text-gray-700" />
+                <BookOpen size={13} className="text-slate-700" />
               </div>
 
               {/* Title */}
               <h4
                 onClick={() => onOpenBook(b.id)}
-                className="text-sm font-bold text-black leading-snug line-clamp-2 min-h-[2.5rem] mb-1 cursor-pointer hover:underline"
+                className="text-sm font-bold text-[#111214] leading-snug line-clamp-2 min-h-[2.5rem] mb-1 cursor-pointer hover:underline"
                 title={b.title}
                 style={fontDisplay}
               >
@@ -118,16 +120,16 @@ function CategoryCarouselRow({ genre, books, onOpenBook, onSelectGenre }) {
               </h4>
 
               {/* Author */}
-              <p className="text-xs text-gray-600 truncate mb-1" title={b.author}>
+              <p className="text-xs text-slate-600 truncate mb-1" title={b.author}>
                 by {b.author || "Unknown"}
               </p>
 
               {/* Edition */}
-              <p className="text-xs text-black font-medium mb-3">
+              <p className="text-xs text-slate-800 font-medium mb-3">
                 Edition : 1
               </p>
 
-              {/* Details Button with Wiley Loading Sweep Animation */}
+              {/* Details Button */}
               <div className="w-full mt-auto pt-1">
                 <WileyDetailsButton
                   onClick={() => onOpenBook(b.id)}
@@ -141,23 +143,25 @@ function CategoryCarouselRow({ genre, books, onOpenBook, onSelectGenre }) {
         {/* Right Scroll Button */}
         {canScrollRight && (
           <button
+            type="button"
             onClick={() => scroll("right")}
             aria-label="Next books"
-            className="absolute -right-4 top-1/3 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black text-white flex items-center justify-center shadow-lg hover:bg-gray-800 transition-all cursor-pointer"
+            className="absolute -right-3 top-1/3 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-[#111214] text-[#F5F23B] flex items-center justify-center shadow-lg hover:scale-105 transition-all cursor-pointer"
           >
             <ChevronRight size={18} />
           </button>
         )}
       </div>
 
-      {/* View All Button below the row on the right */}
-      <div className="flex justify-end mt-4 pr-1">
+      {/* View All Button */}
+      <div className="flex justify-end mt-3 pr-1">
         <button
+          type="button"
           onClick={() => onSelectGenre(genre)}
-          className="flex items-center gap-1.5 text-sm font-bold text-black hover:text-[#DC2626] transition-colors cursor-pointer group"
+          className="admin-glass-pill flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold text-[#111214] hover:bg-[#111214] hover:text-[#F5F23B] transition-all cursor-pointer group"
         >
           <span>View All</span>
-          <ChevronRight size={16} className="transition-transform group-hover:translate-x-0.5" />
+          <ChevronRight size={15} className="transition-transform group-hover:translate-x-0.5" />
         </button>
       </div>
     </div>
@@ -319,30 +323,30 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
   const endItem = Math.min(currentPage * pageSize, sortedBooks.length);
 
   return (
-    <div className="bg-white min-h-screen text-[#131313]" style={fontBody}>
-      {/* Header */}
-      <div className="bg-white text-black border-b border-gray-200 pt-8 pb-20 px-4 sm:px-6 relative">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 relative z-10">
+    <div className="admin-glass-backdrop min-h-screen text-[#111214]" style={fontBody}>
+      {/* Frosted Header Shell */}
+      <div className="pt-6 pb-8 px-4 sm:px-6 relative z-10">
+        <div className="max-w-7xl mx-auto admin-glass-shell rounded-[28px] p-6 sm:p-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
-              <div className="inline-block px-3 py-1 bg-gray-100 text-black rounded-full text-xs font-semibold uppercase tracking-wider mb-4 border border-gray-200">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-[#111214] text-[#F5F23B] rounded-full text-[11px] font-bold uppercase tracking-wider mb-4 shadow-sm">
                 Reader Dashboard
               </div>
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3" style={fontDisplay}>
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 text-[#111214]" style={fontDisplay}>
                 {session.name}'s Library
               </h1>
 
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-4 mt-4 text-sm text-black bg-gray-50 border border-gray-200 py-3 px-4 rounded-lg inline-flex">
-                <span className="flex items-center gap-1.5"><User size={16} className="text-black" /> <span className="font-semibold text-black">ID:</span> {session.id}</span>
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-4 mt-3 text-xs sm:text-sm text-[#111214] admin-glass-pill py-2.5 px-4 rounded-2xl inline-flex">
+                <span className="flex items-center gap-1.5"><User size={15} className="text-slate-700" /> <span className="font-bold">ID:</span> {session.id}</span>
                 {session.email && (
-                  <span className="flex items-center gap-1.5"><Mail size={16} className="text-black" /> <span className="font-semibold text-black">Email:</span> {session.email}</span>
+                  <span className="flex items-center gap-1.5"><Mail size={15} className="text-slate-700" /> <span className="font-bold">Email:</span> {session.email}</span>
                 )}
                 {session.institution && session.institution !== session.name && (
-                  <span className="flex items-center gap-1.5"><Building2 size={16} className="text-black" /> <span className="font-semibold text-black">Institution:</span> {session.institution}</span>
+                  <span className="flex items-center gap-1.5"><Building2 size={15} className="text-slate-700" /> <span className="font-bold">Institution:</span> {session.institution}</span>
                 )}
               </div>
 
-              <p className="text-black text-sm md:text-base max-w-2xl">
+              <p className="text-slate-700 text-sm md:text-base max-w-2xl">
                 {session.type === "trial"
                   ? "Free trial account — full catalog access until your trial ends."
                   : `Licensed titles for ${session.name}, term ${session.startDate} to ${session.endDate}.`}
@@ -351,16 +355,16 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
 
             <div className="flex-shrink-0">
               {expired ? (
-                <div className="flex items-center gap-2 bg-red-900/50 text-red-400 border border-red-900/50 px-4 py-2 rounded-lg font-semibold text-sm">
-                  <AlertTriangle size={16} /> Access expired
+                <div className="flex items-center gap-2 bg-rose-100/90 text-rose-800 border border-rose-200 px-4 py-2.5 rounded-full font-bold text-xs shadow-sm">
+                  <AlertTriangle size={15} /> Access expired
                 </div>
               ) : expiringSoon ? (
-                <div className="flex items-center gap-2 bg-yellow-900/50 text-[#FDD132] border border-yellow-900/50 px-4 py-2 rounded-lg font-semibold text-sm">
-                  <Clock size={16} /> {daysLeft} days left
+                <div className="flex items-center gap-2 bg-[#F5F23B] text-[#111214] border border-amber-300 px-4 py-2.5 rounded-full font-bold text-xs shadow-sm">
+                  <Clock size={15} /> {daysLeft} days left
                 </div>
               ) : (
-                <div className="flex items-center gap-2 bg-gray-800 text-green-400 border border-gray-700 px-4 py-2 rounded-lg font-semibold text-sm">
-                  <Clock size={16} /> Active until {session.endDate}
+                <div className="flex items-center gap-2 bg-[#111214] text-[#F5F23B] px-4 py-2.5 rounded-full font-bold text-xs shadow-md">
+                  <Clock size={15} /> Active until {session.endDate}
                 </div>
               )}
             </div>
@@ -368,41 +372,45 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 -mt-10 relative z-20 pb-24">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-20 pb-24">
         {expired ? (
-          <div className="bg-white rounded-xl shadow-lg border border-red-100 p-8 text-center">
-            <AlertTriangle size={48} className="mx-auto text-red-500 mb-4" />
-            <h2 className="text-2xl font-bold mb-2">Access Period Ended</h2>
-            <p className="text-black mb-6 max-w-md mx-auto">This access period has ended. Contact the publisher to renew and restore reading access.</p>
+          <div className="admin-glass-panel rounded-[26px] p-8 text-center border-rose-200">
+            <AlertTriangle size={48} className="mx-auto text-rose-600 mb-4" />
+            <h2 className="text-2xl font-bold mb-2 text-[#111214]">Access Period Ended</h2>
+            <p className="text-slate-700 mb-6 max-w-md mx-auto">This access period has ended. Contact the publisher to renew and restore reading access.</p>
           </div>
         ) : (
           <>
             {/* Curated For You (Shown when no filter is isolating view) */}
             {!isFilteredView && curatedBooks.length > 0 && (
-              <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden mb-12 p-8 md:p-10 relative">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-6">
+              <div className="admin-glass-panel rounded-[26px] overflow-hidden mb-10 p-6 sm:p-9 relative">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-7 gap-6">
                   <div>
-                    <h2 className="text-3xl md:text-4xl font-bold text-black mb-2 uppercase tracking-widest" style={fontDisplay}>
+                    <h2 className="text-2xl md:text-3xl font-bold text-[#111214] mb-1.5 uppercase tracking-wider" style={fontDisplay}>
                       Curated For You
                     </h2>
-                    <p className="text-black text-sm max-w-md">
+                    <p className="text-slate-600 text-sm max-w-md">
                       Tailored to your reading history and preferences based on your past activity.
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2.5">
                     <button
+                      type="button"
+                      aria-label="Previous curated title"
                       onClick={() => setCuratedIndex(Math.max(0, curatedIndex - 1))}
                       disabled={curatedIndex === 0}
-                      className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-black disabled:opacity-40 hover:bg-gray-200 transition-colors cursor-pointer"
+                      className="w-10 h-10 rounded-full admin-glass-pill flex items-center justify-center text-[#111214] disabled:opacity-40 hover:bg-[#111214] hover:text-[#F5F23B] transition-all cursor-pointer"
                     >
-                      <ChevronLeft size={20} />
+                      <ChevronLeft size={18} />
                     </button>
                     <button
+                      type="button"
+                      aria-label="Next curated title"
                       onClick={() => setCuratedIndex(Math.min(curatedBooks.length - 1, curatedIndex + 1))}
                       disabled={curatedIndex >= curatedBooks.length - 1}
-                      className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-black disabled:opacity-40 hover:bg-gray-200 transition-colors cursor-pointer"
+                      className="w-10 h-10 rounded-full admin-glass-pill flex items-center justify-center text-[#111214] disabled:opacity-40 hover:bg-[#111214] hover:text-[#F5F23B] transition-all cursor-pointer"
                     >
-                      <ChevronRight size={20} />
+                      <ChevronRight size={18} />
                     </button>
                   </div>
                 </div>
@@ -410,19 +418,19 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                 <div className="overflow-hidden">
                   <div className="flex w-full transition-transform duration-500 ease-out" style={{ transform: `translateX(-${curatedIndex * 100}%)` }}>
                     {curatedBooks.map((b) => (
-                      <div key={b.id} className="w-full flex-shrink-0 flex flex-col md:flex-row gap-8 items-center bg-gray-50 p-6 rounded-xl border border-gray-200">
+                      <div key={b.id} className="w-full flex-shrink-0 flex flex-col md:flex-row gap-7 items-center bg-white/65 backdrop-blur-md p-6 rounded-2xl border border-white/90">
                         <BookCover 
                           book={b} 
-                          className="w-32 md:w-48 aspect-[1/1.4] rounded-lg shadow-md flex-shrink-0" 
+                          className="w-32 md:w-44 aspect-[1/1.4] rounded-xl shadow-md flex-shrink-0" 
                         />
                         <div className="flex-1 text-left">
-                          <span className="text-[#D4A017] text-xs font-bold uppercase tracking-wider mb-2 block">{b.genre}</span>
-                          <h3 className="text-black text-2xl md:text-3xl font-bold mb-3 leading-tight" style={fontDisplay}>{b.title}</h3>
-                          <p className="text-black text-sm mb-6 line-clamp-2">{b.author}</p>
+                          <span className="inline-block px-3 py-1 rounded-full bg-[#F5F23B] text-[#111214] text-[11px] font-bold uppercase tracking-wider mb-2.5">{b.genre}</span>
+                          <h3 className="text-[#111214] text-2xl md:text-3xl font-bold mb-2.5 leading-tight" style={fontDisplay}>{b.title}</h3>
+                          <p className="text-slate-600 text-sm mb-6 line-clamp-2">{b.author}</p>
                           <AnimatedSweepButton
                             onClick={() => onOpenBook(b.id)}
                             variant="black"
-                            className="font-bold px-6 py-3 rounded text-sm shadow-sm"
+                            className="font-bold px-6 py-2.5 rounded-full text-sm shadow-sm"
                           >
                             Details
                           </AnimatedSweepButton>
@@ -435,16 +443,18 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
             )}
 
             {/* Main Layout: Left Sidebar + Right Content */}
-            <div className="flex flex-col lg:flex-row gap-10 w-full items-start">
+            <div className="flex flex-col lg:flex-row gap-8 w-full items-start">
               
               {/* LEFT SIDEBAR */}
-              <div className="w-full lg:w-64 flex-shrink-0 space-y-8">
+              <aside className="w-full lg:w-68 flex-shrink-0 space-y-6 admin-glass-panel rounded-[24px] p-5">
                 
                 {/* CLEAR ALL BUTTON AT TOP */}
-                <div className="pb-2">
+                <div className="pb-2 border-b border-black/10 flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Filters</span>
                   <button
+                    type="button"
                     onClick={handleClearAll}
-                    className="text-xs font-bold text-gray-500 hover:text-red-600 uppercase tracking-wider transition-colors cursor-pointer"
+                    className="text-xs font-bold text-slate-600 hover:text-rose-600 uppercase tracking-wider transition-colors cursor-pointer"
                   >
                     Clear All
                   </button>
@@ -452,51 +462,51 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
 
                 {/* TYPE */}
                 <div>
-                  <h3 className="font-bold text-sm tracking-wider uppercase mb-4 text-black" style={fontDisplay}>
+                  <h3 className="font-bold text-xs tracking-wider uppercase mb-3 text-slate-700" style={fontDisplay}>
                     Type
                   </h3>
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     <label className="flex items-center justify-between cursor-pointer group">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2.5">
                         <input
                           type="checkbox"
                           checked={collectionFilter}
                           onChange={(e) => setCollectionFilter(e.target.checked)}
-                          className="w-4 h-4 rounded-sm border-gray-300 text-black focus:ring-black cursor-pointer"
+                          className="brand-check-fallback w-4 h-4 cursor-pointer"
                         />
-                        <span className="text-black text-sm">Collection</span>
+                        <span className="text-[#111214] text-sm">Collection</span>
                       </div>
-                      <span className="bg-gray-100 text-gray-700 text-xs font-semibold px-2.5 py-0.5 rounded-full min-w-[28px] text-center">
+                      <span className="bg-white/80 text-slate-700 text-xs font-bold px-2.5 py-0.5 rounded-full min-w-[28px] text-center border border-white">
                         {myBooksRaw.length > 0 ? 1 : 0}
                       </span>
                     </label>
 
                     <label className="flex items-center justify-between cursor-pointer group">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2.5">
                         <input
                           type="checkbox"
                           checked={typeFilter}
                           onChange={(e) => setTypeFilter(e.target.checked)}
-                          className="w-4 h-4 rounded-sm border-gray-300 text-black focus:ring-black cursor-pointer"
+                          className="brand-check-fallback w-4 h-4 cursor-pointer"
                         />
-                        <span className="text-black text-sm font-medium">eBook</span>
+                        <span className="text-[#111214] text-sm font-medium">eBook</span>
                       </div>
-                      <span className="bg-gray-100 text-gray-700 text-xs font-semibold px-2.5 py-0.5 rounded-full min-w-[28px] text-center">
+                      <span className="bg-white/80 text-slate-700 text-xs font-bold px-2.5 py-0.5 rounded-full min-w-[28px] text-center border border-white">
                         {myBooksRaw.length}
                       </span>
                     </label>
 
                     <label className="flex items-center justify-between cursor-pointer group">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2.5">
                         <input
                           type="checkbox"
                           checked={tokenFilter}
                           onChange={(e) => setTokenFilter(e.target.checked)}
-                          className="w-4 h-4 rounded-sm border-gray-300 text-black focus:ring-black cursor-pointer"
+                          className="brand-check-fallback w-4 h-4 cursor-pointer"
                         />
-                        <span className="text-black text-sm">Tokens</span>
+                        <span className="text-[#111214] text-sm">Tokens</span>
                       </div>
-                      <span className="bg-gray-100 text-gray-700 text-xs font-semibold px-2.5 py-0.5 rounded-full min-w-[28px] text-center">
+                      <span className="bg-white/80 text-slate-700 text-xs font-bold px-2.5 py-0.5 rounded-full min-w-[28px] text-center border border-white">
                         0
                       </span>
                     </label>
@@ -505,13 +515,13 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
 
                 {/* CATEGORY */}
                 <div>
-                  <h3 className="font-bold text-sm tracking-wider uppercase mb-4 text-black" style={fontDisplay}>
+                  <h3 className="font-bold text-xs tracking-wider uppercase mb-3 text-slate-700" style={fontDisplay}>
                     Category
                   </h3>
-                  <div className="space-y-3 mb-4">
+                  <div className="space-y-2.5 mb-3">
                     {allGenres.slice(0, 7).map((g) => (
                       <label key={g} className="flex items-center justify-between group cursor-pointer">
-                        <div className="flex items-center gap-3 overflow-hidden">
+                        <div className="flex items-center gap-2.5 overflow-hidden">
                           <input
                             type="checkbox"
                             checked={selectedGenres.includes(g)}
@@ -519,13 +529,13 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                               if (e.target.checked) setSelectedGenres([...selectedGenres, g]);
                               else setSelectedGenres(selectedGenres.filter((x) => x !== g));
                             }}
-                            className="w-4 h-4 rounded-sm border-gray-300 text-black focus:ring-black cursor-pointer flex-shrink-0"
+                            className="brand-check-fallback w-4 h-4 cursor-pointer flex-shrink-0"
                           />
-                          <span className="text-sm text-black truncate group-hover:underline" title={g}>
+                          <span className="text-sm text-[#111214] truncate group-hover:underline" title={g}>
                             {g}
                           </span>
                         </div>
-                        <span className="bg-gray-100 text-gray-700 text-xs font-semibold px-2.5 py-0.5 rounded-full min-w-[28px] text-center ml-2">
+                        <span className="bg-white/80 text-slate-700 text-xs font-bold px-2.5 py-0.5 rounded-full min-w-[28px] text-center ml-2 border border-white">
                           {genreCounts[g] || 0}
                         </span>
                       </label>
@@ -533,8 +543,9 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                   </div>
                   {allGenres.length > 7 && (
                     <button
+                      type="button"
                       onClick={() => setShowCategoryModal(true)}
-                      className="text-xs font-bold uppercase tracking-wider text-black hover:underline cursor-pointer block"
+                      className="text-xs font-bold uppercase tracking-wider text-[#111214] hover:underline cursor-pointer block"
                     >
                       + Show all category
                     </button>
@@ -543,13 +554,13 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
 
                 {/* AUTHOR */}
                 <div>
-                  <h3 className="font-bold text-sm tracking-wider uppercase mb-4 text-black" style={fontDisplay}>
+                  <h3 className="font-bold text-xs tracking-wider uppercase mb-3 text-slate-700" style={fontDisplay}>
                     Author
                   </h3>
-                  <div className="space-y-3 mb-4">
+                  <div className="space-y-2.5 mb-3">
                     {allAuthorsList.slice(0, 5).map((a) => (
                       <label key={a} className="flex items-center justify-between group cursor-pointer">
-                        <div className="flex items-center gap-3 overflow-hidden">
+                        <div className="flex items-center gap-2.5 overflow-hidden">
                           <input
                             type="checkbox"
                             checked={selectedAuthors.includes(a)}
@@ -557,13 +568,13 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                               if (e.target.checked) setSelectedAuthors([...selectedAuthors, a]);
                               else setSelectedAuthors(selectedAuthors.filter((x) => x !== a));
                             }}
-                            className="w-4 h-4 rounded-sm border-gray-300 text-black focus:ring-black cursor-pointer flex-shrink-0"
+                            className="brand-check-fallback w-4 h-4 cursor-pointer flex-shrink-0"
                           />
-                          <span className="text-sm text-black truncate group-hover:underline" title={a}>
+                          <span className="text-sm text-[#111214] truncate group-hover:underline" title={a}>
                             {a}
                           </span>
                         </div>
-                        <span className="bg-gray-100 text-gray-700 text-xs font-semibold px-2.5 py-0.5 rounded-full min-w-[28px] text-center ml-2">
+                        <span className="bg-white/80 text-slate-700 text-xs font-bold px-2.5 py-0.5 rounded-full min-w-[28px] text-center ml-2 border border-white">
                           {authorCounts[a] || 0}
                         </span>
                       </label>
@@ -571,8 +582,9 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                   </div>
                   {allAuthorsList.length > 5 && (
                     <button
+                      type="button"
                       onClick={() => setShowAuthorModal(true)}
-                      className="text-xs font-bold uppercase tracking-wider text-black hover:underline cursor-pointer block"
+                      className="text-xs font-bold uppercase tracking-wider text-[#111214] hover:underline cursor-pointer block"
                     >
                       + Show all author
                     </button>
@@ -582,13 +594,13 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                 {/* PUBLICATION YEAR */}
                 {allYearsList.length > 0 && (
                   <div>
-                    <h3 className="font-bold text-sm tracking-wider uppercase mb-4 text-black" style={fontDisplay}>
+                    <h3 className="font-bold text-xs tracking-wider uppercase mb-3 text-slate-700" style={fontDisplay}>
                       Publication Year
                     </h3>
-                    <div className="space-y-3 mb-4">
+                    <div className="space-y-2.5 mb-3">
                       {allYearsList.slice(0, 5).map((y) => (
                         <label key={y} className="flex items-center justify-between group cursor-pointer">
-                          <div className="flex items-center gap-3 overflow-hidden">
+                          <div className="flex items-center gap-2.5 overflow-hidden">
                             <input
                               type="checkbox"
                               checked={selectedYears.includes(y)}
@@ -596,13 +608,13 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                                 if (e.target.checked) setSelectedYears([...selectedYears, y]);
                                 else setSelectedYears(selectedYears.filter((x) => x !== y));
                               }}
-                              className="w-4 h-4 rounded-sm border-gray-300 text-black focus:ring-black cursor-pointer flex-shrink-0"
+                              className="brand-check-fallback w-4 h-4 cursor-pointer flex-shrink-0"
                             />
-                            <span className="text-sm text-black truncate group-hover:underline" title={y}>
+                            <span className="text-sm text-[#111214] truncate group-hover:underline" title={y}>
                               {y}
                             </span>
                           </div>
-                          <span className="bg-gray-100 text-gray-700 text-xs font-semibold px-2.5 py-0.5 rounded-full min-w-[28px] text-center ml-2">
+                          <span className="bg-white/80 text-slate-700 text-xs font-bold px-2.5 py-0.5 rounded-full min-w-[28px] text-center ml-2 border border-white">
                             {yearCounts[y] || 0}
                           </span>
                         </label>
@@ -610,15 +622,16 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                     </div>
                     {allYearsList.length > 5 && (
                       <button
+                        type="button"
                         onClick={() => setShowYearModal(true)}
-                        className="text-xs font-bold uppercase tracking-wider text-black hover:underline cursor-pointer block"
+                        className="text-xs font-bold uppercase tracking-wider text-[#111214] hover:underline cursor-pointer block"
                       >
                         + Show all publication year
                       </button>
                     )}
                   </div>
                 )}
-              </div>
+              </aside>
 
               {/* RIGHT CONTENT */}
               <div className="flex-1 w-full min-w-0">
@@ -626,9 +639,9 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                 {isFilteredView ? (
                   <div>
                     {/* Top Control Bar */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-gray-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-black/10">
                       <div>
-                        <h2 className="text-base font-bold text-black" style={fontDisplay}>
+                        <h2 className="text-base font-bold text-[#111214]" style={fontDisplay}>
                           Showing {startItem}-{endItem} of {sortedBooks.length} products
                         </h2>
                       </div>
@@ -638,11 +651,12 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                         {/* Sort Dropdown */}
                         <div className="relative">
                           <button
+                            type="button"
                             onClick={() => setShowSortDropdown(!showSortDropdown)}
-                            className="h-9 flex items-center gap-2 px-3.5 border border-gray-300 bg-white hover:bg-gray-50 text-xs font-semibold text-black rounded-md transition-colors cursor-pointer shadow-sm"
+                            className="h-9 flex items-center gap-2 px-4 admin-glass-pill hover:bg-white text-xs font-bold text-[#111214] rounded-full transition-colors cursor-pointer"
                           >
                             <span>Sort</span>
-                            <ArrowUpDown size={14} className="text-gray-600" />
+                            <ArrowUpDown size={14} className="text-slate-700" />
                           </button>
 
                           {showSortDropdown && (
@@ -651,20 +665,21 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                                 className="fixed inset-0 z-30"
                                 onClick={() => setShowSortDropdown(false)}
                               />
-                              <div className="absolute right-0 top-full mt-1.5 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-40 py-1">
+                              <div className="absolute right-0 top-full mt-2 w-64 bg-white/92 backdrop-blur-xl border border-white rounded-2xl shadow-2xl z-40 py-1.5 overflow-hidden">
                                 {sortOptions.map((opt) => (
                                   <button
+                                    type="button"
                                     key={opt.id}
                                     onClick={() => {
                                       setSortBy(opt.id);
                                       setShowSortDropdown(false);
                                     }}
-                                    className={`w-full text-left px-4 py-2.5 text-xs font-medium flex items-center justify-between hover:bg-blue-50 transition-colors ${
-                                      sortBy === opt.id ? "text-blue-600 font-bold bg-blue-50/50" : "text-black"
+                                    className={`w-full text-left px-4 py-2.5 text-xs font-medium flex items-center justify-between hover:bg-[#F5F23B]/25 transition-colors cursor-pointer ${
+                                      sortBy === opt.id ? "text-[#111214] font-bold bg-[#F5F23B]/35" : "text-slate-700"
                                     }`}
                                   >
                                     <span>{opt.label}</span>
-                                    {sortBy === opt.id && <Check size={14} className="text-blue-600" />}
+                                    {sortBy === opt.id && <Check size={14} className="text-[#111214]" />}
                                   </button>
                                 ))}
                               </div>
@@ -673,25 +688,28 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                         </div>
 
                         {/* View Switcher: Grid vs List */}
-                        <div className="h-9 flex items-center border border-gray-300 rounded-md overflow-hidden bg-white shadow-sm">
+                        <div className="h-9 flex items-center admin-glass-pill rounded-full overflow-hidden p-0.5">
                           <button
+                            type="button"
                             onClick={() => setViewMode("grid")}
                             title="Grid View"
-                            className={`h-full px-2.5 flex items-center justify-center transition-colors cursor-pointer ${
-                              viewMode === "grid" ? "bg-gray-100 text-black font-bold" : "bg-white text-gray-500 hover:text-black"
+                            aria-label="Grid view"
+                            className={`h-full px-3 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                              viewMode === "grid" ? "bg-[#111214] text-[#F5F23B] font-bold" : "text-slate-600 hover:text-[#111214]"
                             }`}
                           >
-                            <LayoutGrid size={16} />
+                            <LayoutGrid size={15} />
                           </button>
-                          <div className="h-4 w-px bg-gray-200" />
                           <button
+                            type="button"
                             onClick={() => setViewMode("list")}
                             title="List View"
-                            className={`h-full px-2.5 flex items-center justify-center transition-colors cursor-pointer ${
-                              viewMode === "list" ? "bg-gray-100 text-black font-bold" : "bg-white text-gray-500 hover:text-black"
+                            aria-label="List view"
+                            className={`h-full px-3 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                              viewMode === "list" ? "bg-[#111214] text-[#F5F23B] font-bold" : "text-slate-600 hover:text-[#111214]"
                             }`}
                           >
-                            <List size={16} />
+                            <List size={15} />
                           </button>
                         </div>
                       </div>
@@ -700,77 +718,78 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                     {/* Filter Pills / Tags */}
                     <div className="flex flex-wrap items-center gap-2 mb-8">
                       {typeFilter && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#D9EEFA] text-[#1E5D88] rounded-full text-xs font-semibold">
+                        <span className="inline-flex items-center gap-1.5 px-3.5 py-1 bg-[#111214] text-[#F5F23B] rounded-full text-xs font-bold">
                           eBook
-                          <button onClick={() => setTypeFilter(false)} className="hover:text-black cursor-pointer"><X size={13} /></button>
+                          <button type="button" onClick={() => setTypeFilter(false)} className="hover:opacity-80 cursor-pointer"><X size={13} /></button>
                         </span>
                       )}
                       {tokenFilter && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#D9EEFA] text-[#1E5D88] rounded-full text-xs font-semibold">
+                        <span className="inline-flex items-center gap-1.5 px-3.5 py-1 bg-[#111214] text-[#F5F23B] rounded-full text-xs font-bold">
                           Tokens
-                          <button onClick={() => setTokenFilter(false)} className="hover:text-black cursor-pointer"><X size={13} /></button>
+                          <button type="button" onClick={() => setTokenFilter(false)} className="hover:opacity-80 cursor-pointer"><X size={13} /></button>
                         </span>
                       )}
                       {collectionFilter && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#D9EEFA] text-[#1E5D88] rounded-full text-xs font-semibold">
+                        <span className="inline-flex items-center gap-1.5 px-3.5 py-1 bg-[#111214] text-[#F5F23B] rounded-full text-xs font-bold">
                           Collection
-                          <button onClick={() => setCollectionFilter(false)} className="hover:text-black cursor-pointer"><X size={13} /></button>
+                          <button type="button" onClick={() => setCollectionFilter(false)} className="hover:opacity-80 cursor-pointer"><X size={13} /></button>
                         </span>
                       )}
                       {selectedGenres.map((g) => (
-                        <span key={g} className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#D9EEFA] text-[#1E5D88] rounded-full text-xs font-semibold">
+                        <span key={g} className="inline-flex items-center gap-1.5 px-3.5 py-1 bg-[#F5F23B] text-[#111214] rounded-full text-xs font-bold">
                           {g}
-                          <button onClick={() => setSelectedGenres(selectedGenres.filter((x) => x !== g))} className="hover:text-black cursor-pointer"><X size={13} /></button>
+                          <button type="button" onClick={() => setSelectedGenres(selectedGenres.filter((x) => x !== g))} className="hover:opacity-75 cursor-pointer"><X size={13} /></button>
                         </span>
                       ))}
                       {selectedAuthors.map((a) => (
-                        <span key={a} className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#D9EEFA] text-[#1E5D88] rounded-full text-xs font-semibold">
+                        <span key={a} className="inline-flex items-center gap-1.5 px-3.5 py-1 admin-glass-pill text-[#111214] rounded-full text-xs font-bold">
                           Author: {a}
-                          <button onClick={() => setSelectedAuthors(selectedAuthors.filter((x) => x !== a))} className="hover:text-black cursor-pointer"><X size={13} /></button>
+                          <button type="button" onClick={() => setSelectedAuthors(selectedAuthors.filter((x) => x !== a))} className="hover:opacity-75 cursor-pointer"><X size={13} /></button>
                         </span>
                       ))}
                       {selectedYears.map((y) => (
-                        <span key={y} className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#D9EEFA] text-[#1E5D88] rounded-full text-xs font-semibold">
+                        <span key={y} className="inline-flex items-center gap-1.5 px-3.5 py-1 admin-glass-pill text-[#111214] rounded-full text-xs font-bold">
                           Year: {y}
-                          <button onClick={() => setSelectedYears(selectedYears.filter((x) => x !== y))} className="hover:text-black cursor-pointer"><X size={13} /></button>
+                          <button type="button" onClick={() => setSelectedYears(selectedYears.filter((x) => x !== y))} className="hover:opacity-75 cursor-pointer"><X size={13} /></button>
                         </span>
                       ))}
                     </div>
 
                     {/* Products Content */}
                     {sortedBooks.length === 0 ? (
-                      <div className="text-center py-20 bg-gray-50 rounded-xl border border-gray-200">
-                        <p className="text-black font-semibold mb-3">No books found matching your selected filters.</p>
+                      <div className="text-center py-20 admin-glass-panel rounded-2xl">
+                        <p className="text-[#111214] font-semibold mb-3">No books found matching your selected filters.</p>
                         <button
+                          type="button"
                           onClick={handleClearAll}
-                          className="text-xs font-bold uppercase tracking-wider text-black underline cursor-pointer"
+                          className="text-xs font-bold uppercase tracking-wider text-[#111214] underline cursor-pointer"
                         >
                           Clear All Filters
                         </button>
                       </div>
                     ) : viewMode === "grid" ? (
-                      /* GRID VIEW (Screenshot 1) */
-                      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
+                      /* GRID VIEW */
+                      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-5 mb-12">
                         {paginatedBooks.map((b) => (
-                          <div key={b.id} className="flex flex-col bg-white p-3 rounded-xl border border-gray-200 hover:border-black transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl cursor-pointer group/card">
+                          <div key={b.id} className="flex flex-col admin-glass-panel p-3.5 rounded-2xl hover:border-[#111214]/40 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl cursor-pointer group/card">
                             {/* Cover */}
                             <div
                               onClick={() => onOpenBook(b.id)}
-                              className="w-full aspect-[1/1.4] rounded bg-white shadow-sm border border-gray-200 overflow-hidden relative mb-3 cursor-pointer group/card"
+                              className="w-full aspect-[1/1.4] rounded-xl bg-white/80 shadow-sm border border-white overflow-hidden relative mb-3 cursor-pointer group/card"
                             >
                               <BookCover book={b} className="w-full h-full transition-transform duration-300 group-hover/card:scale-105" />
                             </div>
 
                             {/* Badges / Type */}
-                            <div className="flex items-center justify-between text-[11px] font-bold text-gray-800 uppercase tracking-wider mb-1">
+                            <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
                               <span>{b.pubType?.toUpperCase() || "EBOOK"}</span>
-                              <BookOpen size={13} className="text-gray-700" />
+                              <BookOpen size={13} className="text-slate-700" />
                             </div>
 
                             {/* Title */}
                             <h4
                               onClick={() => onOpenBook(b.id)}
-                              className="text-sm font-bold text-black leading-snug line-clamp-2 min-h-[2.5rem] mb-1 cursor-pointer hover:underline"
+                              className="text-sm font-bold text-[#111214] leading-snug line-clamp-2 min-h-[2.5rem] mb-1 cursor-pointer hover:underline"
                               title={b.title}
                               style={fontDisplay}
                             >
@@ -778,16 +797,16 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                             </h4>
 
                             {/* Author */}
-                            <p className="text-xs text-gray-600 truncate mb-1" title={b.author}>
+                            <p className="text-xs text-slate-600 truncate mb-1" title={b.author}>
                               by {b.author || "Unknown"}
                             </p>
 
                             {/* Edition */}
-                            <p className="text-xs text-black font-medium mb-3">
+                            <p className="text-xs text-slate-800 font-medium mb-3">
                               Edition : 1
                             </p>
 
-                            {/* Details Button with Wiley Loading Sweep Animation */}
+                            {/* Details Button */}
                             <div className="w-full mt-auto pt-1">
                               <WileyDetailsButton
                                 onClick={() => onOpenBook(b.id)}
@@ -798,17 +817,17 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                         ))}
                       </div>
                     ) : (
-                      /* LIST VIEW (Screenshot 3) */
-                      <div className="space-y-8 mb-12">
+                      /* LIST VIEW */
+                      <div className="space-y-6 mb-12">
                         {paginatedBooks.map((b) => (
                           <div
                             key={b.id}
-                            className="flex flex-col sm:flex-row gap-6 p-6 bg-white border border-gray-200 hover:border-black rounded-lg shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group/card"
+                            className="flex flex-col sm:flex-row gap-6 p-6 admin-glass-panel hover:border-[#111214]/40 rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group/card"
                           >
                             {/* Left Cover */}
                             <div
                               onClick={() => onOpenBook(b.id)}
-                              className="w-36 sm:w-44 aspect-[1/1.4] bg-white rounded shadow-sm border border-gray-200 overflow-hidden flex-shrink-0 cursor-pointer group/card"
+                              className="w-36 sm:w-44 aspect-[1/1.4] bg-white/80 rounded-xl shadow-sm border border-white overflow-hidden flex-shrink-0 cursor-pointer group/card"
                             >
                               <BookCover book={b} className="w-full h-full transition-transform duration-300 group-hover/card:scale-105" />
                             </div>
@@ -817,15 +836,15 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                             <div className="flex-1 flex flex-col min-w-0">
                               <h3
                                 onClick={() => onOpenBook(b.id)}
-                                className="text-xl font-bold text-black mb-1 cursor-pointer hover:underline"
+                                className="text-xl font-bold text-[#111214] mb-1 cursor-pointer hover:underline"
                                 style={fontDisplay}
                               >
                                 {b.title}
                               </h3>
-                              <p className="text-sm text-gray-700 mb-1">
+                              <p className="text-sm text-slate-600 mb-1">
                                 by {b.author || "Unknown"}
                               </p>
-                              <p className="text-sm text-black font-medium mb-4">
+                              <p className="text-sm text-slate-800 font-medium mb-4">
                                 Edition : 1
                               </p>
 
@@ -835,16 +854,17 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                                 />
                               </div>
 
-                              {/* Description with ...Show More */}
-                              <div className="text-sm text-gray-800 leading-relaxed max-w-3xl">
+                              {/* Description */}
+                              <div className="text-sm text-slate-700 leading-relaxed max-w-3xl">
                                 <p className={expandedDesc[b.id] ? "" : "line-clamp-3"}>
                                   {b.description ||
                                     "Presents a thorough overview of this subject matter, delivering essential insights and structured perspectives for researchers and avid readers."}
                                 </p>
                                 {b.description && b.description.length > 120 && (
                                   <button
+                                    type="button"
                                     onClick={() => toggleDesc(b.id)}
-                                    className="text-blue-600 hover:underline text-xs font-semibold mt-1 cursor-pointer italic"
+                                    className="text-slate-900 underline text-xs font-bold mt-1 cursor-pointer italic"
                                   >
                                     {expandedDesc[b.id] ? "Show Less" : "...Show More"}
                                   </button>
@@ -856,25 +876,27 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                       </div>
                     )}
 
-                    {/* PAGINATION (As per inventory) */}
+                    {/* PAGINATION */}
                     {totalPages > 1 && (
-                      <div className="flex items-center justify-center gap-2 pt-6 pb-12 border-t border-gray-200">
+                      <div className="flex items-center justify-center gap-2 pt-6 pb-12 border-t border-black/10">
                         <button
+                          type="button"
                           onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                           disabled={currentPage === 1}
-                          className="w-9 h-9 flex items-center justify-center rounded border border-gray-300 text-black disabled:opacity-30 hover:bg-gray-100 transition-colors cursor-pointer"
+                          className="w-9 h-9 flex items-center justify-center rounded-full admin-glass-pill text-[#111214] disabled:opacity-30 hover:bg-white transition-colors cursor-pointer"
                         >
                           <ChevronLeft size={16} />
                         </button>
 
                         {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
                           <button
+                            type="button"
                             key={num}
                             onClick={() => setCurrentPage(num)}
-                            className={`w-9 h-9 flex items-center justify-center rounded text-sm font-semibold transition-colors cursor-pointer ${
+                            className={`w-9 h-9 flex items-center justify-center rounded-full text-sm font-bold transition-colors cursor-pointer ${
                               currentPage === num
-                                ? "bg-black text-white"
-                                : "border border-gray-300 text-black hover:bg-gray-100"
+                                ? "bg-[#111214] text-[#F5F23B] shadow-md"
+                                : "admin-glass-pill text-[#111214] hover:bg-white"
                             }`}
                           >
                             {num}
@@ -882,9 +904,10 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                         ))}
 
                         <button
+                          type="button"
                           onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                           disabled={currentPage === totalPages}
-                          className="w-9 h-9 flex items-center justify-center rounded border border-gray-300 text-black disabled:opacity-30 hover:bg-gray-100 transition-colors cursor-pointer"
+                          className="w-9 h-9 flex items-center justify-center rounded-full admin-glass-pill text-[#111214] disabled:opacity-30 hover:bg-white transition-colors cursor-pointer"
                         >
                           <ChevronRight size={16} />
                         </button>
@@ -920,132 +943,108 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
 
       {/* MODALS */}
       {showCategoryModal && (
-        <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-3 sm:p-5 backdrop-blur-sm" onClick={() => setShowCategoryModal(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl border border-gray-200" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50/90">
-              <h2 className="text-xl font-bold" style={fontDisplay}>All Categories</h2>
-              <button onClick={() => setShowCategoryModal(false)} className="flex items-center gap-1.5 text-xs font-bold text-gray-700 hover:text-black bg-white hover:bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-300 shadow-sm transition-all cursor-pointer"><X size={15} /><span>Close</span></button>
-            </div>
-            <div className="p-8 overflow-y-auto">
-              <div className="flex gap-4 mb-6">
-                <button onClick={() => setSelectedGenres([])} className="text-sm font-semibold text-black hover:underline cursor-pointer">
-                  Clear Selection
-                </button>
-                <button onClick={() => setSelectedGenres(allGenres)} className="text-sm font-semibold text-black hover:underline cursor-pointer">
-                  Select All
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-8">
-                {allGenres.map((g) => (
-                  <label key={g} className="flex items-center justify-between group cursor-pointer">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <input
-                        type="checkbox"
-                        checked={selectedGenres.includes(g)}
-                        onChange={(e) => {
-                          if (e.target.checked) setSelectedGenres([...selectedGenres, g]);
-                          else setSelectedGenres(selectedGenres.filter((x) => x !== g));
-                        }}
-                        className="w-4 h-4 rounded-sm border-gray-300 text-black focus:ring-black cursor-pointer flex-shrink-0"
-                      />
-                      <span className="text-sm text-black truncate group-hover:underline" title={g}>{g}</span>
-                    </div>
-                    <span className="bg-gray-100 text-gray-700 text-xs font-semibold px-2.5 py-0.5 rounded-full min-w-[28px] text-center ml-2">{genreCounts[g] || 0}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div className="px-8 py-4 bg-gray-50 border-t border-gray-100 text-right">
-              <button onClick={() => setShowCategoryModal(false)} className="bg-black text-white px-6 py-2 rounded-lg font-bold hover:bg-gray-800 transition-colors cursor-pointer">Done</button>
-            </div>
+        <Modal title="All Categories" onClose={() => setShowCategoryModal(false)} wide>
+          <div className="flex gap-3 mb-5">
+            <button type="button" onClick={() => setSelectedGenres([])} className="px-3.5 py-1.5 rounded-full bg-white/80 hover:bg-white text-xs font-bold text-[#111214] border border-white cursor-pointer">
+              Clear Selection
+            </button>
+            <button type="button" onClick={() => setSelectedGenres(allGenres)} className="px-3.5 py-1.5 rounded-full bg-[#111214] text-[#F5F23B] text-xs font-bold cursor-pointer">
+              Select All
+            </button>
           </div>
-        </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-3 gap-x-6 mb-6">
+            {allGenres.map((g) => (
+              <label key={g} className="flex items-center justify-between group cursor-pointer p-2 rounded-xl bg-white/60 border border-white/80 hover:bg-white/90">
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                  <input
+                    type="checkbox"
+                    checked={selectedGenres.includes(g)}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedGenres([...selectedGenres, g]);
+                      else setSelectedGenres(selectedGenres.filter((x) => x !== g));
+                    }}
+                    className="brand-check-fallback w-4 h-4 cursor-pointer flex-shrink-0"
+                  />
+                  <span className="text-sm text-[#111214] truncate" title={g}>{g}</span>
+                </div>
+                <span className="bg-white text-slate-700 text-xs font-bold px-2.5 py-0.5 rounded-full min-w-[28px] text-center ml-2 border border-slate-200/70">{genreCounts[g] || 0}</span>
+              </label>
+            ))}
+          </div>
+          <div className="text-right pt-3 border-t border-black/10">
+            <button type="button" onClick={() => setShowCategoryModal(false)} className="bg-[#111214] text-[#F5F23B] px-6 py-2.5 rounded-full text-xs font-bold hover:opacity-95 transition-opacity cursor-pointer">Done</button>
+          </div>
+        </Modal>
       )}
 
       {showAuthorModal && (
-        <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-3 sm:p-5 backdrop-blur-sm" onClick={() => setShowAuthorModal(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl border border-gray-200" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50/90">
-              <h2 className="text-xl font-bold" style={fontDisplay}>All Authors</h2>
-              <button onClick={() => setShowAuthorModal(false)} className="flex items-center gap-1.5 text-xs font-bold text-gray-700 hover:text-black bg-white hover:bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-300 shadow-sm transition-all cursor-pointer"><X size={15} /><span>Close</span></button>
-            </div>
-            <div className="p-8 overflow-y-auto">
-              <div className="flex gap-4 mb-6">
-                <button onClick={() => setSelectedAuthors([])} className="text-sm font-semibold text-black hover:underline cursor-pointer">
-                  Clear Selection
-                </button>
-                <button onClick={() => setSelectedAuthors(allAuthorsList)} className="text-sm font-semibold text-black hover:underline cursor-pointer">
-                  Select All
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-8">
-                {allAuthorsList.map((a) => (
-                  <label key={a} className="flex items-center justify-between group cursor-pointer">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <input
-                        type="checkbox"
-                        checked={selectedAuthors.includes(a)}
-                        onChange={(e) => {
-                          if (e.target.checked) setSelectedAuthors([...selectedAuthors, a]);
-                          else setSelectedAuthors(selectedAuthors.filter((x) => x !== a));
-                        }}
-                        className="w-4 h-4 rounded-sm border-gray-300 text-black focus:ring-black cursor-pointer flex-shrink-0"
-                      />
-                      <span className="text-sm text-black truncate group-hover:underline" title={a}>{a}</span>
-                    </div>
-                    <span className="bg-gray-100 text-gray-700 text-xs font-semibold px-2.5 py-0.5 rounded-full min-w-[28px] text-center ml-2">{authorCounts[a] || 0}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div className="px-8 py-4 bg-gray-50 border-t border-gray-100 text-right">
-              <button onClick={() => setShowAuthorModal(false)} className="bg-black text-white px-6 py-2 rounded-lg font-bold hover:bg-gray-800 transition-colors cursor-pointer">Done</button>
-            </div>
+        <Modal title="All Authors" onClose={() => setShowAuthorModal(false)} wide>
+          <div className="flex gap-3 mb-5">
+            <button type="button" onClick={() => setSelectedAuthors([])} className="px-3.5 py-1.5 rounded-full bg-white/80 hover:bg-white text-xs font-bold text-[#111214] border border-white cursor-pointer">
+              Clear Selection
+            </button>
+            <button type="button" onClick={() => setSelectedAuthors(allAuthorsList)} className="px-3.5 py-1.5 rounded-full bg-[#111214] text-[#F5F23B] text-xs font-bold cursor-pointer">
+              Select All
+            </button>
           </div>
-        </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-3 gap-x-6 mb-6">
+            {allAuthorsList.map((a) => (
+              <label key={a} className="flex items-center justify-between group cursor-pointer p-2 rounded-xl bg-white/60 border border-white/80 hover:bg-white/90">
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                  <input
+                    type="checkbox"
+                    checked={selectedAuthors.includes(a)}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedAuthors([...selectedAuthors, a]);
+                      else setSelectedAuthors(selectedAuthors.filter((x) => x !== a));
+                    }}
+                    className="brand-check-fallback w-4 h-4 cursor-pointer flex-shrink-0"
+                  />
+                  <span className="text-sm text-[#111214] truncate" title={a}>{a}</span>
+                </div>
+                <span className="bg-white text-slate-700 text-xs font-bold px-2.5 py-0.5 rounded-full min-w-[28px] text-center ml-2 border border-slate-200/70">{authorCounts[a] || 0}</span>
+              </label>
+            ))}
+          </div>
+          <div className="text-right pt-3 border-t border-black/10">
+            <button type="button" onClick={() => setShowAuthorModal(false)} className="bg-[#111214] text-[#F5F23B] px-6 py-2.5 rounded-full text-xs font-bold hover:opacity-95 transition-opacity cursor-pointer">Done</button>
+          </div>
+        </Modal>
       )}
 
       {showYearModal && (
-        <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-3 sm:p-5 backdrop-blur-sm" onClick={() => setShowYearModal(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl border border-gray-200" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50/90">
-              <h2 className="text-xl font-bold" style={fontDisplay}>All Publication Years</h2>
-              <button onClick={() => setShowYearModal(false)} className="flex items-center gap-1.5 text-xs font-bold text-gray-700 hover:text-black bg-white hover:bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-300 shadow-sm transition-all cursor-pointer"><X size={15} /><span>Close</span></button>
-            </div>
-            <div className="p-8 overflow-y-auto">
-              <div className="flex gap-4 mb-6">
-                <button onClick={() => setSelectedYears([])} className="text-sm font-semibold text-black hover:underline cursor-pointer">
-                  Clear Selection
-                </button>
-                <button onClick={() => setSelectedYears(allYearsList)} className="text-sm font-semibold text-black hover:underline cursor-pointer">
-                  Select All
-                </button>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-8">
-                {allYearsList.map((y) => (
-                  <label key={y} className="flex items-center justify-between group cursor-pointer">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <input
-                        type="checkbox"
-                        checked={selectedYears.includes(y)}
-                        onChange={(e) => {
-                          if (e.target.checked) setSelectedYears([...selectedYears, y]);
-                          else setSelectedYears(selectedYears.filter((x) => x !== y));
-                        }}
-                        className="w-4 h-4 rounded-sm border-gray-300 text-black focus:ring-black cursor-pointer flex-shrink-0"
-                      />
-                      <span className="text-sm text-black truncate group-hover:underline" title={y}>{y}</span>
-                    </div>
-                    <span className="bg-gray-100 text-gray-700 text-xs font-semibold px-2.5 py-0.5 rounded-full min-w-[28px] text-center ml-2">{yearCounts[y] || 0}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div className="px-8 py-4 bg-gray-50 border-t border-gray-100 text-right">
-              <button onClick={() => setShowYearModal(false)} className="bg-black text-white px-6 py-2 rounded-lg font-bold hover:bg-gray-800 transition-colors cursor-pointer">Done</button>
-            </div>
+        <Modal title="All Publication Years" onClose={() => setShowYearModal(false)} wide>
+          <div className="flex gap-3 mb-5">
+            <button type="button" onClick={() => setSelectedYears([])} className="px-3.5 py-1.5 rounded-full bg-white/80 hover:bg-white text-xs font-bold text-[#111214] border border-white cursor-pointer">
+              Clear Selection
+            </button>
+            <button type="button" onClick={() => setSelectedYears(allYearsList)} className="px-3.5 py-1.5 rounded-full bg-[#111214] text-[#F5F23B] text-xs font-bold cursor-pointer">
+              Select All
+            </button>
           </div>
-        </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-y-3 gap-x-6 mb-6">
+            {allYearsList.map((y) => (
+              <label key={y} className="flex items-center justify-between group cursor-pointer p-2 rounded-xl bg-white/60 border border-white/80 hover:bg-white/90">
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                  <input
+                    type="checkbox"
+                    checked={selectedYears.includes(y)}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedYears([...selectedYears, y]);
+                      else setSelectedYears(selectedYears.filter((x) => x !== y));
+                    }}
+                    className="brand-check-fallback w-4 h-4 cursor-pointer flex-shrink-0"
+                  />
+                  <span className="text-sm text-[#111214] truncate" title={y}>{y}</span>
+                </div>
+                <span className="bg-white text-slate-700 text-xs font-bold px-2.5 py-0.5 rounded-full min-w-[28px] text-center ml-2 border border-slate-200/70">{yearCounts[y] || 0}</span>
+              </label>
+            ))}
+          </div>
+          <div className="text-right pt-3 border-t border-black/10">
+            <button type="button" onClick={() => setShowYearModal(false)} className="bg-[#111214] text-[#F5F23B] px-6 py-2.5 rounded-full text-xs font-bold hover:opacity-95 transition-opacity cursor-pointer">Done</button>
+          </div>
+        </Modal>
       )}
     </div>
   );
