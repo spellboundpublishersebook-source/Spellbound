@@ -455,7 +455,6 @@ export default function CatalogPage({ books, onNavigate }) {
           <div className="lg:w-1/2 flex flex-col items-center z-10 w-full max-w-full mt-6 lg:mt-0 overflow-hidden">
             <div className="w-full flex items-center justify-between mb-4 px-2">
               <h2 className="text-2xl font-semibold text-[#111214]" style={fontDisplay}>Trending Now</h2>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Drag or swipe</span>
             </div>
             <AutoMarquee
               items={trendingPool}
@@ -1062,7 +1061,7 @@ export default function CatalogPage({ books, onNavigate }) {
       </section>
 
       {/* FOOTER */}
-      <footer className="bg-white/75 backdrop-blur-xl border-t border-white/80 text-[#111214] pt-14 pb-8">
+      <footer className="glass-footer-bar text-[#111214] pt-14 pb-8">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-6 border-b border-black/10 pb-8">
             
