@@ -1,18 +1,44 @@
-import React, { useState, useEffect } from "react";
-import { Plus, Trash2, UploadCloud, BookOpen, Edit2 } from "lucide-react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { Plus, Trash2, UploadCloud, BookOpen, Edit2, ChevronLeft, ChevronRight } from "lucide-react";
 import { palette, fontDisplay, getGenres, getPubTypes, getCustomHeadings, getPublishers } from "../theme";
 import Button from "../components/Button";
 import { Field, Select, TextArea, Modal } from "../components/UI";
 
 const spineChoices = ["#8C3B3F", "#A97F45", "#2C4A3C", "#5A3B2E", "#41332A", "#6E2A34", "#1F3A30", "#9C7A44"];
+const BOOKS_PER_PAGE = 12;
 
 export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBook, embedded, dbStatus, onNavigate }) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const listTopRef = useRef(null);
   const [genres, setGenres] = useState([]);
   const [pubTypes, setPubTypes] = useState([]);
   const [customHeadings, setCustomHeadings] = useState([]);
   const [publishers, setPublishers] = useState(getPublishers());
+
+  const totalBooks = books?.length || 0;
+  const totalPages = Math.max(1, Math.ceil(totalBooks / BOOKS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedBooks = useMemo(() => {
+    const safeList = books || [];
+    const startIndex = (safePage - 1) * BOOKS_PER_PAGE;
+    return safeList.slice(startIndex, startIndex + BOOKS_PER_PAGE);
+  }, [books, safePage]);
+
+  const goToPage = (page) => {
+    const next = Math.max(1, Math.min(page, totalPages));
+    if (next === safePage) return;
+    setCurrentPage(next);
+    listTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   
   useEffect(() => {
     if (showForm) {
@@ -101,6 +127,7 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
       setForm(getFreshDefaultForm());
       setEditingId(null);
     } else {
+      setCurrentPage(1);
       setPendingUpload(newBook);
       setUploadProgress(0);
 
@@ -137,8 +164,23 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
     </div>
   );
 
+  const pageNumbers = useMemo(() => {
+    const pages = [];
+    for (let i = 1; i <= totalPages; i += 1) {
+      if (i === 1 || i === totalPages || Math.abs(i - safePage) <= 1) {
+        pages.push(i);
+      } else if (pages[pages.length - 1] !== "...") {
+        pages.push("...");
+      }
+    }
+    return pages;
+  }, [totalPages, safePage]);
+
+  const startItem = totalBooks === 0 ? 0 : (safePage - 1) * BOOKS_PER_PAGE + 1;
+  const endItem = Math.min(safePage * BOOKS_PER_PAGE, totalBooks);
+
   return (
-    <div className={embedded ? "" : "admin-glass-backdrop min-h-[calc(100vh-64px)] py-8 px-4 sm:px-6"}>
+    <div ref={listTopRef} className={embedded ? "scroll-mt-24" : "scroll-mt-20 admin-glass-backdrop min-h-[calc(100vh-64px)] py-8 px-4 sm:px-6"}>
       <div className={containerCls}>
         {!embedded && (
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8 pb-5 border-b border-black/10">
@@ -154,7 +196,14 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
         )}
         {embedded && (
           <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
-            {dbIndicator}
+            <div className="flex flex-wrap items-center gap-2.5">
+              {dbIndicator}
+              {totalBooks > 0 && (
+                <span className="admin-glass-pill px-3 py-1.5 rounded-full text-xs font-semibold text-slate-700">
+                  Showing <strong className="text-[#111214]">{startItem}–{endItem}</strong> of <strong className="text-[#111214]">{totalBooks}</strong> · Page {safePage}/{totalPages}
+                </span>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => { setEditingId(null); setForm(getFreshDefaultForm()); setShowForm(true); }}
@@ -166,7 +215,7 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
         )}
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {pendingUpload && (
+          {pendingUpload && safePage === 1 && (
             <div className={`flex gap-4 rounded-2xl border p-4 relative overflow-hidden transition-shadow ${embedded ? 'bg-white/65 backdrop-blur-xl border-white/80 shadow-sm' : 'bg-white border-gray-100 shadow-sm hover:shadow-md'}`}>
               {/* Progress Bar Background */}
               <div 
@@ -198,7 +247,7 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
             </div>
           )}
 
-          {books.map((b) => {
+          {paginatedBooks.map((b) => {
             const hasCover = Boolean(b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "");
             return (
             <div key={b.id} className={`flex gap-4 p-5 transition-all ${embedded ? 'rounded-2xl bg-white/60 backdrop-blur-xl border border-white/85 shadow-sm hover:bg-white/80 hover:-translate-y-0.5 hover:shadow-md' : 'rounded-xl border border-gray-100 bg-white shadow-sm hover:shadow-md'}`}>
@@ -210,6 +259,8 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
                   <img
                     src={b.coverUrl}
                     alt={b.title || "Book cover"}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                   />
                 )}
@@ -245,6 +296,56 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
             );
           })}
         </div>
+
+        {totalPages > 1 && (
+          <nav
+            aria-label="Manage books pagination"
+            className="mt-6 flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-black/10"
+          >
+            <span className="text-xs font-semibold text-slate-700">
+              Showing <strong className="text-[#111214]">{startItem}–{endItem}</strong> of <strong className="text-[#111214]">{totalBooks}</strong> books
+            </span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => goToPage(safePage - 1)}
+                disabled={safePage === 1}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold admin-glass-pill text-[#111214] hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+              >
+                <ChevronLeft size={14} strokeWidth={2.2} /> Prev
+              </button>
+              {pageNumbers.map((item, idx) =>
+                item === "..." ? (
+                  <span key={`ellipsis-${idx}`} className="px-2 text-xs font-bold text-slate-500 select-none">
+                    ...
+                  </span>
+                ) : (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => goToPage(item)}
+                    aria-current={item === safePage ? "page" : undefined}
+                    className={`min-w-[32px] h-8 px-2.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                      item === safePage
+                        ? "bg-[#111214] text-[#F5F23B] shadow-md"
+                        : "admin-glass-pill text-[#111214] hover:bg-white/90"
+                    }`}
+                  >
+                    {item}
+                  </button>
+                )
+              )}
+              <button
+                type="button"
+                onClick={() => goToPage(safePage + 1)}
+                disabled={safePage === totalPages}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold admin-glass-pill text-[#111214] hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+              >
+                Next <ChevronRight size={14} strokeWidth={2.2} />
+              </button>
+            </div>
+          </nav>
+        )}
       </div>
 
       {showForm && (
