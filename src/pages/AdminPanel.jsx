@@ -1,7 +1,7 @@
 import { supabase } from "../supabaseClient";
 import React, { useState, useMemo } from "react";
 import { Plus, Trash2, Check, X, Users, UploadCloud, Gift, LayoutGrid, Search, BookOpen, Settings, LayoutTemplate, Mail, AlertTriangle, Key, Activity, Eye, Edit3 } from "lucide-react";
-import { palette, fontDisplay, getGenres, setGenres as saveGenres, getPubTypes, setPubTypes as savePubTypes, getCustomHeadings, getHomepageConfig, setHomepageConfig, getPages, setPages } from "../theme";
+import { palette, fontDisplay, getGenres, setGenres as saveGenres, getPubTypes, setPubTypes as savePubTypes, getPublishers, setPublishers as savePublishers, getCustomHeadings, setCustomHeadings as saveCustomHeadings, getHomepageConfig, setHomepageConfig, getPages, setPages } from "../theme";
 import { addMonths, today, daysUntil, genCredentialId, genPassword } from "../data/mockData";
 import { renderEmailHtml, COMPANY_LOGO_URL } from "../email";
 import Button from "../components/Button";
@@ -30,7 +30,7 @@ export default function AdminPanel({
   onAddUploader, onRemoveUploader,
   onApproveTrial, onRejectTrial, onEditTrialAccess, onResendTrialEmail, onResendInstitutionEmail, onUpdateEmailTemplate,
   onAddFeaturedAuthor, onRemoveFeaturedAuthor,
-  onAddBook, onEditBook, onDeleteBook, dbStatus, onNavigate
+  onAddBook, onEditBook, onDeleteBook, onRenameBookMetadata, dbStatus, onNavigate
 }) {
   const [tab, setTab] = useState("institutions");
 
@@ -140,7 +140,7 @@ export default function AdminPanel({
         {tab === "authors" && (
           <FeaturedAuthorsTab books={books} authors={featuredAuthors} onAddAuthor={onAddFeaturedAuthor} onRemoveAuthor={onRemoveFeaturedAuthor} />
         )}
-        {tab === "filters" && <FiltersTab />}
+        {tab === "filters" && <FiltersTab onRenameBookMetadata={onRenameBookMetadata} />}
         {tab === "homepage" && <HomepageTab books={books} />}
         {tab === "pages" && <PagesTab />}
         {tab === "emails" && <EmailsTab emailTemplates={emailTemplates} onUpdateEmailTemplate={onUpdateEmailTemplate} />}
@@ -1202,23 +1202,161 @@ function TrialsTab({ books, trialRequests, onApproveTrial, onRejectTrial, onRese
 }
 
 // ---------------------------------------------------------------------------
-function FiltersTab() {
+function EditableFilterList({
+  title,
+  description,
+  items,
+  placeholder,
+  newValue,
+  onChangeNewValue,
+  onAdd,
+  onRename,
+  onRemove,
+  minItems = 0,
+}) {
+  const [editingOld, setEditingOld] = useState(null);
+  const [editingText, setEditingText] = useState("");
+
+  const startEdit = (item) => {
+    setEditingOld(item);
+    setEditingText(item);
+  };
+
+  const cancelEdit = () => {
+    setEditingOld(null);
+    setEditingText("");
+  };
+
+  const commitEdit = () => {
+    const trimmed = editingText.trim();
+    if (!trimmed) return;
+    if (trimmed !== editingOld) {
+      onRename(editingOld, trimmed);
+    }
+    cancelEdit();
+  };
+
+  return (
+    <div>
+      <h3 className="font-bold text-lg mb-2 border-b pb-2">{title}</h3>
+      {description && <p className="text-xs text-gray-600 mb-3">{description}</p>}
+      <form onSubmit={onAdd} className="flex gap-2 mb-4">
+        <input
+          className="flex-1 border rounded px-3 py-2 text-sm outline-none focus:border-[#FDD132]"
+          placeholder={placeholder}
+          value={newValue}
+          onChange={(e) => onChangeNewValue(e.target.value)}
+          required
+        />
+        <Button type="submit" variant="brass" size="sm">Add</Button>
+      </form>
+      <ul className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar border rounded p-2 bg-gray-50">
+        {items.map((item) => {
+          const isEditing = editingOld === item;
+          return (
+            <li key={item} className="flex justify-between items-center gap-2 bg-white p-2 border rounded text-sm shadow-sm">
+              {isEditing ? (
+                <>
+                  <input
+                    autoFocus
+                    className="flex-1 border border-[#FDD132] rounded px-2 py-1 text-xs font-semibold outline-none"
+                    value={editingText}
+                    onChange={(e) => setEditingText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        commitEdit();
+                      } else if (e.key === "Escape") {
+                        cancelEdit();
+                      }
+                    }}
+                  />
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={commitEdit}
+                      title="Save"
+                      className="text-green-600 hover:text-green-800 p-1 cursor-pointer"
+                    >
+                      <Check size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelEdit}
+                      title="Cancel"
+                      className="text-gray-500 hover:text-black p-1 cursor-pointer"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <span className="font-semibold text-xs truncate">{item}</span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => startEdit(item)}
+                      title="Edit spelling / format"
+                      className="text-blue-600 hover:text-blue-800 p-1 cursor-pointer"
+                    >
+                      <Edit3 size={14} />
+                    </button>
+                    {items.length > minItems && (
+                      <button
+                        type="button"
+                        onClick={() => onRemove(item)}
+                        title="Delete"
+                        className="text-red-500 hover:text-red-700 p-1 cursor-pointer"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </li>
+          );
+        })}
+        {items.length === 0 && <li className="text-xs text-black italic p-1">No items added yet.</li>}
+      </ul>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+function FiltersTab({ onRenameBookMetadata }) {
   const [genres, setLocalGenres] = useState(getGenres());
   const [pubTypes, setLocalPubTypes] = useState(getPubTypes());
+  const [publishers, setLocalPublishers] = useState(getPublishers());
   const [customHeadings, setLocalCustomHeadings] = useState(getCustomHeadings());
-  
+
   const [newGenre, setNewGenre] = useState("");
   const [newPubType, setNewPubType] = useState("");
+  const [newPublisher, setNewPublisher] = useState("");
   const [newHeadingName, setNewHeadingName] = useState("");
   const [newHeadingOption, setNewHeadingOption] = useState({});
+  const [editingCustomOpt, setEditingCustomOpt] = useState(null);
 
   const handleAddGenre = (e) => {
     e.preventDefault();
-    if (!newGenre.trim()) return;
-    const updated = [...genres, newGenre.trim()].sort();
+    const trimmed = newGenre.trim();
+    if (!trimmed) return;
+    if (genres.includes(trimmed)) {
+      setNewGenre("");
+      return;
+    }
+    const updated = [...genres, trimmed].sort();
     setLocalGenres(updated);
     saveGenres(updated);
     setNewGenre("");
+  };
+
+  const handleRenameGenre = (oldVal, newVal) => {
+    const updated = Array.from(new Set(genres.map(x => (x === oldVal ? newVal : x)))).sort();
+    setLocalGenres(updated);
+    saveGenres(updated);
+    onRenameBookMetadata?.("genre", oldVal, newVal);
   };
 
   const handleRemoveGenre = (g) => {
@@ -1229,11 +1367,23 @@ function FiltersTab() {
 
   const handleAddPubType = (e) => {
     e.preventDefault();
-    if (!newPubType.trim()) return;
-    const updated = [...pubTypes, newPubType.trim()].sort();
+    const trimmed = newPubType.trim();
+    if (!trimmed) return;
+    if (pubTypes.includes(trimmed)) {
+      setNewPubType("");
+      return;
+    }
+    const updated = [...pubTypes, trimmed].sort();
     setLocalPubTypes(updated);
     savePubTypes(updated);
     setNewPubType("");
+  };
+
+  const handleRenamePubType = (oldVal, newVal) => {
+    const updated = Array.from(new Set(pubTypes.map(x => (x === oldVal ? newVal : x)))).sort();
+    setLocalPubTypes(updated);
+    savePubTypes(updated);
+    onRenameBookMetadata?.("pubType", oldVal, newVal);
   };
 
   const handleRemovePubType = (t) => {
@@ -1242,35 +1392,79 @@ function FiltersTab() {
     savePubTypes(updated);
   };
 
+  const handleAddPublisher = (e) => {
+    e.preventDefault();
+    const trimmed = newPublisher.trim();
+    if (!trimmed) return;
+    if (publishers.includes(trimmed)) {
+      setNewPublisher("");
+      return;
+    }
+    const updated = [...publishers, trimmed];
+    setLocalPublishers(updated);
+    savePublishers(updated);
+    setNewPublisher("");
+  };
+
+  const handleRenamePublisher = (oldVal, newVal) => {
+    const updated = Array.from(new Set(publishers.map(x => (x === oldVal ? newVal : x))));
+    setLocalPublishers(updated);
+    savePublishers(updated);
+    onRenameBookMetadata?.("publisher", oldVal, newVal);
+  };
+
+  const handleRemovePublisher = (p) => {
+    if (publishers.length <= 1) return;
+    const updated = publishers.filter(x => x !== p);
+    setLocalPublishers(updated);
+    savePublishers(updated);
+  };
+
   const handleAddCustomHeading = (e) => {
     e.preventDefault();
     if (!newHeadingName.trim()) return;
     const updated = [...customHeadings, { id: Date.now().toString(), name: newHeadingName.trim(), options: [] }];
     setLocalCustomHeadings(updated);
-    localStorage.setItem("athenaeum_custom_headings", JSON.stringify(updated));
+    saveCustomHeadings(updated);
     setNewHeadingName("");
   };
 
   const handleRemoveCustomHeading = (id) => {
     const updated = customHeadings.filter(h => h.id !== id);
     setLocalCustomHeadings(updated);
-    localStorage.setItem("athenaeum_custom_headings", JSON.stringify(updated));
+    saveCustomHeadings(updated);
   };
 
   const handleAddCustomOption = (e, headingId) => {
     e.preventDefault();
     const opt = newHeadingOption[headingId];
     if (!opt?.trim()) return;
-    
+
     const updated = customHeadings.map(h => {
       if (h.id === headingId) {
-        return { ...h, options: [...h.options, opt.trim()].sort() };
+        const trimmed = opt.trim();
+        if (h.options.includes(trimmed)) return h;
+        return { ...h, options: [...h.options, trimmed].sort() };
       }
       return h;
     });
     setLocalCustomHeadings(updated);
-    localStorage.setItem("athenaeum_custom_headings", JSON.stringify(updated));
+    saveCustomHeadings(updated);
     setNewHeadingOption(prev => ({ ...prev, [headingId]: "" }));
+  };
+
+  const handleRenameCustomOption = (headingId, oldOpt, newOpt) => {
+    const trimmed = newOpt.trim();
+    if (!trimmed) return;
+    const updated = customHeadings.map(h => {
+      if (h.id === headingId) {
+        return { ...h, options: Array.from(new Set(h.options.map(o => (o === oldOpt ? trimmed : o)))).sort() };
+      }
+      return h;
+    });
+    setLocalCustomHeadings(updated);
+    saveCustomHeadings(updated);
+    setEditingCustomOpt(null);
   };
 
   const handleRemoveCustomOption = (headingId, optionName) => {
@@ -1281,79 +1475,67 @@ function FiltersTab() {
       return h;
     });
     setLocalCustomHeadings(updated);
-    localStorage.setItem("athenaeum_custom_headings", JSON.stringify(updated));
+    saveCustomHeadings(updated);
   };
 
   return (
     <div className="bg-white p-6 rounded shadow-sm border border-gray-200">
       <h2 className="text-xl font-bold mb-6 text-black">Manage Dropdown Filters</h2>
       <p className="text-sm text-black mb-8 max-w-3xl">
-        Add or remove items from this list to control the default options available when Uploaders add new books. 
-        You can also create entirely new metadata Headings (e.g. "Resources", "Languages") and define dropdown options for them.
+        Add, edit spelling/format, or remove items from these lists to control the options available when adding or editing books.
+        Editing an existing item will also update matching books across your catalog.
       </p>
 
-      <div className="grid md:grid-cols-2 gap-12 mb-12">
-        {/* Subjects */}
-        <div>
-          <h3 className="font-bold text-lg mb-4 border-b pb-2">Subjects / Genres</h3>
-          <form onSubmit={handleAddGenre} className="flex gap-2 mb-4">
-            <input 
-              className="flex-1 border rounded px-3 py-2 text-sm outline-none focus:border-[#FDD132]"
-              placeholder="e.g. BIOPHYSICS"
-              value={newGenre}
-              onChange={(e) => setNewGenre(e.target.value)} required
-            />
-            <Button type="submit" variant="brass" size="sm">Add</Button>
-          </form>
-          <ul className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar border rounded p-2 bg-gray-50">
-            {genres.map(g => (
-              <li key={g} className="flex justify-between items-center bg-white p-2 border rounded text-sm shadow-sm">
-                <span className="font-semibold uppercase text-xs">{g}</span>
-                <button onClick={() => handleRemoveGenre(g)} className="text-red-500 hover:text-red-700 p-1">
-                  <Trash2 size={14} />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+      <div className="grid md:grid-cols-3 gap-8 mb-12">
+        <EditableFilterList
+          title="Subjects / Genres"
+          items={genres}
+          placeholder="e.g. BIOPHYSICS"
+          newValue={newGenre}
+          onChangeNewValue={setNewGenre}
+          onAdd={handleAddGenre}
+          onRename={handleRenameGenre}
+          onRemove={handleRemoveGenre}
+        />
 
-        {/* Publication Types */}
-        <div>
-          <h3 className="font-bold text-lg mb-4 border-b pb-2">Publication Types</h3>
-          <form onSubmit={handleAddPubType} className="flex gap-2 mb-4">
-            <input 
-              className="flex-1 border rounded px-3 py-2 text-sm outline-none focus:border-[#FDD132]"
-              placeholder="e.g. Magazine"
-              value={newPubType}
-              onChange={(e) => setNewPubType(e.target.value)} required
-            />
-            <Button type="submit" variant="brass" size="sm">Add</Button>
-          </form>
-          <ul className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar border rounded p-2 bg-gray-50">
-            {pubTypes.map(t => (
-              <li key={t} className="flex justify-between items-center bg-white p-2 border rounded text-sm shadow-sm">
-                <span className="font-semibold text-xs">{t}</span>
-                <button onClick={() => handleRemovePubType(t)} className="text-red-500 hover:text-red-700 p-1">
-                  <Trash2 size={14} />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <EditableFilterList
+          title="Publication Types"
+          items={pubTypes}
+          placeholder="e.g. eBooks"
+          newValue={newPubType}
+          onChangeNewValue={setNewPubType}
+          onAdd={handleAddPubType}
+          onRename={handleRenamePubType}
+          onRemove={handleRemovePubType}
+        />
+
+        <EditableFilterList
+          title="Publishers"
+          description="Default is Spellbound. Add additional publishers here for future use."
+          items={publishers}
+          placeholder="e.g. Spellbound Academic"
+          newValue={newPublisher}
+          onChangeNewValue={setNewPublisher}
+          onAdd={handleAddPublisher}
+          onRename={handleRenamePublisher}
+          onRemove={handleRemovePublisher}
+          minItems={1}
+        />
       </div>
 
       <div className="border-t pt-8 mt-4">
-        <div className="flex justify-between items-end mb-6">
+        <div className="flex flex-wrap justify-between items-end gap-4 mb-6">
           <div>
             <h3 className="font-bold text-xl mb-1">Custom Filter Headings</h3>
             <p className="text-sm text-black">Create new metadata fields that uploaders can fill out (e.g. "Resources")</p>
           </div>
           <form onSubmit={handleAddCustomHeading} className="flex gap-2">
-            <input 
+            <input
               className="w-64 border rounded px-3 py-2 text-sm outline-none focus:border-[#FDD132]"
               placeholder="New Heading Name..."
               value={newHeadingName}
-              onChange={(e) => setNewHeadingName(e.target.value)} required
+              onChange={(e) => setNewHeadingName(e.target.value)}
+              required
             />
             <Button type="submit" variant="brass" size="sm">Create</Button>
           </form>
@@ -1367,7 +1549,7 @@ function FiltersTab() {
                 <button onClick={() => handleRemoveCustomHeading(h.id)} className="text-red-500 text-sm hover:underline">Remove Heading</button>
               </div>
               <form onSubmit={(e) => handleAddCustomOption(e, h.id)} className="flex gap-2 mb-4">
-                <input 
+                <input
                   className="flex-1 border rounded px-3 py-2 text-sm outline-none focus:border-[#FDD132]"
                   placeholder={`Add option to ${h.name}...`}
                   value={newHeadingOption[h.id] || ""}
@@ -1376,14 +1558,56 @@ function FiltersTab() {
                 <Button type="submit" variant="brass" size="sm">Add Option</Button>
               </form>
               <ul className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                {h.options.map(opt => (
-                  <li key={opt} className="flex justify-between items-center bg-white p-2 border rounded text-sm shadow-sm">
-                    <span className="font-semibold text-xs">{opt}</span>
-                    <button onClick={() => handleRemoveCustomOption(h.id, opt)} className="text-red-500 hover:text-red-700 p-1">
-                      <Trash2 size={14} />
-                    </button>
-                  </li>
-                ))}
+                {h.options.map(opt => {
+                  const isEditing = editingCustomOpt?.headingId === h.id && editingCustomOpt?.oldValue === opt;
+                  return (
+                    <li key={opt} className="flex justify-between items-center gap-2 bg-white p-2 border rounded text-sm shadow-sm">
+                      {isEditing ? (
+                        <>
+                          <input
+                            autoFocus
+                            className="flex-1 border border-[#FDD132] rounded px-2 py-1 text-xs font-semibold outline-none"
+                            value={editingCustomOpt.value}
+                            onChange={(e) => setEditingCustomOpt(prev => ({ ...prev, value: e.target.value }))}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                handleRenameCustomOption(h.id, opt, editingCustomOpt.value);
+                              } else if (e.key === "Escape") {
+                                setEditingCustomOpt(null);
+                              }
+                            }}
+                          />
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button type="button" onClick={() => handleRenameCustomOption(h.id, opt, editingCustomOpt.value)} className="text-green-600 hover:text-green-800 p-1">
+                              <Check size={14} />
+                            </button>
+                            <button type="button" onClick={() => setEditingCustomOpt(null)} className="text-gray-500 hover:text-black p-1">
+                              <X size={14} />
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-semibold text-xs truncate">{opt}</span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setEditingCustomOpt({ headingId: h.id, oldValue: opt, value: opt })}
+                              className="text-blue-600 hover:text-blue-800 p-1"
+                              title="Edit spelling / format"
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                            <button type="button" onClick={() => handleRemoveCustomOption(h.id, opt)} className="text-red-500 hover:text-red-700 p-1" title="Delete">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </li>
+                  );
+                })}
                 {h.options.length === 0 && <li className="text-xs text-black italic">No options added yet.</li>}
               </ul>
             </div>

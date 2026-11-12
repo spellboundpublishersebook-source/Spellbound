@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, BookOpen, Calendar, ShieldCheck, Tag, Info, Quote, Copy } from "lucide-react";
+import { ChevronLeft, BookOpen, Calendar, Tag, Info, Quote, Copy } from "lucide-react";
 import { fontDisplay, fontBody } from "../theme";
 import BookLoader from "../components/BookLoader";
 import AnimatedSweepButton from "../components/AnimatedSweepButton";
@@ -137,14 +137,6 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
                 <div>
                   <div className="text-xs text-black uppercase tracking-wider font-bold">First Published</div>
                   <div className="font-semibold text-black">{book.firstPublish || "N/A"}</div>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-3">
-                <ShieldCheck className="text-black mt-1" size={20} />
-                <div>
-                  <div className="text-xs text-black uppercase tracking-wider font-bold">Copyright</div>
-                  <div className="font-semibold text-black">{book.copyright || "N/A"}</div>
                 </div>
               </div>
               

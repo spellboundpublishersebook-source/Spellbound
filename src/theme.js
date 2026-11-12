@@ -27,9 +27,12 @@ const DEFAULT_GENRES = [
 
 const DEFAULT_PUB_TYPES = ["Books", "Journals", "Reference works", "Book Series"];
 
+const DEFAULT_PUBLISHERS = ["Spellbound"];
+
 const DEFAULT_HOMEPAGE_CONFIG = {
   trendingMode: "auto", trendingBookIds: [], newReleasesMode: "auto", newReleasesBookIds: [],
-  createdForYouMode: "auto", createdForYouBookIds: [], featuredAuthorsMode: "auto", featuredAuthorsList: []
+  createdForYouMode: "auto", createdForYouBookIds: [], featuredAuthorsMode: "auto", featuredAuthorsList: [],
+  publishers: DEFAULT_PUBLISHERS
 };
 
 export const DEFAULT_PAGES = {
@@ -126,8 +129,32 @@ export function getHomepageConfig() {
   return saved ? JSON.parse(saved) : DEFAULT_HOMEPAGE_CONFIG;
 }
 export function setHomepageConfig(config) {
-  localStorage.setItem("athenaeum_homepage_config", JSON.stringify(config));
-  syncToDB('homepage_config', config);
+  const existing = getHomepageConfig();
+  const merged = { ...config };
+  if (merged.publishers === undefined && existing.publishers !== undefined) {
+    merged.publishers = existing.publishers;
+  }
+  localStorage.setItem("athenaeum_homepage_config", JSON.stringify(merged));
+  syncToDB('homepage_config', merged);
+}
+
+export function getPublishers() {
+  const saved = localStorage.getItem("athenaeum_publishers");
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch (e) {}
+  }
+  const cfg = getHomepageConfig();
+  if (Array.isArray(cfg.publishers) && cfg.publishers.length > 0) return cfg.publishers;
+  return DEFAULT_PUBLISHERS;
+}
+export function setPublishers(publishers) {
+  const next = Array.isArray(publishers) && publishers.length > 0 ? publishers : DEFAULT_PUBLISHERS;
+  localStorage.setItem("athenaeum_publishers", JSON.stringify(next));
+  const cfg = getHomepageConfig();
+  setHomepageConfig({ ...cfg, publishers: next });
 }
 
 export function getPages() {
@@ -164,7 +191,12 @@ export async function fetchSettingsFromDB() {
       if (data.genres) localStorage.setItem("athenaeum_genres", JSON.stringify(data.genres));
       if (data.pub_types) localStorage.setItem("athenaeum_pubtypes", JSON.stringify(data.pub_types));
       if (data.custom_headings) localStorage.setItem("athenaeum_custom_headings", JSON.stringify(data.custom_headings));
-      if (data.homepage_config) localStorage.setItem("athenaeum_homepage_config", JSON.stringify(data.homepage_config));
+      if (data.homepage_config) {
+        localStorage.setItem("athenaeum_homepage_config", JSON.stringify(data.homepage_config));
+        if (Array.isArray(data.homepage_config.publishers) && data.homepage_config.publishers.length > 0) {
+          localStorage.setItem("athenaeum_publishers", JSON.stringify(data.homepage_config.publishers));
+        }
+      }
       if (data.pages) localStorage.setItem("athenaeum_pages", JSON.stringify(data.pages));
     }
   } catch (err) { console.error("Failed to fetch settings from DB:", err); }

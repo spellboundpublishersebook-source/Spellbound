@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Plus, Trash2, UploadCloud, BookOpen, Edit2 } from "lucide-react";
-import { palette, fontDisplay, getGenres, getPubTypes, getCustomHeadings } from "../theme";
+import { palette, fontDisplay, getGenres, getPubTypes, getCustomHeadings, getPublishers } from "../theme";
 import Button from "../components/Button";
 import { Field, Select, TextArea, Modal } from "../components/UI";
 
@@ -12,21 +12,27 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
   const [genres, setGenres] = useState([]);
   const [pubTypes, setPubTypes] = useState([]);
   const [customHeadings, setCustomHeadings] = useState([]);
+  const [publishers, setPublishers] = useState(getPublishers());
   
   useEffect(() => {
     if (showForm) {
       setGenres(getGenres());
       setPubTypes(getPubTypes());
       setCustomHeadings(getCustomHeadings());
+      const latestPublishers = getPublishers();
+      setPublishers(latestPublishers);
+      if (!editingId && !form.publisher) {
+        setForm(prev => ({ ...prev, publisher: latestPublishers[0] || "Spellbound" }));
+      }
     }
-  }, [showForm]);
+  }, [showForm, editingId]);
 
-  const defaultForm = {
-    title: "", author: "", genre: "", pubType: "", publisher: "", price: "", color: spineChoices[0],
+  const getFreshDefaultForm = () => ({
+    title: "", author: "", genre: "", pubType: "", publisher: getPublishers()[0] || "Spellbound", price: "", color: spineChoices[0],
     firstPublish: "", copyright: "", printIsbn: "", onlineIsbn: "", description: "", totalPages: "",
     pagesText: "", pdfFile: null, coverImage: null, customFields: {}
-  };
-  const [form, setForm] = useState(defaultForm);
+  });
+  const [form, setForm] = useState(getFreshDefaultForm);
 
   const [pendingUpload, setPendingUpload] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -44,11 +50,11 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
       author: book.author || "",
       genre: book.genre || "",
       pubType: book.pubType || "",
-      publisher: book.publisher || "",
+      publisher: book.publisher || getPublishers()[0] || "Spellbound",
       price: book.price !== undefined && book.price !== null ? book.price : "",
       color: book.color || spineChoices[0],
       firstPublish: book.firstPublish || "",
-      copyright: book.copyright || "",
+      copyright: "",
       printIsbn: book.printIsbn || "",
       onlineIsbn: book.onlineIsbn || "",
       description: (book.description || "").split("\n\n__CUSTOM_FILTERS__:")[0],
@@ -92,7 +98,7 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
 
     if (editingId) {
       await onEditBook(editingId, newBook);
-      setForm(defaultForm);
+      setForm(getFreshDefaultForm());
       setEditingId(null);
     } else {
       setPendingUpload(newBook);
@@ -111,7 +117,7 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
       setUploadProgress(100);
 
       setTimeout(() => {
-        setForm(defaultForm);
+        setForm(getFreshDefaultForm());
         setPendingUpload(null);
         setUploadProgress(0);
       }, 1500);
@@ -144,13 +150,13 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
               </div>
               <p className="text-sm mt-1 text-black">Add new titles to the catalog with cover color, genre, and page content.</p>
             </div>
-            <Button onClick={() => { setEditingId(null); setForm(defaultForm); setShowForm(true); }}><Plus size={16} strokeWidth={2} /> Add book</Button>
+            <Button onClick={() => { setEditingId(null); setForm(getFreshDefaultForm()); setShowForm(true); }}><Plus size={16} strokeWidth={2} /> Add book</Button>
           </div>
         )}
         {embedded && (
           <div className="flex justify-between items-center mb-5">
             {dbIndicator}
-            <Button onClick={() => { setEditingId(null); setForm(defaultForm); setShowForm(true); }}><Plus size={16} strokeWidth={2} /> Publish new book</Button>
+            <Button onClick={() => { setEditingId(null); setForm(getFreshDefaultForm()); setShowForm(true); }}><Plus size={16} strokeWidth={2} /> Publish new book</Button>
           </div>
         )}
 
@@ -273,9 +279,15 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
                 </div>
               ))}
 
-              <Field label="Publisher" required value={form.publisher} onChange={(e) => setForm({ ...form, publisher: e.target.value })} />
+              <Select label="Publisher" required value={form.publisher} onChange={(e) => setForm({ ...form, publisher: e.target.value })}>
+                {publishers.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+                {form.publisher && !publishers.includes(form.publisher) && (
+                  <option value={form.publisher}>{form.publisher}</option>
+                )}
+              </Select>
               <Field label="First Publish (e.g. YYYY)" value={form.firstPublish} onChange={(e) => setForm({ ...form, firstPublish: e.target.value })} />
-              <Field label="Copyright (e.g. © 2026)" value={form.copyright} onChange={(e) => setForm({ ...form, copyright: e.target.value })} />
               <Field label="Online ISBN (eISBN)" value={form.onlineIsbn} onChange={(e) => setForm({ ...form, onlineIsbn: e.target.value })} />
               <Field label="Total Pages (Number)" type="number" min="1" value={form.totalPages} onChange={(e) => setForm({ ...form, totalPages: e.target.value })} />
               <div className="mb-4">

@@ -805,6 +805,29 @@ export default function App() {
     }
   }
 
+  async function handleRenameBookMetadata(field, oldValue, newValue) {
+    const colMap = {
+      genre: { stateKey: "genre", dbCol: "genre" },
+      pubType: { stateKey: "pubType", dbCol: "pubtype" },
+      publisher: { stateKey: "publisher", dbCol: "publisher" },
+    };
+    const mapping = colMap[field];
+    if (!mapping || !oldValue || !newValue || oldValue === newValue) return;
+
+    setBooks((prev) =>
+      prev.map((b) => (b[mapping.stateKey] === oldValue ? { ...b, [mapping.stateKey]: newValue } : b))
+    );
+    try {
+      const { error } = await supabase
+        .from("books")
+        .update({ [mapping.dbCol]: newValue })
+        .eq(mapping.dbCol, oldValue);
+      if (error) console.error("Error renaming metadata in Supabase:", error);
+    } catch (err) {
+      console.error("Error renaming metadata in Supabase:", err);
+    }
+  }
+
   const availableBooks = useMemo(() => {
     const safeBooks = books || [];
     if (session?.role === "reader" && session.bookIds !== "all") {
@@ -853,7 +876,8 @@ export default function App() {
           onResendTrialEmail={handleResendTrialEmail} onResendInstitutionEmail={handleResendInstitutionEmail}
           onUpdateEmailTemplate={handleUpdateEmailTemplate}
           onAddFeaturedAuthor={handleAddFeaturedAuthor} onRemoveFeaturedAuthor={handleRemoveFeaturedAuthor}
-          onAddBook={handleAddBook} onEditBook={handleEditBook} onDeleteBook={handleDeleteBook} dbStatus={dbStatus}
+          onAddBook={handleAddBook} onEditBook={handleEditBook} onDeleteBook={handleDeleteBook}
+          onRenameBookMetadata={handleRenameBookMetadata} dbStatus={dbStatus}
           onNavigate={navigate}
         />
       )}
