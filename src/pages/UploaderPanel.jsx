@@ -203,24 +203,24 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
                 <span className="text-xs text-black mt-0.5">{b.author} · {b.publisher}</span>
                 <span className="text-xs text-black mt-0.5">{b.totalPages || b.pages?.length || 0} pages</span>
                 
-                <div className="mt-auto pt-3 flex items-center gap-4">
+                <div className="mt-auto pt-3 flex flex-wrap items-center gap-2">
                   <button
                     onClick={() => onNavigate && onNavigate("reading", b.id)}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-black hover:text-black transition-colors"
+                    className={`flex items-center gap-1.5 text-xs font-semibold transition-all cursor-pointer ${embedded ? 'px-2.5 py-1 rounded-full bg-white/85 hover:bg-white border border-black/10 text-[#111214]' : 'text-black hover:text-black'}`}
                   >
-                    <BookOpen size={13} strokeWidth={1.8} /> Preview
+                    <BookOpen size={12} strokeWidth={1.9} /> Preview
                   </button>
                   <button
                     onClick={() => handleEditClick(b)}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-[#D4A017] hover:text-[#b8860b] transition-colors"
+                    className={`flex items-center gap-1.5 text-xs font-semibold transition-all cursor-pointer ${embedded ? 'px-2.5 py-1 rounded-full bg-amber-100/85 hover:bg-amber-200/85 text-amber-900' : 'text-[#D4A017] hover:text-[#b8860b]'}`}
                   >
-                    <Edit2 size={13} strokeWidth={1.8} /> Edit
+                    <Edit2 size={12} strokeWidth={1.9} /> Edit
                   </button>
                   <button
                     onClick={() => onDeleteBook(b.id)}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-red-500 hover:text-red-700 transition-colors"
+                    className={`flex items-center gap-1.5 text-xs font-semibold transition-all cursor-pointer ${embedded ? 'px-2.5 py-1 rounded-full bg-red-100/85 hover:bg-red-200/90 text-red-700' : 'text-red-500 hover:text-red-700'}`}
                   >
-                    <Trash2 size={13} strokeWidth={1.8} /> Remove
+                    <Trash2 size={12} strokeWidth={1.9} /> Remove
                   </button>
                 </div>
               </div>

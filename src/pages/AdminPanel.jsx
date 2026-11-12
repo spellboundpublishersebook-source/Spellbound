@@ -1,6 +1,6 @@
 import { supabase } from "../supabaseClient";
 import React, { useState, useMemo, useRef } from "react";
-import { Plus, Trash2, Check, X, Users, UploadCloud, Gift, LayoutGrid, Search, BookOpen, Settings, LayoutTemplate, Mail, AlertTriangle, Key, Activity, Eye, Edit3, ArrowUpRight, SlidersHorizontal, ChevronRight, ChevronLeft, PanelLeft } from "lucide-react";
+import { Plus, Trash2, Check, X, Users, UploadCloud, Gift, Search, BookOpen, Settings, LayoutTemplate, Mail, AlertTriangle, Key, Activity, Eye, Edit3, ArrowUpRight, SlidersHorizontal, PanelLeft } from "lucide-react";
 import { palette, fontDisplay, getGenres, setGenres as saveGenres, getPubTypes, setPubTypes as savePubTypes, getPublishers, setPublishers as savePublishers, getCustomHeadings, setCustomHeadings as saveCustomHeadings, getHomepageConfig, setHomepageConfig, getPages, setPages } from "../theme";
 import { addMonths, today, daysUntil, genCredentialId, genPassword } from "../data/mockData";
 import { renderEmailHtml, COMPANY_LOGO_URL } from "../email";
@@ -1587,7 +1587,11 @@ function UploadersTab({ uploaders, onAddUploader, onRemoveUploader }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-between items-center gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-[#111214]">Uploader Accounts ({uploaders.length})</h2>
+          <p className="text-xs text-zinc-600">Manage staff credentials authorized to upload and update catalog books.</p>
+        </div>
         <button
           type="button"
           onClick={() => setShowForm(true)}
@@ -1601,7 +1605,7 @@ function UploadersTab({ uploaders, onAddUploader, onRemoveUploader }) {
           <table className="w-full text-sm border-collapse min-w-[600px]">
             <thead>
               <tr className="border-b border-black/10 bg-white/40 backdrop-blur-md">
-                {["Name", "Email", "Login ID", "Password", ""].map((h) => (
+                {["Name", "Email", "Login ID", "Password", "Actions"].map((h) => (
                   <th key={h} scope="col" className="text-left px-4 py-3.5 font-bold text-zinc-600 uppercase tracking-wider text-[10px]">{h}</th>
                 ))}
               </tr>
@@ -1609,17 +1613,20 @@ function UploadersTab({ uploaders, onAddUploader, onRemoveUploader }) {
             <tbody>
               {uploaders.map((u) => (
                 <tr key={u.id} className="border-t border-black/5 hover:bg-white/65 transition-colors">
-                  <td className="px-4 py-3.5 font-semibold text-[#111214]">{u.name}</td>
-                  <td className="px-4 py-3.5 text-zinc-700">{u.email || "—"}</td>
-                  <td className="px-4 py-3.5"><code className="px-2 py-0.5 rounded-md bg-white/70 border border-black/10 text-xs">{u.id}</code></td>
-                  <td className="px-4 py-3.5"><code className="px-2 py-0.5 rounded-md bg-white/70 border border-black/10 text-xs">{u.password}</code></td>
-                  <td className="px-4 py-3.5">
+                  <td className="px-4 py-3.5 align-middle font-semibold text-[#111214]">{u.name}</td>
+                  <td className="px-4 py-3.5 align-middle text-zinc-700">{u.email || "—"}</td>
+                  <td className="px-4 py-3.5 align-middle"><code className="px-2 py-0.5 rounded-md bg-white/70 border border-black/10 text-xs">{u.id}</code></td>
+                  <td className="px-4 py-3.5 align-middle"><code className="px-2 py-0.5 rounded-md bg-white/70 border border-black/10 text-xs">{u.password}</code></td>
+                  <td className="px-4 py-3.5 align-middle">
                     <button onClick={() => onRemoveUploader(u.id)} className="px-2.5 py-1 rounded-full bg-red-100/85 hover:bg-red-200/90 text-red-700 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer">
                       <Trash2 size={11} strokeWidth={1.8} /> Remove
                     </button>
                   </td>
                 </tr>
               ))}
+              {uploaders.length === 0 && (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-zinc-600 text-xs font-medium">No uploader accounts yet.</td></tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -1709,16 +1716,16 @@ function TrialsTab({ books, trialRequests, onApproveTrial, onRejectTrial, onRese
           <tbody>
             {trialRequests.map((t) => (
               <tr key={t.id} className="border-t border-black/5 hover:bg-white/65 transition-colors">
-                <td className="px-4 py-3.5 font-semibold text-[#111214]">{t.name}</td>
-                <td className="px-4 py-3.5 text-zinc-700">{t.email}</td>
-                <td className="px-4 py-3.5 text-zinc-700">{t.institution || "—"}</td>
-                <td className="px-4 py-3.5 text-xs text-zinc-700">{t.requestedAt}</td>
-                <td className="px-4 py-3.5">
+                <td className="px-4 py-3.5 align-middle font-semibold text-[#111214]">{t.name}</td>
+                <td className="px-4 py-3.5 align-middle text-zinc-700">{t.email}</td>
+                <td className="px-4 py-3.5 align-middle text-zinc-700">{t.institution || "—"}</td>
+                <td className="px-4 py-3.5 align-middle text-xs text-zinc-700 whitespace-nowrap">{t.requestedAt}</td>
+                <td className="px-4 py-3.5 align-middle">
                   {t.status === "pending" && <Badge tone="warn">Pending</Badge>}
                   {t.status === "approved" && <Badge tone="good">Approved · ends {t.expiresAt}</Badge>}
                   {t.status === "rejected" && <Badge tone="bad">Rejected</Badge>}
                 </td>
-                <td className="px-4 py-3.5">
+                <td className="px-4 py-3.5 align-middle">
                   {t.status === "pending" && (
                     <div className="flex gap-2">
                       <button onClick={() => handleOpenApprove(t.id)} className="px-2.5 py-1 rounded-full bg-emerald-100/85 hover:bg-emerald-200/85 text-emerald-800 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer">
@@ -1901,7 +1908,7 @@ function EditableFilterList({
                       type="button"
                       onClick={commitEdit}
                       title="Save"
-                      className="text-green-600 hover:text-green-800 p-1 cursor-pointer"
+                      className="p-1.5 rounded-lg text-emerald-700 bg-emerald-50/80 hover:bg-emerald-100 transition-colors cursor-pointer"
                     >
                       <Check size={14} />
                     </button>
@@ -1909,7 +1916,7 @@ function EditableFilterList({
                       type="button"
                       onClick={cancelEdit}
                       title="Cancel"
-                      className="text-gray-500 hover:text-black p-1 cursor-pointer"
+                      className="p-1.5 rounded-lg text-zinc-600 bg-zinc-100/80 hover:bg-zinc-200 transition-colors cursor-pointer"
                     >
                       <X size={14} />
                     </button>
@@ -1917,24 +1924,24 @@ function EditableFilterList({
                 </>
               ) : (
                 <>
-                  <span className="font-semibold text-xs truncate">{item}</span>
+                  <span className="font-semibold text-xs text-[#111214] truncate">{item}</span>
                   <div className="flex items-center gap-1 shrink-0">
                     <button
                       type="button"
                       onClick={() => startEdit(item)}
                       title="Edit spelling / format"
-                      className="text-blue-600 hover:text-blue-800 p-1 cursor-pointer"
+                      className="p-1.5 rounded-lg text-blue-700 bg-blue-50/80 hover:bg-blue-100 transition-colors cursor-pointer"
                     >
-                      <Edit3 size={14} />
+                      <Edit3 size={13} />
                     </button>
                     {items.length > minItems && (
                       <button
                         type="button"
                         onClick={() => onRemove(item)}
                         title="Delete"
-                        className="text-red-500 hover:text-red-700 p-1 cursor-pointer"
+                        className="p-1.5 rounded-lg text-red-600 bg-red-50/80 hover:bg-red-100 transition-colors cursor-pointer"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={13} />
                       </button>
                     )}
                   </div>
@@ -2105,13 +2112,15 @@ function FiltersTab({ onRenameBookMetadata }) {
 
   return (
     <div className="admin-glass-panel p-6 rounded-[22px]">
-      <h2 className="text-xl font-bold mb-2 text-[#111214]">Manage Dropdown Filters</h2>
-      <p className="text-sm text-black mb-8 max-w-3xl">
-        Add, edit spelling/format, or remove items from these lists to control the options available when adding or editing books.
-        Editing an existing item will also update matching books across your catalog.
-      </p>
+      <div className="mb-7">
+        <h2 className="text-xl font-bold text-[#111214]">Manage Dropdown Filters</h2>
+        <p className="text-xs text-zinc-600 mt-1 max-w-3xl leading-relaxed">
+          Add, edit spelling/format, or remove items from these lists to control the options available when adding or editing books.
+          Editing an existing item will also update matching books across your catalog.
+        </p>
+      </div>
 
-      <div className="grid md:grid-cols-3 gap-8 mb-12">
+      <div className="grid md:grid-cols-3 gap-6 mb-10">
         <EditableFilterList
           title="Subjects / Genres"
           items={genres}
@@ -2148,50 +2157,65 @@ function FiltersTab({ onRenameBookMetadata }) {
         />
       </div>
 
-      <div className="border-t pt-8 mt-4">
-        <div className="flex flex-wrap justify-between items-end gap-4 mb-6">
+      <div className="border-t border-black/10 pt-7 mt-2">
+        <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
           <div>
-            <h3 className="font-bold text-xl mb-1">Custom Filter Headings</h3>
-            <p className="text-sm text-black">Create new metadata fields that uploaders can fill out (e.g. "Resources")</p>
+            <h3 className="font-bold text-lg text-[#111214]">Custom Filter Headings</h3>
+            <p className="text-xs text-zinc-600 mt-0.5">Create new metadata fields that uploaders can fill out (e.g. &quot;Resources&quot;)</p>
           </div>
-          <form onSubmit={handleAddCustomHeading} className="flex gap-2">
+          <form onSubmit={handleAddCustomHeading} className="flex items-center gap-2">
             <input
-              className="w-64 border rounded px-3 py-2 text-sm outline-none focus:border-[#FDD132]"
+              className="w-60 rounded-full bg-white/80 border border-white px-4 py-2 text-xs font-medium outline-none focus:border-[#F5F23B] shadow-sm"
               placeholder="New Heading Name..."
               value={newHeadingName}
               onChange={(e) => setNewHeadingName(e.target.value)}
               required
             />
-            <Button type="submit" variant="brass" size="sm">Create</Button>
+            <button
+              type="submit"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-[#111214] bg-[#F5F23B] hover:bg-[#ebe72b] shadow-sm transition-all cursor-pointer"
+            >
+              <Plus size={14} strokeWidth={2.3} /> Create
+            </button>
           </form>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid md:grid-cols-2 gap-6">
           {customHeadings.map(h => (
-            <div key={h.id} className="border border-[#FDD132] p-4 rounded-lg bg-yellow-50/30">
-              <div className="flex justify-between items-center border-b border-[#FDD132] pb-2 mb-4">
-                <h4 className="font-bold text-lg">{h.name}</h4>
-                <button onClick={() => handleRemoveCustomHeading(h.id)} className="text-red-500 text-sm hover:underline">Remove Heading</button>
+            <div key={h.id} className="rounded-2xl bg-white/45 border border-white/70 p-5 backdrop-blur-md shadow-sm">
+              <div className="flex justify-between items-center border-b border-black/10 pb-3 mb-4">
+                <h4 className="font-bold text-base text-[#111214]">{h.name}</h4>
+                <button
+                  onClick={() => handleRemoveCustomHeading(h.id)}
+                  className="px-2.5 py-1 rounded-full bg-red-100/85 hover:bg-red-200/90 text-red-700 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Trash2 size={11} /> Remove Heading
+                </button>
               </div>
               <form onSubmit={(e) => handleAddCustomOption(e, h.id)} className="flex gap-2 mb-4">
                 <input
-                  className="flex-1 border rounded px-3 py-2 text-sm outline-none focus:border-[#FDD132]"
+                  className="flex-1 rounded-full bg-white/80 border border-white px-3.5 py-2 text-xs font-medium outline-none focus:border-[#F5F23B]"
                   placeholder={`Add option to ${h.name}...`}
                   value={newHeadingOption[h.id] || ""}
                   onChange={(e) => setNewHeadingOption(prev => ({ ...prev, [h.id]: e.target.value }))}
                 />
-                <Button type="submit" variant="brass" size="sm">Add Option</Button>
+                <button
+                  type="submit"
+                  className="px-3.5 py-2 rounded-full text-xs font-bold text-[#111214] bg-[#F5F23B] hover:bg-[#ebe72b] shadow-sm transition-all cursor-pointer shrink-0"
+                >
+                  Add Option
+                </button>
               </form>
-              <ul className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+              <ul className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
                 {h.options.map(opt => {
                   const isEditing = editingCustomOpt?.headingId === h.id && editingCustomOpt?.oldValue === opt;
                   return (
-                    <li key={opt} className="flex justify-between items-center gap-2 bg-white p-2 border rounded text-sm shadow-sm">
+                    <li key={opt} className="flex justify-between items-center gap-2 bg-white/85 px-3 py-2 border border-white rounded-xl text-sm shadow-sm">
                       {isEditing ? (
                         <>
                           <input
                             autoFocus
-                            className="flex-1 border border-[#FDD132] rounded px-2 py-1 text-xs font-semibold outline-none"
+                            className="flex-1 bg-white border border-[#F5F23B] rounded-lg px-2.5 py-1 text-xs font-semibold outline-none"
                             value={editingCustomOpt.value}
                             onChange={(e) => setEditingCustomOpt(prev => ({ ...prev, value: e.target.value }))}
                             onKeyDown={(e) => {
@@ -2204,28 +2228,41 @@ function FiltersTab({ onRenameBookMetadata }) {
                             }}
                           />
                           <div className="flex items-center gap-1 shrink-0">
-                            <button type="button" onClick={() => handleRenameCustomOption(h.id, opt, editingCustomOpt.value)} className="text-green-600 hover:text-green-800 p-1">
+                            <button
+                              type="button"
+                              onClick={() => handleRenameCustomOption(h.id, opt, editingCustomOpt.value)}
+                              className="p-1.5 rounded-lg text-emerald-700 bg-emerald-50/80 hover:bg-emerald-100 transition-colors cursor-pointer"
+                            >
                               <Check size={14} />
                             </button>
-                            <button type="button" onClick={() => setEditingCustomOpt(null)} className="text-gray-500 hover:text-black p-1">
+                            <button
+                              type="button"
+                              onClick={() => setEditingCustomOpt(null)}
+                              className="p-1.5 rounded-lg text-zinc-600 bg-zinc-100/80 hover:bg-zinc-200 transition-colors cursor-pointer"
+                            >
                               <X size={14} />
                             </button>
                           </div>
                         </>
                       ) : (
                         <>
-                          <span className="font-semibold text-xs truncate">{opt}</span>
+                          <span className="font-semibold text-xs text-[#111214] truncate">{opt}</span>
                           <div className="flex items-center gap-1 shrink-0">
                             <button
                               type="button"
                               onClick={() => setEditingCustomOpt({ headingId: h.id, oldValue: opt, value: opt })}
-                              className="text-blue-600 hover:text-blue-800 p-1"
+                              className="p-1.5 rounded-lg text-blue-700 bg-blue-50/80 hover:bg-blue-100 transition-colors cursor-pointer"
                               title="Edit spelling / format"
                             >
-                              <Edit3 size={14} />
+                              <Edit3 size={13} />
                             </button>
-                            <button type="button" onClick={() => handleRemoveCustomOption(h.id, opt)} className="text-red-500 hover:text-red-700 p-1" title="Delete">
-                              <Trash2 size={14} />
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveCustomOption(h.id, opt)}
+                              className="p-1.5 rounded-lg text-red-600 bg-red-50/80 hover:bg-red-100 transition-colors cursor-pointer"
+                              title="Delete"
+                            >
+                              <Trash2 size={13} />
                             </button>
                           </div>
                         </>
@@ -2233,7 +2270,7 @@ function FiltersTab({ onRenameBookMetadata }) {
                     </li>
                   );
                 })}
-                {h.options.length === 0 && <li className="text-xs text-black italic">No options added yet.</li>}
+                {h.options.length === 0 && <li className="text-xs text-zinc-600 italic p-1">No options added yet.</li>}
               </ul>
             </div>
           ))}
@@ -2286,150 +2323,236 @@ function HomepageTab({ books }) {
 
   return (
     <div className="admin-glass-panel p-6 rounded-[22px]">
-      <h2 className="text-xl font-bold mb-2 text-[#111214]">Homepage Layout</h2>
-      <p className="text-sm text-black mb-8 max-w-3xl">
-        Control how books and authors are listed on the main Catalog page. 
-        You can leave a section on "Auto" to dynamically fetch the most recent data, or switch it to "Manual" to hand-pick the exact items to feature.
-      </p>
+      <div className="mb-7">
+        <h2 className="text-xl font-bold text-[#111214]">Homepage Layout</h2>
+        <p className="text-xs text-zinc-600 mt-1 max-w-3xl leading-relaxed">
+          Control how books and authors are listed on the main Catalog page.
+          Leave a section on &quot;Auto&quot; to dynamically fetch the most recent data, or switch it to &quot;Manual&quot; to hand-pick the exact items to feature.
+        </p>
+      </div>
 
-      <div className="space-y-12">
+      <div className="space-y-6">
         {/* Trending Now */}
-        <div>
-          <div className="flex justify-between items-end border-b pb-2 mb-4">
-            <h3 className="font-bold text-lg">Trending Now</h3>
-            <button 
+        <div className="rounded-2xl bg-white/45 border border-white/70 p-5 backdrop-blur-md">
+          <div className="flex flex-wrap justify-between items-center gap-3 border-b border-black/10 pb-3 mb-4">
+            <div className="flex items-center gap-2.5">
+              <h3 className="font-bold text-base text-[#111214]">Trending Now</h3>
+              {config.trendingMode === 'manual' && (
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-100/90 text-amber-900 text-[11px] font-bold">
+                  {config.trendingBookIds.length}/3 selected
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
               onClick={() => handleToggleMode('trending', config.trendingMode)}
-              className={`text-xs px-3 py-1 rounded font-bold ${config.trendingMode === 'auto' ? 'bg-gray-200 text-black' : 'bg-[#FDD132] text-black'}`}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm ${
+                config.trendingMode === 'auto'
+                  ? 'bg-white/80 hover:bg-white text-[#111214] border border-white'
+                  : 'bg-[#F5F23B] hover:bg-[#ebe72b] text-[#111214]'
+              }`}
             >
               Mode: {config.trendingMode.toUpperCase()}
             </button>
           </div>
           {config.trendingMode === 'auto' ? (
-            <p className="text-sm text-black italic">Automatically showing the 3 most recently added books.</p>
+            <p className="text-xs text-zinc-600 italic">Automatically showing the 3 most recently added books.</p>
           ) : (
             <div>
-              <p className="text-sm text-black mb-3">Select exactly 3 books to feature in the Trending section:</p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-h-60 overflow-y-auto p-2 bg-gray-50 rounded border">
-                {books.map(b => (
-                  <div 
-                    key={b.id} 
-                    onClick={() => handleToggleBook('trending', b.id)}
-                    className={`cursor-pointer p-2 border rounded text-xs flex flex-col justify-between ${config.trendingBookIds.includes(b.id) ? 'border-[#FDD132] bg-yellow-50 shadow-sm' : 'bg-white hover:border-gray-300'}`}
-                  >
-                    <span className="font-bold line-clamp-2">{b.title}</span>
-                    <span className="text-black mt-1">{b.author}</span>
-                    {config.trendingBookIds.includes(b.id) && <Check size={14} className="text-green-600 mt-2 self-end" />}
-                  </div>
-                ))}
+              <p className="text-xs font-medium text-zinc-700 mb-3">Select exactly 3 books to feature in the Trending section:</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-h-60 overflow-y-auto p-3 rounded-2xl bg-white/55 border border-white/80 custom-scrollbar">
+                {books.map(b => {
+                  const picked = config.trendingBookIds.includes(b.id);
+                  return (
+                    <div
+                      key={b.id}
+                      onClick={() => handleToggleBook('trending', b.id)}
+                      className={`cursor-pointer p-3 rounded-xl border text-xs flex flex-col justify-between transition-all ${
+                        picked
+                          ? 'border-[#F5F23B] bg-[#FFFCE8] shadow-sm ring-1 ring-[#F5F23B]'
+                          : 'bg-white/85 border-white hover:bg-white'
+                      }`}
+                    >
+                      <div>
+                        <span className="font-bold text-[#111214] line-clamp-2">{b.title}</span>
+                        <span className="text-zinc-600 mt-1 block truncate">{b.author}</span>
+                      </div>
+                      {picked && <Check size={14} className="text-emerald-600 mt-2 self-end" />}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
         </div>
 
         {/* New Releases */}
-        <div>
-          <div className="flex justify-between items-end border-b pb-2 mb-4">
-            <h3 className="font-bold text-lg">New Releases</h3>
-            <button 
+        <div className="rounded-2xl bg-white/45 border border-white/70 p-5 backdrop-blur-md">
+          <div className="flex flex-wrap justify-between items-center gap-3 border-b border-black/10 pb-3 mb-4">
+            <div className="flex items-center gap-2.5">
+              <h3 className="font-bold text-base text-[#111214]">New Releases</h3>
+              {config.newReleasesMode === 'manual' && (
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-100/90 text-amber-900 text-[11px] font-bold">
+                  {config.newReleasesBookIds.length}/4 selected
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
               onClick={() => handleToggleMode('newReleases', config.newReleasesMode)}
-              className={`text-xs px-3 py-1 rounded font-bold ${config.newReleasesMode === 'auto' ? 'bg-gray-200 text-black' : 'bg-[#FDD132] text-black'}`}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm ${
+                config.newReleasesMode === 'auto'
+                  ? 'bg-white/80 hover:bg-white text-[#111214] border border-white'
+                  : 'bg-[#F5F23B] hover:bg-[#ebe72b] text-[#111214]'
+              }`}
             >
               Mode: {config.newReleasesMode.toUpperCase()}
             </button>
           </div>
           {config.newReleasesMode === 'auto' ? (
-            <p className="text-sm text-black italic">Automatically showing the next 4 most recently added books.</p>
+            <p className="text-xs text-zinc-600 italic">Automatically showing the next 4 most recently added books.</p>
           ) : (
             <div>
-              <p className="text-sm text-black mb-3">Select exactly 4 books to feature in the New Releases section:</p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-h-60 overflow-y-auto p-2 bg-gray-50 rounded border">
-                {books.map(b => (
-                  <div 
-                    key={b.id} 
-                    onClick={() => handleToggleBook('newReleases', b.id)}
-                    className={`cursor-pointer p-2 border rounded text-xs flex flex-col justify-between ${config.newReleasesBookIds.includes(b.id) ? 'border-[#FDD132] bg-yellow-50 shadow-sm' : 'bg-white hover:border-gray-300'}`}
-                  >
-                    <span className="font-bold line-clamp-2">{b.title}</span>
-                    <span className="text-black mt-1">{b.author}</span>
-                    {config.newReleasesBookIds.includes(b.id) && <Check size={14} className="text-green-600 mt-2 self-end" />}
-                  </div>
-                ))}
+              <p className="text-xs font-medium text-zinc-700 mb-3">Select exactly 4 books to feature in the New Releases section:</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-h-60 overflow-y-auto p-3 rounded-2xl bg-white/55 border border-white/80 custom-scrollbar">
+                {books.map(b => {
+                  const picked = config.newReleasesBookIds.includes(b.id);
+                  return (
+                    <div
+                      key={b.id}
+                      onClick={() => handleToggleBook('newReleases', b.id)}
+                      className={`cursor-pointer p-3 rounded-xl border text-xs flex flex-col justify-between transition-all ${
+                        picked
+                          ? 'border-[#F5F23B] bg-[#FFFCE8] shadow-sm ring-1 ring-[#F5F23B]'
+                          : 'bg-white/85 border-white hover:bg-white'
+                      }`}
+                    >
+                      <div>
+                        <span className="font-bold text-[#111214] line-clamp-2">{b.title}</span>
+                        <span className="text-zinc-600 mt-1 block truncate">{b.author}</span>
+                      </div>
+                      {picked && <Check size={14} className="text-emerald-600 mt-2 self-end" />}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
         </div>
 
         {/* Created For You */}
-        <div>
-          <div className="flex justify-between items-end border-b pb-2 mb-4">
-            <h3 className="font-bold text-lg">Created For You</h3>
-            <button 
+        <div className="rounded-2xl bg-white/45 border border-white/70 p-5 backdrop-blur-md">
+          <div className="flex flex-wrap justify-between items-center gap-3 border-b border-black/10 pb-3 mb-4">
+            <div className="flex items-center gap-2.5">
+              <h3 className="font-bold text-base text-[#111214]">Created For You</h3>
+              {config.createdForYouMode === 'manual' && (
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-100/90 text-amber-900 text-[11px] font-bold">
+                  {config.createdForYouBookIds.length}/2 selected
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
               onClick={() => handleToggleMode('createdForYou', config.createdForYouMode)}
-              className={`text-xs px-3 py-1 rounded font-bold ${config.createdForYouMode === 'auto' ? 'bg-gray-200 text-black' : 'bg-[#FDD132] text-black'}`}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm ${
+                config.createdForYouMode === 'auto'
+                  ? 'bg-white/80 hover:bg-white text-[#111214] border border-white'
+                  : 'bg-[#F5F23B] hover:bg-[#ebe72b] text-[#111214]'
+              }`}
             >
               Mode: {config.createdForYouMode.toUpperCase()}
             </button>
           </div>
           {config.createdForYouMode === 'auto' ? (
-            <p className="text-sm text-black italic">Automatically showing 2 books for the user based on catalog history.</p>
+            <p className="text-xs text-zinc-600 italic">Automatically showing 2 books for the user based on catalog history.</p>
           ) : (
             <div>
-              <p className="text-sm text-black mb-3">Select exactly 2 books to feature in the Created For You section:</p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-h-60 overflow-y-auto p-2 bg-gray-50 rounded border">
-                {books.map(b => (
-                  <div 
-                    key={b.id} 
-                    onClick={() => handleToggleBook('createdForYou', b.id)}
-                    className={`cursor-pointer p-2 border rounded text-xs flex flex-col justify-between ${config.createdForYouBookIds.includes(b.id) ? 'border-[#FDD132] bg-yellow-50 shadow-sm' : 'bg-white hover:border-gray-300'}`}
-                  >
-                    <span className="font-bold line-clamp-2">{b.title}</span>
-                    <span className="text-black mt-1">{b.author}</span>
-                    {config.createdForYouBookIds.includes(b.id) && <Check size={14} className="text-green-600 mt-2 self-end" />}
-                  </div>
-                ))}
+              <p className="text-xs font-medium text-zinc-700 mb-3">Select exactly 2 books to feature in the Created For You section:</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-h-60 overflow-y-auto p-3 rounded-2xl bg-white/55 border border-white/80 custom-scrollbar">
+                {books.map(b => {
+                  const picked = config.createdForYouBookIds.includes(b.id);
+                  return (
+                    <div
+                      key={b.id}
+                      onClick={() => handleToggleBook('createdForYou', b.id)}
+                      className={`cursor-pointer p-3 rounded-xl border text-xs flex flex-col justify-between transition-all ${
+                        picked
+                          ? 'border-[#F5F23B] bg-[#FFFCE8] shadow-sm ring-1 ring-[#F5F23B]'
+                          : 'bg-white/85 border-white hover:bg-white'
+                      }`}
+                    >
+                      <div>
+                        <span className="font-bold text-[#111214] line-clamp-2">{b.title}</span>
+                        <span className="text-zinc-600 mt-1 block truncate">{b.author}</span>
+                      </div>
+                      {picked && <Check size={14} className="text-emerald-600 mt-2 self-end" />}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
         </div>
 
         {/* Featured Authors */}
-        <div>
-          <div className="flex justify-between items-end border-b pb-2 mb-4">
-            <h3 className="font-bold text-lg">Featured Authors</h3>
-            <button 
+        <div className="rounded-2xl bg-white/45 border border-white/70 p-5 backdrop-blur-md">
+          <div className="flex flex-wrap justify-between items-center gap-3 border-b border-black/10 pb-3 mb-4">
+            <div className="flex items-center gap-2.5">
+              <h3 className="font-bold text-base text-[#111214]">Featured Authors</h3>
+              {config.featuredAuthorsMode === 'manual' && (
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-100/90 text-amber-900 text-[11px] font-bold">
+                  {config.featuredAuthorsList.length} added
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
               onClick={() => handleToggleMode('featuredAuthors', config.featuredAuthorsMode)}
-              className={`text-xs px-3 py-1 rounded font-bold ${config.featuredAuthorsMode === 'auto' ? 'bg-gray-200 text-black' : 'bg-[#FDD132] text-black'}`}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm ${
+                config.featuredAuthorsMode === 'auto'
+                  ? 'bg-white/80 hover:bg-white text-[#111214] border border-white'
+                  : 'bg-[#F5F23B] hover:bg-[#ebe72b] text-[#111214]'
+              }`}
             >
               Mode: {config.featuredAuthorsMode.toUpperCase()}
             </button>
           </div>
           {config.featuredAuthorsMode === 'auto' ? (
-            <p className="text-sm text-black italic">Automatically showing 6 authors based on most books uploaded.</p>
+            <p className="text-xs text-zinc-600 italic">Automatically showing 6 authors based on most books uploaded.</p>
           ) : (
-            <div className="grid md:grid-cols-2 gap-8">
+            <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <form onSubmit={handleAddAuthor} className="flex gap-2 mb-4">
-                  <input 
+                  <input
                     name="author"
                     list="existing-authors-home"
-                    className="flex-1 border rounded px-3 py-2 text-sm outline-none focus:border-[#FDD132]"
+                    className="flex-1 rounded-full bg-white/80 border border-white px-3.5 py-2 text-xs font-medium outline-none focus:border-[#F5F23B]"
                     placeholder="Select or type author name..."
                   />
                   <datalist id="existing-authors-home">
                     {allAuthors.map(a => <option key={a} value={a} />)}
                   </datalist>
-                  <Button type="submit" variant="brass" size="sm">Add Author</Button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-full text-xs font-bold text-[#111214] bg-[#F5F23B] hover:bg-[#ebe72b] shadow-sm transition-all cursor-pointer shrink-0"
+                  >
+                    Add Author
+                  </button>
                 </form>
-                <ul className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar border rounded p-2 bg-gray-50">
+                <ul className="space-y-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar rounded-2xl bg-white/55 border border-white/80 p-3">
                   {config.featuredAuthorsList.map(a => (
-                    <li key={a} className="flex justify-between items-center bg-white p-2 border rounded text-sm shadow-sm">
-                      <span className="font-semibold text-xs">{a}</span>
-                      <button onClick={() => handleRemoveAuthor(a)} className="text-red-500 hover:text-red-700 p-1">
-                        <Trash2 size={14} />
+                    <li key={a} className="flex justify-between items-center bg-white/85 px-3 py-2 border border-white rounded-xl text-sm shadow-sm">
+                      <span className="font-semibold text-xs text-[#111214]">{a}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAuthor(a)}
+                        className="p-1.5 rounded-lg text-red-600 bg-red-50/80 hover:bg-red-100 transition-colors cursor-pointer"
+                      >
+                        <Trash2 size={13} />
                       </button>
                     </li>
                   ))}
-                  {config.featuredAuthorsList.length === 0 && <li className="text-xs text-black italic">No authors added.</li>}
+                  {config.featuredAuthorsList.length === 0 && <li className="text-xs text-zinc-600 italic p-1">No authors added.</li>}
                 </ul>
               </div>
             </div>
@@ -2458,19 +2581,25 @@ function PagesTab() {
 
   return (
     <div className="admin-glass-panel p-6 rounded-[22px]">
-      <h2 className="text-xl font-bold mb-2 text-[#111214]">Manage Static Pages</h2>
-      <p className="text-sm text-black mb-8 max-w-3xl">
-        Edit the content of the footer pages (About Us, Contact Us, Terms, Privacy Policy, FAQs). Changes reflect instantly on the live site.
-      </p>
+      <div className="mb-7">
+        <h2 className="text-xl font-bold text-[#111214]">Manage Static Pages</h2>
+        <p className="text-xs text-zinc-600 mt-1 max-w-3xl leading-relaxed">
+          Edit the content of the footer pages (About Us, Contact Us, Terms, Privacy Policy, FAQs). Changes reflect instantly on the live site.
+        </p>
+      </div>
 
-      <div className="flex flex-col md:flex-row gap-8">
-        <div className="md:w-1/4 border-r pr-4">
-          <ul className="space-y-2">
+      <div className="flex flex-col md:flex-row gap-6 items-start">
+        <div className="w-full md:w-1/4 rounded-2xl bg-white/45 border border-white/70 p-3 backdrop-blur-md">
+          <ul className="space-y-1.5">
             {Object.keys(pages).map(slug => (
               <li key={slug}>
                 <button
                   onClick={() => setActiveSlug(slug)}
-                  className={`w-full text-left px-4 py-2 rounded text-sm font-semibold ${activeSlug === slug ? 'bg-[#FDD132] text-black' : 'hover:bg-gray-100 text-black'}`}
+                  className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    activeSlug === slug
+                      ? 'bg-[#111214] text-white font-bold shadow-sm'
+                      : 'hover:bg-white/75 text-[#111214]'
+                  }`}
                 >
                   {pages[slug].title}
                 </button>
@@ -2478,26 +2607,26 @@ function PagesTab() {
             ))}
           </ul>
         </div>
-        
-        <div className="md:w-3/4">
+
+        <div className="w-full md:w-3/4 rounded-2xl bg-white/45 border border-white/70 p-5 backdrop-blur-md">
           <div className="mb-4">
-            <label className="block text-sm font-bold text-black mb-2">Page Title</label>
-            <input 
+            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-2">Page Title</label>
+            <input
               value={activePage.title}
               onChange={(e) => handleUpdate("title", e.target.value)}
-              className="w-full border rounded px-3 py-2 outline-none focus:border-[#FDD132]"
+              className="w-full rounded-xl bg-white/80 focus:bg-white border border-white focus:border-[#F5F23B] px-4 py-2.5 text-sm font-semibold text-[#111214] outline-none shadow-sm transition-colors"
             />
           </div>
           <div className="mb-4">
-            <label className="block text-sm font-bold text-black mb-2">Page Content (Supports Line Breaks)</label>
-            <textarea 
+            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-2">Page Content (Supports Line Breaks)</label>
+            <textarea
               value={activePage.content}
               onChange={(e) => handleUpdate("content", e.target.value)}
-              className="w-full border rounded px-3 py-2 outline-none focus:border-[#FDD132] h-64 font-sans"
+              className="w-full rounded-2xl bg-white/80 focus:bg-white border border-white focus:border-[#F5F23B] px-4 py-3 text-sm text-[#111214] outline-none shadow-sm h-64 font-sans leading-relaxed transition-colors"
             />
           </div>
-          <div className="text-sm text-black italic mt-4">
-            * Changes are saved automatically as you type.
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50/90 border border-emerald-200/70 text-[11px] font-semibold text-emerald-800">
+            <Check size={12} /> Changes are saved automatically as you type
           </div>
         </div>
       </div>
@@ -2547,82 +2676,86 @@ function EmailsTab({ emailTemplates, onUpdateEmailTemplate }) {
   return (
     <div className="space-y-6">
       {/* EmailJS Setup Notice */}
-      <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-950 text-xs leading-relaxed flex flex-col md:flex-row gap-4 items-start justify-between shadow-sm">
-        <div className="space-y-1 max-w-2xl">
-          <div className="font-bold flex items-center gap-1.5 text-sm text-amber-900">
+      <div className="p-5 rounded-2xl bg-amber-50/75 backdrop-blur-md border border-amber-200/80 text-amber-950 text-xs leading-relaxed flex flex-col md:flex-row gap-4 items-center justify-between shadow-sm">
+        <div className="space-y-1.5 max-w-2xl">
+          <div className="font-bold flex items-center gap-1.5 text-sm text-amber-950">
             <Mail size={16} /> EmailJS Template Configuration Note
           </div>
           <p>
             In your EmailJS dashboard (<strong>emailjs.com</strong> &rarr; Email Templates &rarr; <code>template_cncozac</code>), make sure your message variable uses <strong>triple curly braces</strong>:
           </p>
-          <div className="my-1.5 p-2 bg-white rounded border border-amber-300 font-mono text-xs inline-flex items-center gap-2">
+          <div className="my-1.5 p-2 bg-white/85 rounded-xl border border-amber-300/70 font-mono text-xs inline-flex items-center gap-2">
             <span className="text-red-500 line-through">{"{{message}}"}</span>
-            <span className="text-gray-400">&rarr;</span>
-            <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">{"{{{message}}}"}</span>
+            <span className="text-zinc-400">&rarr;</span>
+            <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">{"{{{message}}}"}</span>
           </div>
-          <p className="text-gray-600">
+          <p className="text-zinc-700">
             Double braces force EmailJS to escape HTML, showing raw code tags like <code>&lt;div&gt;</code> in the email. Triple braces <code>{"{{{message}}}"}</code> allow EmailJS to properly render the card design and company logo.
           </p>
         </div>
-        <div className="flex-shrink-0 bg-white p-3 rounded-lg border border-amber-200 text-center">
-          <img src={COMPANY_LOGO_URL} alt="Company Logo" className="h-10 w-auto mx-auto mb-1 object-contain" />
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Company Logo Active</span>
+        <div className="flex-shrink-0 bg-white/85 p-3.5 rounded-2xl border border-white text-center shadow-sm">
+          <img src={COMPANY_LOGO_URL} alt="Company Logo" className="h-10 w-auto mx-auto mb-1.5 object-contain" />
+          <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider block">Company Logo Active</span>
         </div>
       </div>
 
-      <div className="grid md:grid-cols-4 gap-6">
-        <div className="md:col-span-1 admin-glass-panel rounded-[20px] p-4">
-          <h3 className="font-semibold mb-4 text-sm uppercase tracking-wider text-black">Available Templates</h3>
-          <div className="flex flex-col gap-2">
+      <div className="grid md:grid-cols-4 gap-6 items-start">
+        <div className="md:col-span-1 admin-glass-panel rounded-[22px] p-4">
+          <h3 className="font-bold mb-3.5 text-[11px] uppercase tracking-wider text-zinc-600">Available Templates</h3>
+          <div className="flex flex-col gap-1.5">
             {DEFAULT_TEMPLATES.map(t => (
               <button
                 key={t.id}
                 onClick={() => setActiveTemplate(t.id)}
-                className={`text-left px-3 py-2 rounded-xl text-sm transition-colors cursor-pointer ${activeTemplate === t.id ? 'bg-[#111214] text-white font-bold shadow-sm' : 'hover:bg-white/70 text-black'}`}
+                className={`text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  activeTemplate === t.id
+                    ? 'bg-[#111214] text-white font-bold shadow-sm'
+                    : 'hover:bg-white/75 text-[#111214]'
+                }`}
               >
                 {t.name}
               </button>
             ))}
           </div>
-          <div className="mt-8 text-xs text-black bg-white/60 p-3 rounded-xl border border-white/70">
-            <strong>Available Variables:</strong>
-            <ul className="mt-2 space-y-1">
-              <li><code>{`{{name}}`}</code> - User/Institution Name</li>
-              <li><code>{`{{id}}`}</code> - Login ID</li>
-              <li><code>{`{{password}}`}</code> - Password</li>
-              <li><code>{`{{startDate}}`}</code> - Purchase Date</li>
-              <li><code>{`{{endDate}}`}</code> - Expiration Date</li>
+          <div className="mt-6 text-xs text-[#111214] bg-white/60 p-3.5 rounded-2xl border border-white/80">
+            <strong className="text-[11px] uppercase tracking-wider text-zinc-700">Available Variables</strong>
+            <ul className="mt-2 space-y-1.5 text-[11px]">
+              <li><code className="bg-white/80 px-1.5 py-0.5 rounded">{`{{name}}`}</code> — User/Institution</li>
+              <li><code className="bg-white/80 px-1.5 py-0.5 rounded">{`{{id}}`}</code> — Login ID</li>
+              <li><code className="bg-white/80 px-1.5 py-0.5 rounded">{`{{password}}`}</code> — Password</li>
+              <li><code className="bg-white/80 px-1.5 py-0.5 rounded">{`{{startDate}}`}</code> — Start Date</li>
+              <li><code className="bg-white/80 px-1.5 py-0.5 rounded">{`{{endDate}}`}</code> — Expiration Date</li>
             </ul>
           </div>
         </div>
 
         <div className="md:col-span-3">
-          <div className="admin-glass-panel rounded-[20px] p-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-gray-100">
+          <div className="admin-glass-panel rounded-[22px] p-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-black/10">
               <div>
-                <h2 className="text-xl font-bold" style={fontDisplay}>Edit {currentDefault?.name} Email</h2>
-                <p className="text-xs text-gray-500 mt-0.5">Customize email messaging dispatched via EmailJS.</p>
+                <h2 className="text-xl font-bold text-[#111214]" style={fontDisplay}>Edit {currentDefault?.name} Email</h2>
+                <p className="text-xs text-zinc-600 mt-0.5">Customize email messaging dispatched via EmailJS.</p>
               </div>
 
               {/* Toggle Edit vs Live Preview */}
-              <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg border border-gray-200">
+              <div className="flex items-center gap-1 bg-white/65 p-1 rounded-full border border-white shadow-sm">
                 <button
                   type="button"
                   onClick={() => setShowPreview(false)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                    !showPreview ? "bg-white text-black shadow-sm font-bold" : "text-gray-600 hover:text-black"
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                    !showPreview ? "bg-[#111214] text-white shadow-sm font-bold" : "text-zinc-600 hover:text-[#111214]"
                   }`}
                 >
-                  <Edit3 size={14} /> Edit
+                  <Edit3 size={13} /> Edit
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowPreview(true)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                    showPreview ? "bg-white text-black shadow-sm font-bold" : "text-gray-600 hover:text-black"
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                    showPreview ? "bg-[#111214] text-white shadow-sm font-bold" : "text-zinc-600 hover:text-[#111214]"
                   }`}
                 >
-                  <Eye size={14} /> Preview with Logo
+                  <Eye size={13} /> Preview with Logo
                 </button>
               </div>
             </div>
@@ -2630,59 +2763,71 @@ function EmailsTab({ emailTemplates, onUpdateEmailTemplate }) {
             {!showPreview ? (
               <>
                 <div className="mb-4">
-                  <label className="block text-sm font-semibold mb-1.5 text-black">Subject Line</label>
-                  <input 
-                    value={subject} 
+                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-2">Subject Line</label>
+                  <input
+                    value={subject}
                     onChange={e => setSubject(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded border text-sm outline-none bg-gray-50 focus:bg-white"
+                    className="w-full px-4 py-2.5 rounded-xl border border-white focus:border-[#F5F23B] text-sm font-medium outline-none bg-white/80 focus:bg-white shadow-sm transition-colors"
                   />
                 </div>
-                
+
                 <div className="mb-6">
-                  <label className="block text-sm font-semibold mb-1.5 text-black">Email Body</label>
-                  <textarea 
-                    value={body} 
+                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-2">Email Body</label>
+                  <textarea
+                    value={body}
                     onChange={e => setBody(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded border text-sm outline-none bg-gray-50 focus:bg-white h-64 font-mono text-xs leading-relaxed"
+                    className="w-full px-4 py-3 rounded-2xl border border-white focus:border-[#F5F23B] text-xs outline-none bg-white/80 focus:bg-white h-64 font-mono leading-relaxed shadow-sm transition-colors"
                   />
                 </div>
-                
-                <div className="flex justify-between items-center pt-2">
+
+                <div className="flex flex-wrap justify-between items-center gap-3 pt-2">
                   <button
                     type="button"
                     onClick={() => setShowPreview(true)}
-                    className="text-xs font-semibold text-gray-600 hover:text-black flex items-center gap-1 cursor-pointer"
+                    className="px-3.5 py-2 rounded-full bg-white/80 hover:bg-white border border-white text-xs font-semibold text-[#111214] flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
                   >
-                    <Eye size={14} /> Preview formatted email
+                    <Eye size={13} /> Preview formatted email
                   </button>
-                  <Button onClick={handleSave}><Check size={16} /> Save Template</Button>
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-bold text-[#111214] bg-[#F5F23B] hover:bg-[#ebe72b] shadow-md hover:shadow-lg transition-all cursor-pointer"
+                  >
+                    <Check size={14} strokeWidth={2.4} /> Save Template
+                  </button>
                 </div>
               </>
             ) : (
               <div className="space-y-4">
-                <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border text-xs text-gray-600">
+                <div className="flex flex-wrap items-center justify-between gap-2 bg-white/65 px-4 py-2.5 rounded-xl border border-white text-xs text-zinc-700">
                   <span><strong>Subject:</strong> {preview.subject}</span>
-                  <span className="text-gray-400">Sample variables rendered</span>
+                  <span className="text-zinc-500">Sample variables rendered</span>
                 </div>
 
                 {/* Email Preview Frame */}
-                <div className="rounded-xl border border-gray-200 overflow-hidden bg-gray-100 shadow-inner p-2 sm:p-4 flex justify-center">
+                <div className="rounded-2xl border border-white/80 overflow-hidden bg-white/45 shadow-inner p-2 sm:p-4 flex justify-center">
                   <iframe
                     title="Email Preview"
                     srcDoc={preview.html}
-                    className="w-full max-w-[620px] h-[520px] border-0 rounded-lg bg-white shadow-sm"
+                    className="w-full max-w-[620px] h-[520px] border-0 rounded-xl bg-white shadow-sm"
                   />
                 </div>
 
-                <div className="flex justify-between items-center pt-2">
+                <div className="flex flex-wrap justify-between items-center gap-3 pt-2">
                   <button
                     type="button"
                     onClick={() => setShowPreview(false)}
-                    className="text-xs font-semibold text-gray-600 hover:text-black flex items-center gap-1 cursor-pointer"
+                    className="px-3.5 py-2 rounded-full bg-white/80 hover:bg-white border border-white text-xs font-semibold text-[#111214] flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
                   >
-                    <Edit3 size={14} /> Back to editor
+                    <Edit3 size={13} /> Back to editor
                   </button>
-                  <Button onClick={handleSave}><Check size={16} /> Save Template</Button>
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-bold text-[#111214] bg-[#F5F23B] hover:bg-[#ebe72b] shadow-md hover:shadow-lg transition-all cursor-pointer"
+                  >
+                    <Check size={14} strokeWidth={2.4} /> Save Template
+                  </button>
                 </div>
               </div>
             )}
@@ -2732,9 +2877,12 @@ function FeaturedAuthorsTab({ books = [], authors = [], onAddAuthor, onRemoveAut
   };
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-[#111214]">Featured Authors</h2>
+    <div className="space-y-5">
+      <div className="flex flex-wrap justify-between items-center gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-[#111214]">Featured Authors ({authors.length})</h2>
+          <p className="text-xs text-zinc-600">Curate author profiles displayed across the catalog showcase.</p>
+        </div>
         <button
           type="button"
           onClick={() => setShowForm(true)}
@@ -2750,25 +2898,25 @@ function FeaturedAuthorsTab({ books = [], authors = [], onAddAuthor, onRemoveAut
           return (
             <div key={author.id} className="admin-glass-panel rounded-[22px] p-6 flex flex-col items-center text-center hover:-translate-y-0.5 transition-all">
               <div
-                className="w-24 h-24 rounded-full bg-gray-200 mb-4 bg-cover bg-center border-4 border-white shadow-md flex items-center justify-center text-xl font-bold text-black"
+                className="w-24 h-24 rounded-full bg-gradient-to-br from-[#F5F23B] to-[#F59E0B] mb-4 bg-cover bg-center border-4 border-white shadow-md flex items-center justify-center text-2xl font-bold text-[#111214]"
                 style={author.photo_url ? { backgroundImage: `url(${author.photo_url})` } : {}}
               >
                 {!author.photo_url && String(author.name || "U").charAt(0).toUpperCase()}
               </div>
-              <h3 className="font-semibold text-lg mb-1">{String(author.name || "Unknown")}</h3>
-              {author.bio && <p className="text-xs text-black line-clamp-3 mb-4">{String(author.bio)}</p>}
+              <h3 className="font-bold text-base text-[#111214] mb-1">{String(author.name || "Unknown")}</h3>
+              {author.bio && <p className="text-xs text-zinc-600 line-clamp-3 mb-4 leading-relaxed">{String(author.bio)}</p>}
               <button
                 onClick={() => onRemoveAuthor(author.id)}
-                className="mt-auto text-xs font-semibold text-red-500 hover:text-red-700 flex items-center gap-1"
+                className="mt-auto px-3 py-1 rounded-full bg-red-100/85 hover:bg-red-200/90 text-red-700 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
               >
-                <Trash2 size={14} /> Remove
+                <Trash2 size={12} /> Remove
               </button>
             </div>
           );
         })}
         {authors.length === 0 && (
-          <div className="col-span-full py-12 text-center text-black">
-            No featured authors yet. Click "Add Featured Author" to get started.
+          <div className="col-span-full admin-glass-panel rounded-[22px] py-12 px-6 text-center text-zinc-600 text-xs font-medium">
+            No featured authors yet. Click &quot;Add Featured Author&quot; to get started.
           </div>
         )}
       </div>
@@ -2836,8 +2984,11 @@ function FeaturedAuthorsTab({ books = [], authors = [], onAddAuthor, onRemoveAut
 function SubscribersTab({ subscribers }) {
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-bold text-[#111214]">Newsletter Subscribers ({subscribers.length})</h3>
+      <div className="flex flex-wrap justify-between items-center gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-[#111214]">Newsletter Subscribers ({subscribers.length})</h2>
+          <p className="text-xs text-zinc-600">Readers and educators subscribed to platform updates.</p>
+        </div>
       </div>
       <div className="admin-glass-panel rounded-[22px] overflow-hidden">
         <div tabIndex={0} role="region" aria-label="Newsletter subscribers" className="admin-table-region">
@@ -2852,8 +3003,8 @@ function SubscribersTab({ subscribers }) {
             <tbody>
               {subscribers.map((s) => (
                 <tr key={s.id} className="border-t border-black/5 hover:bg-white/65 transition-colors">
-                  <td className="px-4 py-3.5 font-semibold text-[#111214]">{s.email}</td>
-                  <td className="px-4 py-3.5 text-zinc-700 text-xs">{new Date(s.subscribed_at).toLocaleString()}</td>
+                  <td className="px-4 py-3.5 align-middle font-semibold text-[#111214]">{s.email}</td>
+                  <td className="px-4 py-3.5 align-middle text-zinc-700 text-xs">{new Date(s.subscribed_at).toLocaleString()}</td>
                 </tr>
               ))}
               {subscribers.length === 0 && (
