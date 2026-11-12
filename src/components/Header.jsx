@@ -40,7 +40,7 @@ export default function Header({ session, view, onNavigate, onLogout }) {
   return (
     <>
       <header
-        className="sticky top-0 z-[100] bg-white/75 backdrop-blur-xl border-b border-white/80 shadow-[0_8px_24px_-14px_rgba(15,23,42,0.16)] relative w-full max-w-full"
+        className="sticky top-0 z-[100] glass-header-bar w-full max-w-full"
       >
         <div className="max-w-7xl mx-auto px-3 sm:px-4 flex items-center justify-between h-auto py-1">
 
@@ -83,7 +83,7 @@ export default function Header({ session, view, onNavigate, onLogout }) {
             <button
               onClick={() => setMenuOpen(o => !o)}
               aria-label="Toggle navigation menu"
-              className="p-2 sm:p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 active:scale-95 border border-gray-200 text-black cursor-pointer transition-all shadow-xs flex items-center justify-center"
+              className="p-2 sm:p-2.5 rounded-xl admin-glass-pill hover:bg-white/85 active:scale-95 text-black cursor-pointer transition-all flex items-center justify-center"
             >
               {menuOpen ? <X size={22} className="stroke-[2.5]" /> : <Menu size={22} className="stroke-[2.5]" />}
             </button>
@@ -98,7 +98,7 @@ export default function Header({ session, view, onNavigate, onLogout }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="lg:hidden absolute top-full left-0 right-0 bg-white/90 backdrop-blur-xl border-b border-white/80 shadow-2xl z-50 overflow-hidden"
+              className="lg:hidden absolute top-full left-0 right-0 admin-glass-panel border-t-0 shadow-2xl z-50 overflow-hidden"
             >
               <div className="p-4 flex flex-col gap-1.5 max-h-[calc(100vh-80px)] overflow-y-auto">
                 <DrawerItem
@@ -199,7 +199,7 @@ function AnimatedNavItem({ label, icon: Icon, isActive, onClick }) {
       }`}
     >
       {/* Animation 1: Ambient Capsule Hover Glow */}
-      <span className="absolute inset-0 rounded-lg bg-gray-100/90 scale-95 opacity-0 group-hover/nav:scale-100 group-hover/nav:opacity-100 transition-all duration-200 -z-10 pointer-events-none" />
+      <span className="absolute inset-0 rounded-lg bg-white/60 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] scale-95 opacity-0 group-hover/nav:scale-100 group-hover/nav:opacity-100 transition-all duration-200 -z-10 pointer-events-none" />
 
       {/* Interactive Micro-Icon on Hover */}
       {Icon && (
@@ -306,10 +306,10 @@ function NavLinks({ session, view, onNavigate, onLogout }) {
               onClick={() => setProfileOpen(prev => !prev)}
               aria-label="User menu"
               aria-expanded={profileOpen}
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors border cursor-pointer ${
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer admin-glass-pill ${
                 profileOpen
-                  ? "bg-gray-200 text-black border-gray-300"
-                  : "bg-gray-100 text-black hover:bg-gray-200 border-gray-200"
+                  ? "text-black ring-2 ring-black/15 bg-white/85"
+                  : "text-black hover:bg-white/85"
               }`}
             >
               <User size={20} />
@@ -317,7 +317,7 @@ function NavLinks({ session, view, onNavigate, onLogout }) {
             
             {/* Dropdown menu */}
             {profileOpen && (
-              <div className="absolute top-full right-0 mt-2 w-56 bg-white/90 backdrop-blur-xl border border-white rounded-2xl shadow-2xl z-[120]">
+              <div className="absolute top-full right-0 mt-2 w-56 admin-glass-panel rounded-2xl shadow-2xl z-[120] overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-100">
                   <p className="text-sm font-bold text-black truncate">{session.name}</p>
                   <p className="text-xs text-gray-500 capitalize">{session.role} Account</p>
