@@ -91,17 +91,17 @@ export default function AdminPanel({
 
   return (
     <div className="admin-glass-backdrop min-h-screen py-3 sm:py-5 px-2.5 sm:px-5 pb-12">
-      {/* Subtle bright white & pearl atmospheric highlights behind glass shell */}
+      {/* Soft ambient glass atmosphere matching yellow / coral / graphite theme */}
       <div aria-hidden="true" className="pointer-events-none fixed inset-0 overflow-hidden z-0">
-        <div className="absolute -top-24 -left-20 w-[420px] h-[420px] rounded-full bg-white/80 blur-[110px]" />
-        <div className="absolute top-12 -right-24 w-[400px] h-[400px] rounded-full bg-slate-200/50 blur-[115px]" />
-        <div className="absolute bottom-0 left-1/3 w-[480px] h-[360px] rounded-full bg-white/75 blur-[120px]" />
+        <div className="absolute -top-24 -left-20 w-[440px] h-[440px] rounded-full bg-[#F5F23B]/20 blur-[120px]" />
+        <div className="absolute top-12 -right-24 w-[420px] h-[420px] rounded-full bg-[#F97316]/16 blur-[120px]" />
+        <div className="absolute bottom-0 left-1/3 w-[520px] h-[380px] rounded-full bg-slate-400/25 blur-[130px]" />
       </div>
       <div className="relative z-10 max-w-[1440px] mx-auto admin-glass-shell rounded-[26px] p-3 sm:p-4 lg:p-5 flex flex-col lg:flex-row gap-4 lg:gap-5">
         {/* LEFT GLASS ICON RAIL (DESKTOP) */}
         <aside
           aria-label="Admin navigation rail"
-          className={`hidden lg:flex flex-col justify-between shrink-0 py-3 px-2 rounded-2xl bg-white/90 border border-black/[0.06] shadow-[0_8px_24px_-12px_rgba(15,23,42,0.08)] backdrop-blur-xl transition-all duration-300 ${
+          className={`relative z-40 hidden lg:flex flex-col justify-between shrink-0 py-3 px-2 rounded-2xl bg-slate-100/65 border border-white/80 shadow-[0_12px_28px_-14px_rgba(15,23,42,0.14),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-xl transition-all duration-300 ${
             railExpanded ? "w-52" : "w-[68px]"
           }`}
         >
@@ -126,14 +126,14 @@ export default function AdminPanel({
                     type="button"
                     role="tab"
                     aria-selected={isActive}
-                    title={!railExpanded ? t.label : undefined}
+                    aria-label={t.label}
                     onClick={() => handleSelectTab(t.id)}
-                    className={`group relative flex items-center gap-3 w-full rounded-2xl transition-all duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-black/15 ${
+                    className={`group relative flex items-center gap-3 w-full rounded-2xl transition-all duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ${
                       railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
                     } ${
                       isActive
-                        ? "bg-white text-[#111214] shadow-[0_8px_20px_-6px_rgba(15,23,42,0.16)] ring-1 ring-black/10 scale-[1.02]"
-                        : "text-zinc-700 hover:bg-slate-100/80 hover:text-[#111214]"
+                        ? "bg-white/95 text-[#111214] shadow-[0_8px_20px_-6px_rgba(15,23,42,0.18)] ring-1 ring-black/10 scale-[1.02]"
+                        : "text-zinc-700 hover:bg-white/60 hover:text-[#111214]"
                     }`}
                   >
                     {isActive && (
@@ -154,7 +154,7 @@ export default function AdminPanel({
                       </span>
                     )}
                     {!railExpanded && (
-                      <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-2.5 py-1.5 rounded-xl bg-[#111214] text-white text-xs font-semibold shadow-lg">
+                      <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#111214] text-white text-xs font-semibold shadow-xl">
                         {t.label}
                       </span>
                     )}
@@ -168,7 +168,7 @@ export default function AdminPanel({
             <button
               type="button"
               onClick={() => setRailExpanded((v) => !v)}
-              title={railExpanded ? "Collapse sidebar" : "Expand sidebar labels"}
+              aria-label={railExpanded ? "Collapse sidebar" : "Expand sidebar labels"}
               className={`w-full flex items-center ${railExpanded ? "justify-between px-3" : "justify-center"} py-2 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-white/70 transition-colors cursor-pointer`}
             >
               <PanelLeft size={16} />
@@ -178,7 +178,7 @@ export default function AdminPanel({
         </aside>
 
         {/* MAIN CONTENT AREA */}
-        <div className="flex-1 min-w-0 flex flex-col gap-5">
+        <div className="relative z-10 flex-1 min-w-0 flex flex-col gap-5">
           {/* TOP HEADER BAR */}
           <header className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 px-1">
             <div className="flex items-center gap-3 min-w-0">
@@ -731,7 +731,7 @@ function InstitutionsTab({
         <div tabIndex={0} role="region" aria-label="Institutions directory" className="admin-table-region">
           <table className="w-full text-sm border-collapse min-w-[960px]">
             <thead>
-              <tr className="border-b border-black/[0.08] bg-white/95 backdrop-blur-md">
+              <tr className="border-b border-black/[0.08] bg-slate-200/55 backdrop-blur-md">
                 {["Institution", "Login ID", "Password", "Active Readers", "Books", "Term", "Status", "Actions"].map((h) => (
                   <th key={h} scope="col" className="text-left px-3.5 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px] whitespace-nowrap">
                     {h}
@@ -749,7 +749,7 @@ function InstitutionsTab({
                 const isSpiked = activeCount >= 50;
                 const initial = String(l.name || "I").charAt(0).toUpperCase();
                 return (
-                  <tr key={l.id} className="border-t border-black/[0.06] bg-white even:bg-slate-50/45 hover:bg-slate-50/90 transition-colors">
+                  <tr key={l.id} className="border-t border-black/[0.06] bg-white/45 even:bg-slate-200/30 hover:bg-white/80 transition-colors">
                     <td className="px-3.5 py-3 align-middle font-semibold text-[#111214] max-w-[220px]">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#F5F23B] to-[#F97316] text-[#111214] font-extrabold text-xs flex items-center justify-center shadow-sm shrink-0">
@@ -959,10 +959,10 @@ function InstitutionsTab({
                     onChange={() => {}} 
                     className="mt-1 shrink-0 pointer-events-none" 
                   />
-                  <div 
-                    className="w-8 h-12 rounded-sm shrink-0 bg-contain bg-no-repeat bg-center shadow-sm"
+                  <div
+                    className="w-8 h-11 rounded overflow-hidden shrink-0 shadow-sm bg-cover bg-center"
                     style={{
-                      backgroundColor: b.color,
+                      backgroundColor: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? "transparent" : b.color,
                       backgroundImage: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? `url(${b.coverUrl})` : 'none'
                     }}
                   />
@@ -1269,7 +1269,7 @@ function ReadersTab({
         <div tabIndex={0} role="region" aria-label="Individual users and orders" className="admin-table-region">
           <table className="w-full text-sm border-collapse min-w-[900px]">
             <thead>
-              <tr className="border-b border-black/[0.08] bg-white/95 backdrop-blur-md">
+              <tr className="border-b border-black/[0.08] bg-slate-200/55 backdrop-blur-md">
                 {["User", "Login ID", "Password", "Books", "Term", "Status", "Actions"].map((h) => (
                   <th key={h} scope="col" className="text-left px-3.5 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px] whitespace-nowrap">
                     {h}
@@ -1286,7 +1286,7 @@ function ReadersTab({
                 const bookCount = Array.isArray(r.bookIds) ? r.bookIds.length : (r.bookIds === "all" ? books.length : 0);
                 const initial = String(r.name || r.loginId || "U").charAt(0).toUpperCase();
                 return (
-                  <tr key={r.id} className="border-t border-black/[0.06] bg-white even:bg-slate-50/45 hover:bg-slate-50/90 transition-colors">
+                  <tr key={r.id} className="border-t border-black/[0.06] bg-white/45 even:bg-slate-200/30 hover:bg-white/80 transition-colors">
                     <td className="px-3.5 py-3 align-middle max-w-[220px]">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#60A5FA] to-[#4F46E5] text-white font-bold text-xs flex items-center justify-center shadow-sm shrink-0">
@@ -1530,10 +1530,10 @@ function ReadersTab({
                     onChange={() => {}} 
                     className="mt-1 shrink-0 pointer-events-none" 
                   />
-                  <div 
-                    className="w-8 h-12 rounded-sm shrink-0 bg-contain bg-no-repeat bg-center shadow-sm"
+                  <div
+                    className="w-8 h-11 rounded overflow-hidden shrink-0 shadow-sm bg-cover bg-center"
                     style={{
-                      backgroundColor: b.color,
+                      backgroundColor: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? "transparent" : b.color,
                       backgroundImage: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? `url(${b.coverUrl})` : 'none'
                     }}
                   />
@@ -1619,7 +1619,7 @@ function UploadersTab({ uploaders, onAddUploader, onRemoveUploader }) {
         <div tabIndex={0} role="region" aria-label="Uploaders list" className="admin-table-region">
           <table className="w-full text-sm border-collapse min-w-[660px]">
             <thead>
-              <tr className="border-b border-black/[0.08] bg-white/95 backdrop-blur-md">
+              <tr className="border-b border-black/[0.08] bg-slate-200/55 backdrop-blur-md">
                 {["Name", "Email", "Login ID", "Password", "Actions"].map((h) => (
                   <th key={h} scope="col" className="text-left px-3.5 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px] whitespace-nowrap">{h}</th>
                 ))}
@@ -1627,7 +1627,7 @@ function UploadersTab({ uploaders, onAddUploader, onRemoveUploader }) {
             </thead>
             <tbody>
               {uploaders.map((u) => (
-                <tr key={u.id} className="border-t border-black/[0.06] bg-white even:bg-slate-50/45 hover:bg-slate-50/90 transition-colors">
+                <tr key={u.id} className="border-t border-black/[0.06] bg-white/45 even:bg-slate-200/30 hover:bg-white/80 transition-colors">
                   <td className="px-3.5 py-3 align-middle font-semibold text-[#111214] whitespace-nowrap">{u.name}</td>
                   <td className="px-3.5 py-3 align-middle text-zinc-700 truncate max-w-[220px]" title={u.email || ""}>{u.email || "—"}</td>
                   <td className="px-3.5 py-3 align-middle whitespace-nowrap"><code className="px-2 py-0.5 rounded-lg bg-white/75 border border-white text-[11px] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04)]">{u.id}</code></td>
@@ -1810,7 +1810,7 @@ function TrialsTab({ books, trialRequests, onApproveTrial, onRejectTrial, onDele
         <div tabIndex={0} role="region" aria-label="Trial requests" className="admin-table-region">
           <table className="w-full text-sm border-collapse min-w-[860px]">
             <thead>
-              <tr className="border-b border-black/[0.08] bg-white/95 backdrop-blur-md">
+              <tr className="border-b border-black/[0.08] bg-slate-200/55 backdrop-blur-md">
                 {["Name", "Email", "Institution", "Requested", "Status", "Actions"].map((h) => (
                   <th key={h} scope="col" className="text-left px-3.5 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px] whitespace-nowrap">{h}</th>
                 ))}
@@ -1818,7 +1818,7 @@ function TrialsTab({ books, trialRequests, onApproveTrial, onRejectTrial, onDele
             </thead>
             <tbody>
               {filteredTrials.map((t) => (
-                <tr key={t.id} className="border-t border-black/[0.06] bg-white even:bg-slate-50/45 hover:bg-slate-50/90 transition-colors">
+                <tr key={t.id} className="border-t border-black/[0.06] bg-white/45 even:bg-slate-200/30 hover:bg-white/80 transition-colors">
                   <td className="px-3.5 py-3 align-middle font-semibold text-[#111214] whitespace-nowrap">{t.name}</td>
                   <td className="px-3.5 py-3 align-middle text-zinc-700 truncate max-w-[200px]" title={t.email}>{t.email}</td>
                   <td className="px-3.5 py-3 align-middle text-zinc-700 truncate max-w-[180px]" title={t.institution || ""}>{t.institution || "—"}</td>
@@ -2005,10 +2005,10 @@ function TrialsTab({ books, trialRequests, onApproveTrial, onRejectTrial, onDele
                     onChange={() => {}} 
                     className="mt-1 shrink-0 pointer-events-none" 
                   />
-                  <div 
-                    className="w-8 h-12 rounded-sm shrink-0 bg-contain bg-no-repeat bg-center shadow-sm"
+                  <div
+                    className="w-8 h-11 rounded overflow-hidden shrink-0 shadow-sm bg-cover bg-center"
                     style={{
-                      backgroundColor: b.color,
+                      backgroundColor: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? "transparent" : b.color,
                       backgroundImage: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? `url(${b.coverUrl})` : 'none'
                     }}
                   />
@@ -3190,7 +3190,7 @@ function SubscribersTab({ subscribers }) {
         <div tabIndex={0} role="region" aria-label="Newsletter subscribers" className="admin-table-region">
           <table className="w-full text-sm border-collapse min-w-[460px]">
             <thead>
-              <tr className="border-b border-black/[0.08] bg-white/95 backdrop-blur-md">
+              <tr className="border-b border-black/[0.08] bg-slate-200/55 backdrop-blur-md">
                 {["Email", "Subscribed At"].map((h) => (
                   <th key={h} scope="col" className="text-left px-3.5 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px] whitespace-nowrap">{h}</th>
                 ))}
@@ -3198,7 +3198,7 @@ function SubscribersTab({ subscribers }) {
             </thead>
             <tbody>
               {subscribers.map((s) => (
-                <tr key={s.id} className="border-t border-black/[0.06] bg-white even:bg-slate-50/45 hover:bg-slate-50/90 transition-colors">
+                <tr key={s.id} className="border-t border-black/[0.06] bg-white/45 even:bg-slate-200/30 hover:bg-white/80 transition-colors">
                   <td className="px-3.5 py-3 align-middle font-semibold text-[#111214]">{s.email}</td>
                   <td className="px-3.5 py-3 align-middle text-zinc-700 text-xs whitespace-nowrap">{new Date(s.subscribed_at).toLocaleString()}</td>
                 </tr>

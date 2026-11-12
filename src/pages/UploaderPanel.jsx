@@ -174,10 +174,18 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
                 className="absolute left-0 top-0 bottom-0 bg-[#FDD132] opacity-20 transition-all duration-300"
                 style={{ width: `${uploadProgress}%` }}
               />
-              <div 
-                className="w-20 rounded-xl flex-shrink-0 z-10 bg-contain bg-no-repeat bg-center shadow-sm" 
-                style={{ backgroundColor: pendingUpload.color, minHeight: 110, backgroundImage: pendingUpload.coverImage ? `url(${URL.createObjectURL(pendingUpload.coverImage)})` : 'none' }} 
-              />
+              <div
+                className="w-20 h-[108px] self-start rounded-xl flex-shrink-0 z-10 overflow-hidden shadow-sm"
+                style={{ backgroundColor: pendingUpload.coverImage ? "transparent" : pendingUpload.color }}
+              >
+                {pendingUpload.coverImage && (
+                  <img
+                    src={URL.createObjectURL(pendingUpload.coverImage)}
+                    alt={pendingUpload.title || "Book cover"}
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </div>
               <div className="flex flex-col min-w-0 flex-1 z-10">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#D4A017] mb-1">{pendingUpload.genre}</span>
                 <span className="font-bold text-sm leading-tight text-[#111111]" style={fontDisplay}>{pendingUpload.title}</span>
@@ -191,12 +199,22 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
             </div>
           )}
 
-          {books.map((b) => (
-            <div key={b.id} className={`flex gap-4 p-5 transition-all ${embedded ? 'rounded-2xl bg-white/60 backdrop-blur-xl border border-white/80 shadow-sm hover:bg-white/80 hover:-translate-y-0.5 hover:shadow-md' : 'rounded-xl border border-gray-100 bg-white shadow-sm hover:shadow-md'}`}>
-              <div 
-                className="w-20 rounded-xl flex-shrink-0 bg-contain bg-no-repeat bg-center shadow-sm" 
-                style={{ backgroundColor: b.color, minHeight: 110, backgroundImage: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? `url(${b.coverUrl})` : 'none' }} 
-              />
+          {books.map((b) => {
+            const hasCover = Boolean(b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "");
+            return (
+            <div key={b.id} className={`flex gap-4 p-5 transition-all ${embedded ? 'rounded-2xl bg-white/60 backdrop-blur-xl border border-white/85 shadow-sm hover:bg-white/80 hover:-translate-y-0.5 hover:shadow-md' : 'rounded-xl border border-gray-100 bg-white shadow-sm hover:shadow-md'}`}>
+              <div
+                className="w-20 h-[108px] self-start rounded-xl flex-shrink-0 overflow-hidden shadow-sm"
+                style={{ backgroundColor: hasCover ? "transparent" : b.color }}
+              >
+                {hasCover && (
+                  <img
+                    src={b.coverUrl}
+                    alt={b.title || "Book cover"}
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </div>
               <div className="flex flex-col min-w-0 flex-1">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#D4A017] mb-1">{b.genre}</span>
                 <span className="font-bold text-sm leading-tight text-[#111111]" style={fontDisplay}>{b.title}</span>
@@ -225,7 +243,8 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
