@@ -10,6 +10,142 @@ import { fontDisplay, fontBody, getHomepageConfig } from "../theme";
 import AnimatedSweepButton from "../components/AnimatedSweepButton";
 import BookCover from "../components/BookCover";
 
+function AutoMarquee({ items = [], speed = 36, className = "", renderItem }) {
+  const trackRef = useRef(null);
+  const pausedRef = useRef(false);
+  const dragStateRef = useRef({ down: false, dragged: false, startX: 0, startScroll: 0 });
+  const posRef = useRef(0);
+
+  const baseItems = useMemo(() => {
+    if (!items || items.length === 0) return [];
+    let list = [...items];
+    while (list.length < 6) {
+      list = [...list, ...items];
+    }
+    return list;
+  }, [items]);
+
+  const loopItems = useMemo(() => [...baseItems, ...baseItems], [baseItems]);
+
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el || loopItems.length === 0) return;
+
+    const prefersReduced = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    if (prefersReduced) return;
+
+    let rafId = 0;
+    let lastTime = performance.now();
+    posRef.current = el.scrollLeft;
+
+    const step = (now) => {
+      const dt = Math.min(now - lastTime, 64);
+      lastTime = now;
+
+      const halfWidth = el.scrollWidth / 2;
+      if (halfWidth > 0 && el.scrollWidth > el.clientWidth) {
+        if (!pausedRef.current && !dragStateRef.current.down) {
+          if (Math.abs(el.scrollLeft - posRef.current) > 2) {
+            posRef.current = el.scrollLeft;
+          }
+          posRef.current += (speed * dt) / 1000;
+          if (posRef.current >= halfWidth) {
+            posRef.current -= halfWidth;
+          }
+          el.scrollLeft = posRef.current;
+        } else {
+          posRef.current = el.scrollLeft;
+        }
+      }
+      rafId = requestAnimationFrame(step);
+    };
+
+    rafId = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(rafId);
+  }, [loopItems.length, speed]);
+
+  useEffect(() => {
+    const onPointerMove = (e) => {
+      const state = dragStateRef.current;
+      const el = trackRef.current;
+      if (!state.down || !el) return;
+
+      const dx = e.clientX - state.startX;
+      if (Math.abs(dx) > 6) {
+        state.dragged = true;
+      }
+      if (!state.dragged) return;
+
+      const halfWidth = el.scrollWidth / 2;
+      let next = state.startScroll - dx;
+      if (halfWidth > 0) {
+        while (next < 0) next += halfWidth;
+        while (next >= halfWidth) next -= halfWidth;
+      }
+      el.scrollLeft = next;
+      posRef.current = next;
+    };
+
+    const onPointerUp = () => {
+      if (!dragStateRef.current.down) return;
+      dragStateRef.current.down = false;
+      setTimeout(() => {
+        dragStateRef.current.dragged = false;
+      }, 40);
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
+    return () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
+    };
+  }, []);
+
+  if (loopItems.length === 0) return null;
+
+  return (
+    <div
+      ref={trackRef}
+      onMouseEnter={() => { pausedRef.current = true; }}
+      onMouseLeave={() => { pausedRef.current = false; }}
+      onFocusCapture={() => { pausedRef.current = true; }}
+      onBlurCapture={() => { pausedRef.current = false; }}
+      onPointerDown={(e) => {
+        if (e.pointerType === "touch") return;
+        const el = trackRef.current;
+        if (!el) return;
+        dragStateRef.current = {
+          down: true,
+          dragged: false,
+          startX: e.clientX,
+          startScroll: el.scrollLeft,
+        };
+      }}
+      onClickCapture={(e) => {
+        if (dragStateRef.current.dragged) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
+      onScroll={() => {
+        const el = trackRef.current;
+        if (!el) return;
+        const halfWidth = el.scrollWidth / 2;
+        if (halfWidth > 0 && el.scrollLeft >= halfWidth) {
+          el.scrollLeft -= halfWidth;
+          posRef.current = el.scrollLeft;
+        }
+      }}
+      className={`flex items-center overflow-x-auto admin-tab-scroller touch-pan-x cursor-grab active:cursor-grabbing select-none [mask-image:linear-gradient(to_right,transparent,black_4%,black_96%,transparent)] ${className}`}
+    >
+      {loopItems.map((item, idx) => renderItem(item, idx))}
+    </div>
+  );
+}
+
 export default function CatalogPage({ books, onNavigate }) {
   const [genre, setGenre] = useState("All");
   const [selectedAuthor, setSelectedAuthor] = useState("All");
@@ -68,16 +204,6 @@ export default function CatalogPage({ books, onNavigate }) {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
-  const createdForYouScrollRef = useRef(null);
-
-  const scrollCreatedForYou = (direction) => {
-    if (createdForYouScrollRef.current) {
-      createdForYouScrollRef.current.scrollBy({
-        left: direction === "left" ? -300 : 300,
-        behavior: "smooth"
-      });
-    }
-  };
 
   const resetFilters = () => {
     setGenre("All");
@@ -183,8 +309,6 @@ export default function CatalogPage({ books, onNavigate }) {
 
   const homepageConfig = useMemo(() => getHomepageConfig(), [books]);
 
-  const [trendingIndex, setTrendingIndex] = useState(0);
-
   const trendingPool = useMemo(() => {
     const validBooks = (books || []).filter(b => b && b.id && b.title);
     if (homepageConfig.trendingMode === 'manual') {
@@ -195,37 +319,6 @@ export default function CatalogPage({ books, onNavigate }) {
     }
     return validBooks.slice(0, 8);
   }, [books, homepageConfig]);
-
-  const visibleTrending = useMemo(() => {
-    if (!trendingPool || trendingPool.length === 0) return [];
-    const poolLen = trendingPool.length;
-    const validIndex = typeof trendingIndex === "number" && !isNaN(trendingIndex) 
-      ? ((trendingIndex % poolLen) + poolLen) % poolLen 
-      : 0;
-
-    const items = [];
-    for (let i = 0; i < 3; i++) {
-      const b = trendingPool[(validIndex + i) % poolLen];
-      if (b) items.push(b);
-    }
-    return items;
-  }, [trendingPool, trendingIndex]);
-
-  const handlePrevTrending = () => {
-    if (!trendingPool || trendingPool.length <= 1) return;
-    setTrendingIndex(prev => {
-      const valid = typeof prev === "number" && !isNaN(prev) ? prev : 0;
-      return (valid - 1 + trendingPool.length) % trendingPool.length;
-    });
-  };
-
-  const handleNextTrending = () => {
-    if (!trendingPool || trendingPool.length <= 1) return;
-    setTrendingIndex(prev => {
-      const valid = typeof prev === "number" && !isNaN(prev) ? prev : 0;
-      return (valid + 1) % trendingPool.length;
-    });
-  };
 
   const newReleases = useMemo(() => {
     if (homepageConfig.newReleasesMode === 'manual') {
@@ -360,81 +453,34 @@ export default function CatalogPage({ books, onNavigate }) {
           </div>
 
           <div className="lg:w-1/2 flex flex-col items-center z-10 w-full max-w-full mt-6 lg:mt-0 overflow-hidden">
-            <h2 className="text-2xl mb-6 sm:mb-8 font-semibold self-center lg:self-start ml-0 lg:ml-12" style={fontDisplay}>Trending Now</h2>
-            <div className="flex gap-2 sm:gap-4 md:gap-6 items-center justify-center min-h-[220px] sm:min-h-[320px] py-4 max-w-full">
-              {visibleTrending.map((b, i) => {
-                const isCenter = i === 1 && visibleTrending.length >= 3;
-                return (
-                  <motion.div 
-                    key={`${b.id}-trending-${i}`}
-                    layout
-                    initial={{ opacity: 0.9, scale: isCenter ? 1.05 : 0.95 }}
-                    animate={{ opacity: 1, scale: isCenter ? 1.1 : 1 }}
-                    transition={{ duration: 0.28, ease: "easeOut" }}
-                    onClick={() => onNavigate("book-details", b.id)}
-                    className={`group/trending relative cursor-pointer select-none transition-all duration-300 ease-out [will-change:transform,box-shadow]
-                      hover:-translate-y-4 hover:z-30
-                      ${isCenter 
-                        ? 'scale-110 z-20 hover:scale-[1.18]' 
-                        : 'scale-100 z-10 hover:scale-108'
-                      }`}
-                  >
-                    {/* Glowing highlight border & deep 3D elevation container */}
-                    <div className="relative rounded-md overflow-hidden transition-all duration-300 ease-out group-hover/trending:shadow-[0_28px_50px_-12px_rgba(0,0,0,0.55),0_12px_24px_-6px_rgba(0,0,0,0.35)] group-hover/trending:ring-2 group-hover/trending:ring-[#FDD132] group-hover/trending:ring-offset-2 group-hover/trending:ring-offset-white">
-                      <BookCover 
-                        book={b} 
-                        className="w-20 h-28 sm:w-28 sm:h-42 md:w-44 md:h-64 rounded-md shadow-2xl transition-transform duration-300 ease-out group-hover/trending:scale-105" 
-                      />
-                      {/* Deep interactive feedback sheen with View Book pill */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent opacity-0 group-hover/trending:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-3 pointer-events-none z-20">
-                        <span className="bg-black/90 text-[#FDD132] text-xs font-bold px-3 py-1 rounded-full border border-[#FDD132]/70 shadow-lg flex items-center gap-1.5 transform translate-y-2 group-hover/trending:translate-y-0 transition-transform duration-300">
-                          <BookOpen size={12} className="text-[#FDD132]" /> View Book
-                        </span>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
+            <div className="w-full flex items-center justify-between mb-4 px-2">
+              <h2 className="text-2xl font-semibold text-[#111214]" style={fontDisplay}>Trending Now</h2>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Drag or swipe</span>
             </div>
-            {trendingPool.length > 1 && (
-              <div className="flex items-center gap-4 mt-8 sm:mt-10">
-                <button 
-                  onClick={handlePrevTrending}
-                  aria-label="Previous trending title"
-                  className="p-2.5 sm:p-3 border border-gray-400 bg-white/90 hover:bg-[#FDD132] hover:border-[#FDD132] text-black rounded-full hover:scale-110 active:scale-95 shadow-sm transition-all duration-200 cursor-pointer"
+            <AutoMarquee
+              items={trendingPool}
+              speed={36}
+              className="w-full gap-4 sm:gap-5 py-6 px-2"
+              renderItem={(b, idx) => (
+                <div
+                  key={`${b.id}-trending-mq-${idx}`}
+                  onClick={() => onNavigate("book-details", b.id)}
+                  className="group/trending flex-shrink-0 relative cursor-pointer select-none transition-transform duration-300 ease-out hover:-translate-y-2.5"
                 >
-                  <ChevronLeft size={18} />
-                </button>
-                <div className="flex items-center gap-1.5 px-2">
-                  {trendingPool.slice(0, Math.min(trendingPool.length, 8)).map((_, dotIdx) => {
-                    const poolLen = trendingPool.length;
-                    const normalizedIdx = typeof trendingIndex === "number" && !isNaN(trendingIndex) 
-                      ? ((trendingIndex % poolLen) + poolLen) % poolLen 
-                      : 0;
-                    const isActive = normalizedIdx === dotIdx;
-                    return (
-                      <button
-                        key={dotIdx}
-                        onClick={() => setTrendingIndex(dotIdx)}
-                        aria-label={`Go to slide ${dotIdx + 1}`}
-                        className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
-                          isActive 
-                            ? "w-6 bg-black" 
-                            : "w-2 bg-gray-300 hover:bg-gray-500"
-                        }`}
-                      />
-                    );
-                  })}
+                  <div className="relative rounded-xl overflow-hidden transition-all duration-300 ease-out shadow-lg group-hover/trending:shadow-2xl group-hover/trending:ring-2 group-hover/trending:ring-[#F5F23B] group-hover/trending:ring-offset-2 group-hover/trending:ring-offset-white/60">
+                    <BookCover
+                      book={b}
+                      className="w-28 h-40 sm:w-36 sm:h-52 md:w-44 md:h-64 rounded-xl transition-transform duration-300 ease-out group-hover/trending:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent opacity-0 group-hover/trending:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-3 pointer-events-none z-20">
+                      <span className="bg-[#111214]/90 text-[#F5F23B] text-xs font-bold px-3 py-1 rounded-full border border-[#F5F23B]/70 shadow-lg flex items-center gap-1.5">
+                        <BookOpen size={12} className="text-[#F5F23B]" /> View Book
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <button 
-                  onClick={handleNextTrending}
-                  aria-label="Next trending title"
-                  className="p-2.5 sm:p-3 border border-gray-400 bg-white/90 hover:bg-[#FDD132] hover:border-[#FDD132] text-black rounded-full hover:scale-110 active:scale-95 shadow-sm transition-all duration-200 cursor-pointer"
-                >
-                  <ChevronRight size={18} />
-                </button>
-              </div>
-            )}
+              )}
+            />
           </div>
           
           <div className="absolute top-0 right-0 w-full h-full opacity-5 pointer-events-none" 
@@ -945,49 +991,33 @@ export default function CatalogPage({ books, onNavigate }) {
             </AnimatedSweepButton>
           </div>
           
-          <div className="md:w-2/3 flex gap-3 sm:gap-4 items-center justify-center z-10 w-full">
-            <button 
-              type="button"
-              onClick={() => scrollCreatedForYou("left")}
-              aria-label="Previous recommendations"
-              className="p-2.5 admin-glass-pill text-[#111214] rounded-full hover:bg-[#111214] hover:text-[#F5F23B] flex-shrink-0 transition-all cursor-pointer"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <div 
-              ref={createdForYouScrollRef}
-              className="flex gap-4 px-2 overflow-x-auto pb-4 md:pb-0 scroll-smooth no-scrollbar w-full"
-            >
-              {createdForYouBooks.map(b => (
-                <div 
-                  key={b.id} 
+          <div className="md:w-2/3 z-10 w-full min-w-0">
+            <AutoMarquee
+              items={createdForYouBooks}
+              speed={34}
+              className="gap-4 px-2 py-2 w-full"
+              renderItem={(b, idx) => (
+                <div
+                  key={`${b.id}-cfy-mq-${idx}`}
                   onClick={() => onNavigate("book-details", b.id)}
                   className="admin-glass-panel flex gap-4 w-60 sm:w-72 flex-shrink-0 p-4 text-[#111214] cursor-pointer hover:shadow-lg rounded-2xl transition-all duration-200 hover:-translate-y-0.5"
                 >
-                   <BookCover book={b} className="w-20 h-32 rounded-xl flex-shrink-0 shadow-sm" />
-                   <div className="flex flex-col flex-1 py-1 min-w-0">
-                     <h3 className="font-bold text-sm leading-tight mb-2 line-clamp-2" style={fontDisplay}>{b.title}</h3>
-                     <p className="text-xs text-slate-600 mb-auto line-clamp-2">{b.author}</p>
-                     <div className="mt-2 flex items-center justify-between gap-2">
-                       <span className="text-[11px] font-semibold text-slate-700 truncate" title={b.onlineIsbn ? `eISBN: ${b.onlineIsbn}` : ""}>
-                         <span className="font-bold">eISBN:</span> {b.onlineIsbn || "—"}
-                       </span>
-                       <span className="text-xs font-bold text-[#111214] flex items-center gap-0.5 shrink-0">
-                         Details <ChevronRight size={14} />
-                       </span>
-                     </div>
-                   </div>
+                  <BookCover book={b} className="w-20 h-32 rounded-xl flex-shrink-0 shadow-sm" />
+                  <div className="flex flex-col flex-1 py-1 min-w-0">
+                    <h3 className="font-bold text-sm leading-tight mb-2 line-clamp-2" style={fontDisplay}>{b.title}</h3>
+                    <p className="text-xs text-slate-600 mb-auto line-clamp-2">{b.author}</p>
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-semibold text-slate-700 truncate" title={b.onlineIsbn ? `eISBN: ${b.onlineIsbn}` : ""}>
+                        <span className="font-bold">eISBN:</span> {b.onlineIsbn || "—"}
+                      </span>
+                      <span className="text-xs font-bold text-[#111214] flex items-center gap-0.5 shrink-0">
+                        Details <ChevronRight size={14} />
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
-            <button 
-              type="button"
-              onClick={() => scrollCreatedForYou("right")}
-              aria-label="Next recommendations"
-              className="p-2.5 admin-glass-pill text-[#111214] rounded-full hover:bg-[#111214] hover:text-[#F5F23B] flex-shrink-0 transition-all cursor-pointer"
-            >
-              <ChevronRight size={18} />
-            </button>
+              )}
+            />
           </div>
         </div>
       </section>
