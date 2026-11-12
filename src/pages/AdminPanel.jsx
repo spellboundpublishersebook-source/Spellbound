@@ -35,7 +35,7 @@ export default function AdminPanel({
   onCreateLicense, onRevokeLicense, onDeleteLicense, onToggleLicenseStatus, onEditInstitutionAccess, onRotateSemesterPassword,
   onCreateReader, onRevokeReader, onDeleteReader, onToggleReaderStatus, onEditReaderAccess, onResendReaderEmail,
   onAddUploader, onRemoveUploader,
-  onApproveTrial, onRejectTrial, onEditTrialAccess, onResendTrialEmail, onResendInstitutionEmail, onUpdateEmailTemplate,
+  onApproveTrial, onRejectTrial, onDeleteTrial, onDeleteRejectedTrials, onEditTrialAccess, onResendTrialEmail, onResendInstitutionEmail, onUpdateEmailTemplate,
   onAddFeaturedAuthor, onRemoveFeaturedAuthor,
   onAddBook, onEditBook, onDeleteBook, onRenameBookMetadata, dbStatus, onNavigate
 }) {
@@ -91,17 +91,17 @@ export default function AdminPanel({
 
   return (
     <div className="admin-glass-backdrop min-h-screen py-3 sm:py-5 px-2.5 sm:px-5 pb-12">
-      {/* Soft ambient light orbs behind glass panels */}
+      {/* Subtle bright white & pearl atmospheric highlights behind glass shell */}
       <div aria-hidden="true" className="pointer-events-none fixed inset-0 overflow-hidden z-0">
-        <div className="absolute -top-24 -left-20 w-[420px] h-[420px] rounded-full bg-[#F5F23B]/25 blur-[110px]" />
-        <div className="absolute top-12 -right-24 w-[400px] h-[400px] rounded-full bg-[#F97316]/20 blur-[115px]" />
-        <div className="absolute bottom-0 left-1/3 w-[480px] h-[360px] rounded-full bg-slate-300/35 blur-[120px]" />
+        <div className="absolute -top-24 -left-20 w-[420px] h-[420px] rounded-full bg-white/80 blur-[110px]" />
+        <div className="absolute top-12 -right-24 w-[400px] h-[400px] rounded-full bg-slate-200/50 blur-[115px]" />
+        <div className="absolute bottom-0 left-1/3 w-[480px] h-[360px] rounded-full bg-white/75 blur-[120px]" />
       </div>
       <div className="relative z-10 max-w-[1440px] mx-auto admin-glass-shell rounded-[26px] p-3 sm:p-4 lg:p-5 flex flex-col lg:flex-row gap-4 lg:gap-5">
         {/* LEFT GLASS ICON RAIL (DESKTOP) */}
         <aside
           aria-label="Admin navigation rail"
-          className={`hidden lg:flex flex-col justify-between shrink-0 py-3 px-2 rounded-2xl bg-white/40 border border-white/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-xl transition-all duration-300 ${
+          className={`hidden lg:flex flex-col justify-between shrink-0 py-3 px-2 rounded-2xl bg-white/90 border border-black/[0.06] shadow-[0_8px_24px_-12px_rgba(15,23,42,0.08)] backdrop-blur-xl transition-all duration-300 ${
             railExpanded ? "w-52" : "w-[68px]"
           }`}
         >
@@ -126,14 +126,14 @@ export default function AdminPanel({
                     type="button"
                     role="tab"
                     aria-selected={isActive}
-                    title={t.label}
+                    title={!railExpanded ? t.label : undefined}
                     onClick={() => handleSelectTab(t.id)}
-                    className={`group relative flex items-center gap-3 w-full rounded-2xl transition-all duration-200 cursor-pointer ${
+                    className={`group relative flex items-center gap-3 w-full rounded-2xl transition-all duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-black/15 ${
                       railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
                     } ${
                       isActive
-                        ? "bg-white text-[#111214] shadow-[0_10px_24px_-8px_rgba(0,0,0,0.22)] ring-1 ring-black/5 scale-[1.02]"
-                        : "text-zinc-700 hover:bg-white/65 hover:text-[#111214]"
+                        ? "bg-white text-[#111214] shadow-[0_8px_20px_-6px_rgba(15,23,42,0.16)] ring-1 ring-black/10 scale-[1.02]"
+                        : "text-zinc-700 hover:bg-slate-100/80 hover:text-[#111214]"
                     }`}
                   >
                     {isActive && (
@@ -515,7 +515,16 @@ export default function AdminPanel({
               <UploadersTab uploaders={uploaders} onAddUploader={onAddUploader} onRemoveUploader={onRemoveUploader} />
             )}
             {tab === "trials" && (
-              <TrialsTab books={books} trialRequests={trialRequests} onApproveTrial={onApproveTrial} onRejectTrial={onRejectTrial} onResendEmail={onResendTrialEmail} onEditAccess={onEditTrialAccess} />
+              <TrialsTab
+                books={books}
+                trialRequests={trialRequests}
+                onApproveTrial={onApproveTrial}
+                onRejectTrial={onRejectTrial}
+                onDeleteTrial={onDeleteTrial}
+                onDeleteRejectedTrials={onDeleteRejectedTrials}
+                onResendEmail={onResendTrialEmail}
+                onEditAccess={onEditTrialAccess}
+              />
             )}
             {tab === "authors" && (
               <FeaturedAuthorsTab books={books} authors={featuredAuthors} onAddAuthor={onAddFeaturedAuthor} onRemoveAuthor={onRemoveFeaturedAuthor} />
@@ -722,7 +731,7 @@ function InstitutionsTab({
         <div tabIndex={0} role="region" aria-label="Institutions directory" className="admin-table-region">
           <table className="w-full text-sm border-collapse min-w-[960px]">
             <thead>
-              <tr className="border-b border-black/[0.08] bg-white/55 backdrop-blur-md">
+              <tr className="border-b border-black/[0.08] bg-white/95 backdrop-blur-md">
                 {["Institution", "Login ID", "Password", "Active Readers", "Books", "Term", "Status", "Actions"].map((h) => (
                   <th key={h} scope="col" className="text-left px-3.5 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px] whitespace-nowrap">
                     {h}
@@ -740,7 +749,7 @@ function InstitutionsTab({
                 const isSpiked = activeCount >= 50;
                 const initial = String(l.name || "I").charAt(0).toUpperCase();
                 return (
-                  <tr key={l.id} className="border-t border-black/[0.06] bg-white/15 even:bg-white/30 hover:bg-white/65 transition-colors">
+                  <tr key={l.id} className="border-t border-black/[0.06] bg-white even:bg-slate-50/45 hover:bg-slate-50/90 transition-colors">
                     <td className="px-3.5 py-3 align-middle font-semibold text-[#111214] max-w-[220px]">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#F5F23B] to-[#F97316] text-[#111214] font-extrabold text-xs flex items-center justify-center shadow-sm shrink-0">
@@ -1260,7 +1269,7 @@ function ReadersTab({
         <div tabIndex={0} role="region" aria-label="Individual users and orders" className="admin-table-region">
           <table className="w-full text-sm border-collapse min-w-[900px]">
             <thead>
-              <tr className="border-b border-black/[0.08] bg-white/55 backdrop-blur-md">
+              <tr className="border-b border-black/[0.08] bg-white/95 backdrop-blur-md">
                 {["User", "Login ID", "Password", "Books", "Term", "Status", "Actions"].map((h) => (
                   <th key={h} scope="col" className="text-left px-3.5 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px] whitespace-nowrap">
                     {h}
@@ -1277,7 +1286,7 @@ function ReadersTab({
                 const bookCount = Array.isArray(r.bookIds) ? r.bookIds.length : (r.bookIds === "all" ? books.length : 0);
                 const initial = String(r.name || r.loginId || "U").charAt(0).toUpperCase();
                 return (
-                  <tr key={r.id} className="border-t border-black/[0.06] bg-white/15 even:bg-white/30 hover:bg-white/65 transition-colors">
+                  <tr key={r.id} className="border-t border-black/[0.06] bg-white even:bg-slate-50/45 hover:bg-slate-50/90 transition-colors">
                     <td className="px-3.5 py-3 align-middle max-w-[220px]">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#60A5FA] to-[#4F46E5] text-white font-bold text-xs flex items-center justify-center shadow-sm shrink-0">
@@ -1610,7 +1619,7 @@ function UploadersTab({ uploaders, onAddUploader, onRemoveUploader }) {
         <div tabIndex={0} role="region" aria-label="Uploaders list" className="admin-table-region">
           <table className="w-full text-sm border-collapse min-w-[660px]">
             <thead>
-              <tr className="border-b border-black/[0.08] bg-white/55 backdrop-blur-md">
+              <tr className="border-b border-black/[0.08] bg-white/95 backdrop-blur-md">
                 {["Name", "Email", "Login ID", "Password", "Actions"].map((h) => (
                   <th key={h} scope="col" className="text-left px-3.5 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px] whitespace-nowrap">{h}</th>
                 ))}
@@ -1618,7 +1627,7 @@ function UploadersTab({ uploaders, onAddUploader, onRemoveUploader }) {
             </thead>
             <tbody>
               {uploaders.map((u) => (
-                <tr key={u.id} className="border-t border-black/[0.06] bg-white/15 even:bg-white/30 hover:bg-white/65 transition-colors">
+                <tr key={u.id} className="border-t border-black/[0.06] bg-white even:bg-slate-50/45 hover:bg-slate-50/90 transition-colors">
                   <td className="px-3.5 py-3 align-middle font-semibold text-[#111214] whitespace-nowrap">{u.name}</td>
                   <td className="px-3.5 py-3 align-middle text-zinc-700 truncate max-w-[220px]" title={u.email || ""}>{u.email || "—"}</td>
                   <td className="px-3.5 py-3 align-middle whitespace-nowrap"><code className="px-2 py-0.5 rounded-lg bg-white/75 border border-white text-[11px] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04)]">{u.id}</code></td>
@@ -1653,7 +1662,7 @@ function UploadersTab({ uploaders, onAddUploader, onRemoveUploader }) {
 }
 
 // ---------------------------------------------------------------------------
-function TrialsTab({ books, trialRequests, onApproveTrial, onRejectTrial, onResendEmail, onEditAccess }) {
+function TrialsTab({ books, trialRequests, onApproveTrial, onRejectTrial, onDeleteTrial, onDeleteRejectedTrials, onResendEmail, onEditAccess }) {
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [activeTrialId, setActiveTrialId] = useState(null);
@@ -1662,6 +1671,30 @@ function TrialsTab({ books, trialRequests, onApproveTrial, onRejectTrial, onRese
   const [genreFilter, setGenreFilter] = useState("All");
   const [pubTypeFilter, setPubTypeFilter] = useState("All");
   const [authorFilter, setAuthorFilter] = useState("All");
+  const [tableSearch, setTableSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [deletingTrial, setDeletingTrial] = useState(null);
+  const [isDeletingTrial, setIsDeletingTrial] = useState(false);
+  const [confirmClearRejected, setConfirmClearRejected] = useState(false);
+  const [isClearingRejected, setIsClearingRejected] = useState(false);
+
+  const rejectedCount = useMemo(
+    () => trialRequests.filter((t) => t.status === "rejected").length,
+    [trialRequests]
+  );
+
+  const filteredTrials = useMemo(() => {
+    const q = tableSearch.trim().toLowerCase();
+    return trialRequests.filter((t) => {
+      if (statusFilter !== "all" && t.status !== statusFilter) return false;
+      if (!q) return true;
+      return (
+        (t.name || "").toLowerCase().includes(q) ||
+        (t.email || "").toLowerCase().includes(q) ||
+        (t.institution || "").toLowerCase().includes(q)
+      );
+    });
+  }, [trialRequests, tableSearch, statusFilter]);
 
   const filteredBooks = useMemo(() => books.filter((b) =>
     (genreFilter === "All" || b.genre === genreFilter) &&
@@ -1708,73 +1741,230 @@ function TrialsTab({ books, trialRequests, onApproveTrial, onRejectTrial, onRese
     setSelected([]);
   }
 
+  async function handleConfirmDeleteTrial() {
+    if (!deletingTrial || !onDeleteTrial) return;
+    setIsDeletingTrial(true);
+    try {
+      await onDeleteTrial(deletingTrial.id);
+      setDeletingTrial(null);
+    } finally {
+      setIsDeletingTrial(false);
+    }
+  }
+
+  async function handleConfirmClearRejected() {
+    if (!onDeleteRejectedTrials) return;
+    setIsClearingRejected(true);
+    try {
+      await onDeleteRejectedTrials();
+      setConfirmClearRejected(false);
+    } finally {
+      setIsClearingRejected(false);
+    }
+  }
+
   return (
-    <div className="admin-glass-panel rounded-[22px] overflow-hidden">
-      <div tabIndex={0} role="region" aria-label="Trial requests" className="admin-table-region">
-        <table className="w-full text-sm border-collapse min-w-[820px]">
-          <thead>
-            <tr className="border-b border-black/[0.08] bg-white/55 backdrop-blur-md">
-              {["Name", "Email", "Institution", "Requested", "Status", "Actions"].map((h) => (
-                <th key={h} scope="col" className="text-left px-3.5 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px] whitespace-nowrap">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {trialRequests.map((t) => (
-              <tr key={t.id} className="border-t border-black/[0.06] bg-white/15 even:bg-white/30 hover:bg-white/65 transition-colors">
-                <td className="px-3.5 py-3 align-middle font-semibold text-[#111214] whitespace-nowrap">{t.name}</td>
-                <td className="px-3.5 py-3 align-middle text-zinc-700 truncate max-w-[200px]" title={t.email}>{t.email}</td>
-                <td className="px-3.5 py-3 align-middle text-zinc-700 truncate max-w-[180px]" title={t.institution || ""}>{t.institution || "—"}</td>
-                <td className="px-3.5 py-3 align-middle text-xs text-zinc-700 whitespace-nowrap">{t.requestedAt}</td>
-                <td className="px-3.5 py-3 align-middle whitespace-nowrap">
-                  {t.status === "pending" && <Badge tone="warn">Pending</Badge>}
-                  {t.status === "approved" && <Badge tone="good">Approved · ends {t.expiresAt}</Badge>}
-                  {t.status === "rejected" && <Badge tone="bad">Rejected</Badge>}
-                </td>
-                <td className="px-3.5 py-3 align-middle min-w-[210px]">
-                  {t.status === "pending" && (
-                    <div className="flex gap-1.5 items-center flex-wrap">
-                      <button onClick={() => handleOpenApprove(t.id)} className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-emerald-100/85 hover:bg-emerald-200/90 text-emerald-800 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer">
-                        <Check size={12} strokeWidth={2.2} /> Approve
-                      </button>
-                      <button onClick={() => onRejectTrial(t.id)} className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-red-100/85 hover:bg-red-200/90 text-red-700 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer">
-                        <X size={12} strokeWidth={2.2} /> Reject
-                      </button>
-                    </div>
-                  )}
-                  {t.status === "approved" && (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[240px]">
+          <div className="admin-glass-pill flex items-center gap-2 px-3.5 py-2 rounded-full flex-1 max-w-sm">
+            <Search size={14} className="text-zinc-600 shrink-0" />
+            <input
+              type="text"
+              value={tableSearch}
+              onChange={(e) => setTableSearch(e.target.value)}
+              placeholder="Search trial name, email or institution..."
+              className="w-full bg-transparent text-xs font-medium text-[#111214] placeholder:text-zinc-500 outline-none"
+            />
+            {tableSearch && (
+              <button type="button" onClick={() => setTableSearch("")} className="text-zinc-500 hover:text-black cursor-pointer">
+                <X size={13} />
+              </button>
+            )}
+          </div>
+          <select
+            aria-label="Filter trial requests by status"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="admin-glass-pill px-3.5 py-2 rounded-full text-xs font-semibold text-[#111214] outline-none cursor-pointer"
+          >
+            <option value="all">Status: All ({trialRequests.length})</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected ({rejectedCount})</option>
+          </select>
+        </div>
+
+        {rejectedCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setConfirmClearRejected(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-red-700 bg-red-100/85 hover:bg-red-200/90 border border-red-200/80 shadow-sm transition-all cursor-pointer"
+          >
+            <Trash2 size={14} /> Delete All Rejected ({rejectedCount})
+          </button>
+        )}
+      </div>
+
+      <div className="admin-glass-panel rounded-[22px] overflow-hidden">
+        <div tabIndex={0} role="region" aria-label="Trial requests" className="admin-table-region">
+          <table className="w-full text-sm border-collapse min-w-[860px]">
+            <thead>
+              <tr className="border-b border-black/[0.08] bg-white/95 backdrop-blur-md">
+                {["Name", "Email", "Institution", "Requested", "Status", "Actions"].map((h) => (
+                  <th key={h} scope="col" className="text-left px-3.5 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px] whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredTrials.map((t) => (
+                <tr key={t.id} className="border-t border-black/[0.06] bg-white even:bg-slate-50/45 hover:bg-slate-50/90 transition-colors">
+                  <td className="px-3.5 py-3 align-middle font-semibold text-[#111214] whitespace-nowrap">{t.name}</td>
+                  <td className="px-3.5 py-3 align-middle text-zinc-700 truncate max-w-[200px]" title={t.email}>{t.email}</td>
+                  <td className="px-3.5 py-3 align-middle text-zinc-700 truncate max-w-[180px]" title={t.institution || ""}>{t.institution || "—"}</td>
+                  <td className="px-3.5 py-3 align-middle text-xs text-zinc-700 whitespace-nowrap">{t.requestedAt}</td>
+                  <td className="px-3.5 py-3 align-middle whitespace-nowrap">
+                    {t.status === "pending" && <Badge tone="warn">Pending</Badge>}
+                    {t.status === "approved" && <Badge tone="good">Approved · ends {t.expiresAt}</Badge>}
+                    {t.status === "rejected" && <Badge tone="bad">Rejected</Badge>}
+                  </td>
+                  <td className="px-3.5 py-3 align-middle min-w-[250px]">
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <button onClick={() => handleOpenEdit(t)} className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-white/85 hover:bg-white border border-black/10 text-[#111214] text-[11px] font-semibold cursor-pointer">
-                          Edit Access
-                        </button>
+                        {t.status === "pending" && (
+                          <>
+                            <button onClick={() => handleOpenApprove(t.id)} className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-emerald-100/85 hover:bg-emerald-200/90 text-emerald-800 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer">
+                              <Check size={12} strokeWidth={2.2} /> Approve
+                            </button>
+                            <button onClick={() => onRejectTrial(t.id)} className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-orange-100/85 hover:bg-orange-200/90 text-orange-800 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer">
+                              <X size={12} strokeWidth={2.2} /> Reject
+                            </button>
+                          </>
+                        )}
+                        {t.status === "approved" && (
+                          <>
+                            <button onClick={() => handleOpenEdit(t)} className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-white hover:bg-slate-100 border border-black/10 text-[#111214] text-[11px] font-semibold cursor-pointer shadow-xs">
+                              Edit Access
+                            </button>
+                            <button
+                              onClick={() => onResendEmail && onResendEmail(t.id, 'approved')}
+                              className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-amber-100/85 hover:bg-amber-200/90 text-amber-900 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+                            >
+                              <Mail size={11} /> Resend Email
+                            </button>
+                          </>
+                        )}
+                        {t.status === "rejected" && (
+                          <button
+                            onClick={() => onResendEmail && onResendEmail(t.id, 'rejected')}
+                            className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-white hover:bg-slate-100 border border-black/10 text-[#111214] text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer shadow-xs"
+                          >
+                            <Mail size={11} /> Resend Rejection
+                          </button>
+                        )}
                         <button
-                          onClick={() => onResendEmail && onResendEmail(t.id, 'approved')}
-                          className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-amber-100/85 hover:bg-amber-200/90 text-amber-900 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+                          onClick={() => setDeletingTrial(t)}
+                          className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-red-100/85 hover:bg-red-200/90 text-red-700 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Delete trial request permanently"
                         >
-                          <Mail size={11} /> Resend Email
+                          <Trash2 size={11} /> Delete
                         </button>
                       </div>
-                      {t.password && <span className="text-[11px] font-semibold text-zinc-700 whitespace-nowrap">Login: <code>{t.email}</code> / <code>{t.password}</code></span>}
+                      {t.status === "approved" && t.password && (
+                        <span className="text-[11px] font-semibold text-zinc-700 whitespace-nowrap">Login: <code>{t.email}</code> / <code>{t.password}</code></span>
+                      )}
                     </div>
-                  )}
-                  {t.status === "rejected" && (
-                    <button
-                      onClick={() => onResendEmail && onResendEmail(t.id, 'rejected')}
-                      className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-white/85 hover:bg-white border border-black/10 text-[#111214] text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer"
-                    >
-                      <Mail size={11} /> Resend Rejection
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {trialRequests.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-zinc-600 text-xs font-medium">No trial requests yet.</td></tr>
-            )}
-          </tbody>
-        </table>
+                  </td>
+                </tr>
+              ))}
+              {filteredTrials.length === 0 && (
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-zinc-600 text-xs font-medium">No matching trial requests found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {deletingTrial && (
+        <Modal
+          title="Delete Trial Request"
+          onClose={() => !isDeletingTrial && setDeletingTrial(null)}
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-red-50 border border-red-200">
+              <AlertTriangle size={20} className="text-red-600 shrink-0 mt-0.5" />
+              <div className="text-sm text-black">
+                <p className="font-bold mb-1">
+                  Permanently delete trial request for &ldquo;{deletingTrial.name}&rdquo;?
+                </p>
+                <p className="text-xs text-black/80">
+                  Email: <strong>{deletingTrial.email}</strong> ({deletingTrial.status}).
+                  {deletingTrial.status === "approved"
+                    ? " This will also remove their free-trial login access immediately."
+                    : " This action cannot be undone."}
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDeletingTrial(null)}
+                disabled={isDeletingTrial}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleConfirmDeleteTrial}
+                disabled={isDeletingTrial}
+                className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+              >
+                <Trash2 size={14} /> {isDeletingTrial ? "Deleting..." : "Delete Permanently"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {confirmClearRejected && (
+        <Modal
+          title="Delete All Rejected Trials"
+          onClose={() => !isClearingRejected && setConfirmClearRejected(false)}
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-red-50 border border-red-200">
+              <AlertTriangle size={20} className="text-red-600 shrink-0 mt-0.5" />
+              <div className="text-sm text-black">
+                <p className="font-bold mb-1">
+                  Permanently delete all {rejectedCount} rejected trial request{rejectedCount > 1 ? "s" : ""}?
+                </p>
+                <p className="text-xs text-black/80">
+                  Pending and approved trial requests will remain untouched. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setConfirmClearRejected(false)}
+                disabled={isClearingRejected}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleConfirmClearRejected}
+                disabled={isClearingRejected}
+                className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+              >
+                <Trash2 size={14} /> {isClearingRejected ? "Deleting..." : `Delete ${rejectedCount} Rejected`}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {(showApproveModal || showEditModal) && (
         <Modal title={showApproveModal ? "Approve Trial & Select Books" : "Edit Trial Access"} onClose={() => { setShowApproveModal(false); setShowEditModal(false); }} wide>
@@ -3000,7 +3190,7 @@ function SubscribersTab({ subscribers }) {
         <div tabIndex={0} role="region" aria-label="Newsletter subscribers" className="admin-table-region">
           <table className="w-full text-sm border-collapse min-w-[460px]">
             <thead>
-              <tr className="border-b border-black/[0.08] bg-white/55 backdrop-blur-md">
+              <tr className="border-b border-black/[0.08] bg-white/95 backdrop-blur-md">
                 {["Email", "Subscribed At"].map((h) => (
                   <th key={h} scope="col" className="text-left px-3.5 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px] whitespace-nowrap">{h}</th>
                 ))}
@@ -3008,7 +3198,7 @@ function SubscribersTab({ subscribers }) {
             </thead>
             <tbody>
               {subscribers.map((s) => (
-                <tr key={s.id} className="border-t border-black/[0.06] bg-white/15 even:bg-white/30 hover:bg-white/65 transition-colors">
+                <tr key={s.id} className="border-t border-black/[0.06] bg-white even:bg-slate-50/45 hover:bg-slate-50/90 transition-colors">
                   <td className="px-3.5 py-3 align-middle font-semibold text-[#111214]">{s.email}</td>
                   <td className="px-3.5 py-3 align-middle text-zinc-700 text-xs whitespace-nowrap">{new Date(s.subscribed_at).toLocaleString()}</td>
                 </tr>

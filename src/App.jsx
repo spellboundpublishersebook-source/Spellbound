@@ -470,6 +470,47 @@ export default function App() {
     setTrialRequests((prev) => prev.map((t) => (t.id === id ? { ...t, status: "rejected" } : t)));
   }
 
+  async function handleDeleteTrial(id) {
+    const trial = trialRequests.find((t) => t.id === id);
+    try {
+      const { error } = await supabase.from('trial_requests').delete().eq('id', id);
+      if (error) {
+        console.error("Error deleting trial request:", error);
+        alert("Database error deleting trial request: " + error.message);
+        return false;
+      }
+      if (trial?.email) {
+        await supabase.from('readers').delete().eq('login_id', trial.email).eq('account_type', 'free_trial');
+      }
+    } catch (e) {
+      console.error("Error deleting trial request:", e);
+      alert("Error deleting trial request: " + e.message);
+      return false;
+    }
+    setTrialRequests((prev) => prev.filter((t) => t.id !== id));
+    if (trial?.email) {
+      setReaders((prev) => prev.filter((r) => !(r.loginId === trial.email && r.accountType === 'free_trial')));
+    }
+    return true;
+  }
+
+  async function handleDeleteRejectedTrials() {
+    try {
+      const { error } = await supabase.from('trial_requests').delete().eq('status', 'rejected');
+      if (error) {
+        console.error("Error deleting rejected trial requests:", error);
+        alert("Database error deleting rejected trial requests: " + error.message);
+        return false;
+      }
+    } catch (e) {
+      console.error("Error deleting rejected trial requests:", e);
+      alert("Error deleting rejected trial requests: " + e.message);
+      return false;
+    }
+    setTrialRequests((prev) => prev.filter((t) => t.status !== 'rejected'));
+    return true;
+  }
+
   async function handleCreateLicense(license) {
     try {
       const { bookIds, startDate, endDate, createdAt, email, ...dbLicense } = license;
@@ -912,7 +953,7 @@ export default function App() {
           onCreateReader={handleCreateReader} onRevokeReader={handleRevokeReader} onDeleteReader={handleDeleteReader} onToggleReaderStatus={handleToggleReaderStatus}
           onEditReaderAccess={handleEditReaderAccess} onResendReaderEmail={handleResendReaderEmail}
           onAddUploader={handleAddUploader} onRemoveUploader={handleRemoveUploader}
-          onApproveTrial={handleApproveTrial} onRejectTrial={handleRejectTrial} onEditTrialAccess={handleEditTrialAccess}
+          onApproveTrial={handleApproveTrial} onRejectTrial={handleRejectTrial} onDeleteTrial={handleDeleteTrial} onDeleteRejectedTrials={handleDeleteRejectedTrials} onEditTrialAccess={handleEditTrialAccess}
           onResendTrialEmail={handleResendTrialEmail} onResendInstitutionEmail={handleResendInstitutionEmail}
           onUpdateEmailTemplate={handleUpdateEmailTemplate}
           onAddFeaturedAuthor={handleAddFeaturedAuthor} onRemoveFeaturedAuthor={handleRemoveFeaturedAuthor}
