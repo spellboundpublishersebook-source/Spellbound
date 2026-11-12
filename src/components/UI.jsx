@@ -48,7 +48,7 @@ export function TextArea({ label, className = "", ...props }) {
   );
 }
 
-export function Badge({ children, tone = "neutral" }) {
+export function Badge({ children, tone = "neutral", className = "" }) {
   const tones = {
     neutral: "bg-gray-100 text-black border border-gray-200",
     good: "bg-green-100 text-green-700 border border-green-200",
@@ -56,7 +56,7 @@ export function Badge({ children, tone = "neutral" }) {
     bad: "bg-red-100 text-red-700 border border-red-200",
   };
   return (
-    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${tones[tone]}`}>
+    <span className={`inline-flex items-center gap-1 whitespace-nowrap px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${tones[tone]} ${className}`}>
       {children}
     </span>
   );

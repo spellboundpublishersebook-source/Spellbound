@@ -90,13 +90,19 @@ export default function AdminPanel({
   };
 
   return (
-    <div className="admin-glass-backdrop min-h-screen py-4 sm:py-6 px-3 sm:px-6 pb-20">
-      <div className="max-w-[1380px] mx-auto admin-glass-shell rounded-[28px] p-3 sm:p-5 lg:p-6 flex flex-col lg:flex-row gap-4 lg:gap-6">
+    <div className="admin-glass-backdrop min-h-screen py-3 sm:py-5 px-2.5 sm:px-5 pb-12">
+      {/* Soft ambient light orbs behind glass panels */}
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 overflow-hidden z-0">
+        <div className="absolute -top-24 -left-20 w-[420px] h-[420px] rounded-full bg-[#F5F23B]/25 blur-[110px]" />
+        <div className="absolute top-12 -right-24 w-[400px] h-[400px] rounded-full bg-[#F97316]/20 blur-[115px]" />
+        <div className="absolute bottom-0 left-1/3 w-[480px] h-[360px] rounded-full bg-slate-300/35 blur-[120px]" />
+      </div>
+      <div className="relative z-10 max-w-[1440px] mx-auto admin-glass-shell rounded-[26px] p-3 sm:p-4 lg:p-5 flex flex-col lg:flex-row gap-4 lg:gap-5">
         {/* LEFT GLASS ICON RAIL (DESKTOP) */}
         <aside
           aria-label="Admin navigation rail"
-          className={`hidden lg:flex flex-col justify-between shrink-0 py-3 px-2 rounded-2xl bg-white/35 border border-white/60 backdrop-blur-xl transition-all duration-300 ${
-            railExpanded ? "w-56" : "w-[74px]"
+          className={`hidden lg:flex flex-col justify-between shrink-0 py-3 px-2 rounded-2xl bg-white/40 border border-white/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-xl transition-all duration-300 ${
+            railExpanded ? "w-52" : "w-[68px]"
           }`}
         >
           <div className="flex flex-col items-center gap-4">
@@ -714,11 +720,11 @@ function InstitutionsTab({
 
       <div className="admin-glass-panel rounded-[22px] overflow-hidden">
         <div tabIndex={0} role="region" aria-label="Institutions directory" className="admin-table-region">
-          <table className="w-full text-sm border-collapse min-w-[820px]">
+          <table className="w-full text-sm border-collapse min-w-[960px]">
             <thead>
-              <tr className="border-b border-black/10 bg-white/40 backdrop-blur-md">
+              <tr className="border-b border-black/[0.08] bg-white/55 backdrop-blur-md">
                 {["Institution", "Login ID", "Password", "Active Readers", "Books", "Term", "Status", "Actions"].map((h) => (
-                  <th key={h} scope="col" className="text-left px-4 py-3.5 font-bold text-zinc-600 uppercase tracking-wider text-[10px]">
+                  <th key={h} scope="col" className="text-left px-3.5 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px] whitespace-nowrap">
                     {h}
                   </th>
                 ))}
@@ -734,25 +740,25 @@ function InstitutionsTab({
                 const isSpiked = activeCount >= 50;
                 const initial = String(l.name || "I").charAt(0).toUpperCase();
                 return (
-                  <tr key={l.id} className="border-t border-black/5 hover:bg-white/65 transition-colors">
-                    <td className="px-4 py-3.5 font-semibold text-[#111214]">
-                      <div className="flex items-center gap-3">
+                  <tr key={l.id} className="border-t border-black/[0.06] bg-white/15 even:bg-white/30 hover:bg-white/65 transition-colors">
+                    <td className="px-3.5 py-3 align-middle font-semibold text-[#111214] max-w-[220px]">
+                      <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#F5F23B] to-[#F97316] text-[#111214] font-extrabold text-xs flex items-center justify-center shadow-sm shrink-0">
                           {initial}
                         </div>
-                        <div className="min-w-0">
-                          <div className="truncate font-semibold text-xs sm:text-sm">{l.name}</div>
-                          {l.email && <div className="text-[11px] text-zinc-500 truncate">{l.email}</div>}
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate font-semibold text-xs sm:text-[13px]" title={l.name}>{l.name}</div>
+                          {l.email && <div className="text-[11px] text-zinc-500 truncate font-normal" title={l.email}>{l.email}</div>}
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5"><code className="px-2 py-0.5 rounded-md bg-white/70 border border-black/10 text-xs">{l.id}</code></td>
-                    <td className="px-4 py-3.5"><code className="px-2 py-0.5 rounded-md bg-white/70 border border-black/10 text-xs">{l.password}</code></td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-zinc-800">{activeCount}</span>
+                    <td className="px-3.5 py-3 align-middle whitespace-nowrap"><code className="px-2 py-0.5 rounded-lg bg-white/75 border border-white text-[11px] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04)]">{l.id}</code></td>
+                    <td className="px-3.5 py-3 align-middle whitespace-nowrap"><code className="px-2 py-0.5 rounded-lg bg-white/75 border border-white text-[11px] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04)]">{l.password}</code></td>
+                    <td className="px-3.5 py-3 align-middle whitespace-nowrap">
+                      <div className="inline-flex items-center gap-1.5">
+                        <span className="font-bold text-zinc-800 text-xs">{activeCount}</span>
                         {isSpiked ? (
-                          <Badge tone="warn" className="animate-pulse flex items-center gap-1 text-[10px]">
+                          <Badge tone="warn" className="animate-pulse inline-flex items-center gap-1 text-[10px]">
                             <Activity size={10} /> Spike
                           </Badge>
                         ) : activeCount > 0 ? (
@@ -760,40 +766,40 @@ function InstitutionsTab({
                         ) : null}
                       </div>
                     </td>
-                    <td className="px-4 py-3.5 text-xs font-semibold text-zinc-700">{l.bookIds.length} titles</td>
-                    <td className="px-4 py-3.5 text-xs text-zinc-700 whitespace-nowrap">{l.startDate.slice(0, 10)} → {l.endDate.slice(0, 10)}</td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-3.5 py-3 align-middle text-xs font-semibold text-zinc-700 whitespace-nowrap">{l.bookIds.length} titles</td>
+                    <td className="px-3.5 py-3 align-middle text-xs text-zinc-700 whitespace-nowrap">{l.startDate.slice(0, 10)} → {l.endDate.slice(0, 10)}</td>
+                    <td className="px-3.5 py-3 align-middle whitespace-nowrap">
                       {isOffline ? <Badge tone="bad">Offline</Badge> : expired ? <Badge tone="bad">Expired</Badge> : soon ? <Badge tone="warn">{left}d left</Badge> : <Badge tone="good">Active</Badge>}
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-3.5 py-3 align-middle min-w-[265px]">
                       <div className="flex gap-1.5 items-center flex-wrap">
                         {l.email && (
-                          <button onClick={() => onResendEmail && onResendEmail(l.id)} className="px-2.5 py-1 rounded-full bg-amber-100/80 hover:bg-amber-200/80 text-amber-900 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer">
+                          <button onClick={() => onResendEmail && onResendEmail(l.id)} className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-amber-100/85 hover:bg-amber-200/90 text-amber-900 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
                             <Mail size={11} /> Resend
                           </button>
                         )}
                         <button
                           onClick={() => openRotatePassword(l)}
-                          className="px-2.5 py-1 rounded-full bg-indigo-100/80 hover:bg-indigo-200/80 text-indigo-800 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                          className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-indigo-100/85 hover:bg-indigo-200/90 text-indigo-800 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]"
                         >
                           <Key size={11} /> Rotate PW
                         </button>
-                        <button onClick={() => openEditAccess(l)} className="px-2.5 py-1 rounded-full bg-white/80 hover:bg-white border border-black/10 text-[#111214] text-[11px] font-semibold transition-colors cursor-pointer">
+                        <button onClick={() => openEditAccess(l)} className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-white/85 hover:bg-white border border-black/10 text-[#111214] text-[11px] font-semibold transition-colors cursor-pointer shadow-xs">
                           Edit Access
                         </button>
                         {!expired && (
-                          <button onClick={() => onToggleLicenseStatus(l.id, !isOffline)} className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors cursor-pointer ${isOffline ? "bg-emerald-100/85 text-emerald-800 hover:bg-emerald-200/80" : "bg-amber-100/85 text-amber-800 hover:bg-amber-200/80"}`}>
+                          <button onClick={() => onToggleLicenseStatus(l.id, !isOffline)} className={`whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors cursor-pointer shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] ${isOffline ? "bg-emerald-100/85 text-emerald-800 hover:bg-emerald-200/85" : "bg-amber-100/85 text-amber-800 hover:bg-amber-200/85"}`}>
                             {isOffline ? "Set Online" : "Set Offline"}
                           </button>
                         )}
                         {!expired && !isOffline && (
-                          <button onClick={() => onRevokeLicense(l.id)} className="px-2.5 py-1 rounded-full bg-orange-100/85 hover:bg-orange-200/85 text-orange-800 text-[11px] font-semibold transition-colors cursor-pointer">
+                          <button onClick={() => onRevokeLicense(l.id)} className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-orange-100/85 hover:bg-orange-200/90 text-orange-800 text-[11px] font-semibold transition-colors cursor-pointer shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
                             Revoke
                           </button>
                         )}
                         <button
                           onClick={() => setDeletingLicense(l)}
-                          className="px-2.5 py-1 rounded-full bg-red-100/85 hover:bg-red-200/90 text-red-700 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                          className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-red-100/85 hover:bg-red-200/90 text-red-700 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]"
                           title="Permanently delete institution"
                         >
                           <Trash2 size={11} /> Delete
@@ -1252,11 +1258,11 @@ function ReadersTab({
 
       <div className="admin-glass-panel rounded-[22px] overflow-hidden">
         <div tabIndex={0} role="region" aria-label="Individual users and orders" className="admin-table-region">
-          <table className="w-full text-sm border-collapse min-w-[780px]">
+          <table className="w-full text-sm border-collapse min-w-[900px]">
             <thead>
-              <tr className="border-b border-black/10 bg-white/40 backdrop-blur-md">
+              <tr className="border-b border-black/[0.08] bg-white/55 backdrop-blur-md">
                 {["User", "Login ID", "Password", "Books", "Term", "Status", "Actions"].map((h) => (
-                  <th key={h} scope="col" className="text-left px-4 py-3.5 font-bold text-zinc-600 uppercase tracking-wider text-[10px]">
+                  <th key={h} scope="col" className="text-left px-3.5 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px] whitespace-nowrap">
                     {h}
                   </th>
                 ))}
@@ -1271,25 +1277,25 @@ function ReadersTab({
                 const bookCount = Array.isArray(r.bookIds) ? r.bookIds.length : (r.bookIds === "all" ? books.length : 0);
                 const initial = String(r.name || r.loginId || "U").charAt(0).toUpperCase();
                 return (
-                  <tr key={r.id} className="border-t border-black/5 hover:bg-white/65 transition-colors">
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-3">
+                  <tr key={r.id} className="border-t border-black/[0.06] bg-white/15 even:bg-white/30 hover:bg-white/65 transition-colors">
+                    <td className="px-3.5 py-3 align-middle max-w-[220px]">
+                      <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#60A5FA] to-[#4F46E5] text-white font-bold text-xs flex items-center justify-center shadow-sm shrink-0">
                           {initial}
                         </div>
-                        <div className="min-w-0">
-                          <div className="font-semibold text-[#111214] truncate">{r.name || "—"}</div>
-                          {r.email && <div className="text-[11px] text-zinc-500 truncate">{r.email}</div>}
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-[#111214] text-xs sm:text-[13px] truncate" title={r.name || ""}>{r.name || "—"}</div>
+                          {r.email && <div className="text-[11px] text-zinc-500 truncate" title={r.email}>{r.email}</div>}
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5"><code className="px-2 py-0.5 rounded-md bg-white/70 border border-black/10 text-xs">{r.loginId}</code></td>
-                    <td className="px-4 py-3.5"><code className="px-2 py-0.5 rounded-md bg-white/70 border border-black/10 text-xs">{r.password}</code></td>
-                    <td className="px-4 py-3.5 text-xs font-semibold text-zinc-700">{bookCount} titles</td>
-                    <td className="px-4 py-3.5 text-xs text-zinc-700 whitespace-nowrap">
+                    <td className="px-3.5 py-3 align-middle whitespace-nowrap"><code className="px-2 py-0.5 rounded-lg bg-white/75 border border-white text-[11px] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04)]">{r.loginId}</code></td>
+                    <td className="px-3.5 py-3 align-middle whitespace-nowrap"><code className="px-2 py-0.5 rounded-lg bg-white/75 border border-white text-[11px] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04)]">{r.password}</code></td>
+                    <td className="px-3.5 py-3 align-middle text-xs font-semibold text-zinc-700 whitespace-nowrap">{bookCount} titles</td>
+                    <td className="px-3.5 py-3 align-middle text-xs text-zinc-700 whitespace-nowrap">
                       {r.startDate ? r.startDate.slice(0, 10) : "—"} → {r.endDate ? r.endDate.slice(0, 10) : "—"}
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-3.5 py-3 align-middle whitespace-nowrap">
                       {isOffline ? (
                         <Badge tone="bad">Offline</Badge>
                       ) : expired ? (
@@ -1300,27 +1306,27 @@ function ReadersTab({
                         <Badge tone="good">Active</Badge>
                       )}
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-3.5 py-3 align-middle min-w-[235px]">
                       <div className="flex gap-1.5 items-center flex-wrap">
                         {r.email && (
                           <button
                             onClick={() => onResendEmail && onResendEmail(r.id)}
-                            className="px-2.5 py-1 rounded-full bg-amber-100/80 hover:bg-amber-200/80 text-amber-900 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                            className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-amber-100/85 hover:bg-amber-200/90 text-amber-900 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]"
                           >
                             <Mail size={11} /> Resend
                           </button>
                         )}
                         <button
                           onClick={() => openEditAccess(r)}
-                          className="px-2.5 py-1 rounded-full bg-white/80 hover:bg-white border border-black/10 text-[#111214] text-[11px] font-semibold transition-colors cursor-pointer"
+                          className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-white/85 hover:bg-white border border-black/10 text-[#111214] text-[11px] font-semibold transition-colors cursor-pointer shadow-xs"
                         >
                           Edit Access
                         </button>
                         {!expired && (
                           <button
                             onClick={() => onToggleReaderStatus && onToggleReaderStatus(r.id, !isOffline)}
-                            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors cursor-pointer ${
-                              isOffline ? "bg-emerald-100/85 text-emerald-800 hover:bg-emerald-200/80" : "bg-amber-100/85 text-amber-800 hover:bg-amber-200/80"
+                            className={`whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors cursor-pointer shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] ${
+                              isOffline ? "bg-emerald-100/85 text-emerald-800 hover:bg-emerald-200/85" : "bg-amber-100/85 text-amber-800 hover:bg-amber-200/85"
                             }`}
                           >
                             {isOffline ? "Set Online" : "Set Offline"}
@@ -1329,14 +1335,14 @@ function ReadersTab({
                         {!expired && !isOffline && (
                           <button
                             onClick={() => onRevokeReader && onRevokeReader(r.id)}
-                            className="px-2.5 py-1 rounded-full bg-orange-100/85 hover:bg-orange-200/85 text-orange-800 text-[11px] font-semibold transition-colors cursor-pointer"
+                            className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-orange-100/85 hover:bg-orange-200/90 text-orange-800 text-[11px] font-semibold transition-colors cursor-pointer shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]"
                           >
                             Revoke
                           </button>
                         )}
                         <button
                           onClick={() => setDeletingReader(r)}
-                          className="px-2.5 py-1 rounded-full bg-red-100/85 hover:bg-red-200/90 text-red-700 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                          className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-red-100/85 hover:bg-red-200/90 text-red-700 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]"
                           title="Permanently delete user"
                         >
                           <Trash2 size={11} /> Delete
@@ -1602,23 +1608,23 @@ function UploadersTab({ uploaders, onAddUploader, onRemoveUploader }) {
       </div>
       <div className="admin-glass-panel rounded-[22px] overflow-hidden">
         <div tabIndex={0} role="region" aria-label="Uploaders list" className="admin-table-region">
-          <table className="w-full text-sm border-collapse min-w-[600px]">
+          <table className="w-full text-sm border-collapse min-w-[660px]">
             <thead>
-              <tr className="border-b border-black/10 bg-white/40 backdrop-blur-md">
+              <tr className="border-b border-black/[0.08] bg-white/55 backdrop-blur-md">
                 {["Name", "Email", "Login ID", "Password", "Actions"].map((h) => (
-                  <th key={h} scope="col" className="text-left px-4 py-3.5 font-bold text-zinc-600 uppercase tracking-wider text-[10px]">{h}</th>
+                  <th key={h} scope="col" className="text-left px-3.5 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px] whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {uploaders.map((u) => (
-                <tr key={u.id} className="border-t border-black/5 hover:bg-white/65 transition-colors">
-                  <td className="px-4 py-3.5 align-middle font-semibold text-[#111214]">{u.name}</td>
-                  <td className="px-4 py-3.5 align-middle text-zinc-700">{u.email || "—"}</td>
-                  <td className="px-4 py-3.5 align-middle"><code className="px-2 py-0.5 rounded-md bg-white/70 border border-black/10 text-xs">{u.id}</code></td>
-                  <td className="px-4 py-3.5 align-middle"><code className="px-2 py-0.5 rounded-md bg-white/70 border border-black/10 text-xs">{u.password}</code></td>
-                  <td className="px-4 py-3.5 align-middle">
-                    <button onClick={() => onRemoveUploader(u.id)} className="px-2.5 py-1 rounded-full bg-red-100/85 hover:bg-red-200/90 text-red-700 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer">
+                <tr key={u.id} className="border-t border-black/[0.06] bg-white/15 even:bg-white/30 hover:bg-white/65 transition-colors">
+                  <td className="px-3.5 py-3 align-middle font-semibold text-[#111214] whitespace-nowrap">{u.name}</td>
+                  <td className="px-3.5 py-3 align-middle text-zinc-700 truncate max-w-[220px]" title={u.email || ""}>{u.email || "—"}</td>
+                  <td className="px-3.5 py-3 align-middle whitespace-nowrap"><code className="px-2 py-0.5 rounded-lg bg-white/75 border border-white text-[11px] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04)]">{u.id}</code></td>
+                  <td className="px-3.5 py-3 align-middle whitespace-nowrap"><code className="px-2 py-0.5 rounded-lg bg-white/75 border border-white text-[11px] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04)]">{u.password}</code></td>
+                  <td className="px-3.5 py-3 align-middle whitespace-nowrap">
+                    <button onClick={() => onRemoveUploader(u.id)} className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-red-100/85 hover:bg-red-200/90 text-red-700 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer">
                       <Trash2 size={11} strokeWidth={1.8} /> Remove
                     </button>
                   </td>
@@ -1705,57 +1711,57 @@ function TrialsTab({ books, trialRequests, onApproveTrial, onRejectTrial, onRese
   return (
     <div className="admin-glass-panel rounded-[22px] overflow-hidden">
       <div tabIndex={0} role="region" aria-label="Trial requests" className="admin-table-region">
-        <table className="w-full text-sm border-collapse min-w-[760px]">
+        <table className="w-full text-sm border-collapse min-w-[820px]">
           <thead>
-            <tr className="border-b border-black/10 bg-white/40 backdrop-blur-md">
+            <tr className="border-b border-black/[0.08] bg-white/55 backdrop-blur-md">
               {["Name", "Email", "Institution", "Requested", "Status", "Actions"].map((h) => (
-                <th key={h} scope="col" className="text-left px-4 py-3.5 font-bold text-zinc-600 uppercase tracking-wider text-[10px]">{h}</th>
+                <th key={h} scope="col" className="text-left px-3.5 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px] whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {trialRequests.map((t) => (
-              <tr key={t.id} className="border-t border-black/5 hover:bg-white/65 transition-colors">
-                <td className="px-4 py-3.5 align-middle font-semibold text-[#111214]">{t.name}</td>
-                <td className="px-4 py-3.5 align-middle text-zinc-700">{t.email}</td>
-                <td className="px-4 py-3.5 align-middle text-zinc-700">{t.institution || "—"}</td>
-                <td className="px-4 py-3.5 align-middle text-xs text-zinc-700 whitespace-nowrap">{t.requestedAt}</td>
-                <td className="px-4 py-3.5 align-middle">
+              <tr key={t.id} className="border-t border-black/[0.06] bg-white/15 even:bg-white/30 hover:bg-white/65 transition-colors">
+                <td className="px-3.5 py-3 align-middle font-semibold text-[#111214] whitespace-nowrap">{t.name}</td>
+                <td className="px-3.5 py-3 align-middle text-zinc-700 truncate max-w-[200px]" title={t.email}>{t.email}</td>
+                <td className="px-3.5 py-3 align-middle text-zinc-700 truncate max-w-[180px]" title={t.institution || ""}>{t.institution || "—"}</td>
+                <td className="px-3.5 py-3 align-middle text-xs text-zinc-700 whitespace-nowrap">{t.requestedAt}</td>
+                <td className="px-3.5 py-3 align-middle whitespace-nowrap">
                   {t.status === "pending" && <Badge tone="warn">Pending</Badge>}
                   {t.status === "approved" && <Badge tone="good">Approved · ends {t.expiresAt}</Badge>}
                   {t.status === "rejected" && <Badge tone="bad">Rejected</Badge>}
                 </td>
-                <td className="px-4 py-3.5 align-middle">
+                <td className="px-3.5 py-3 align-middle min-w-[210px]">
                   {t.status === "pending" && (
-                    <div className="flex gap-2">
-                      <button onClick={() => handleOpenApprove(t.id)} className="px-2.5 py-1 rounded-full bg-emerald-100/85 hover:bg-emerald-200/85 text-emerald-800 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer">
+                    <div className="flex gap-1.5 items-center flex-wrap">
+                      <button onClick={() => handleOpenApprove(t.id)} className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-emerald-100/85 hover:bg-emerald-200/90 text-emerald-800 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer">
                         <Check size={12} strokeWidth={2.2} /> Approve
                       </button>
-                      <button onClick={() => onRejectTrial(t.id)} className="px-2.5 py-1 rounded-full bg-red-100/85 hover:bg-red-200/85 text-red-700 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer">
+                      <button onClick={() => onRejectTrial(t.id)} className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-red-100/85 hover:bg-red-200/90 text-red-700 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer">
                         <X size={12} strokeWidth={2.2} /> Reject
                       </button>
                     </div>
                   )}
                   {t.status === "approved" && (
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <button onClick={() => handleOpenEdit(t)} className="px-2.5 py-1 rounded-full bg-white/80 hover:bg-white border border-black/10 text-[#111214] text-[11px] font-semibold cursor-pointer">
+                        <button onClick={() => handleOpenEdit(t)} className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-white/85 hover:bg-white border border-black/10 text-[#111214] text-[11px] font-semibold cursor-pointer">
                           Edit Access
                         </button>
                         <button
                           onClick={() => onResendEmail && onResendEmail(t.id, 'approved')}
-                          className="px-2.5 py-1 rounded-full bg-amber-100/80 hover:bg-amber-200/80 text-amber-900 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+                          className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-amber-100/85 hover:bg-amber-200/90 text-amber-900 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
                         >
                           <Mail size={11} /> Resend Email
                         </button>
                       </div>
-                      {t.password && <span className="text-[11px] font-semibold text-zinc-700">Login: <code>{t.email}</code> / <code>{t.password}</code></span>}
+                      {t.password && <span className="text-[11px] font-semibold text-zinc-700 whitespace-nowrap">Login: <code>{t.email}</code> / <code>{t.password}</code></span>}
                     </div>
                   )}
                   {t.status === "rejected" && (
                     <button
                       onClick={() => onResendEmail && onResendEmail(t.id, 'rejected')}
-                      className="px-2.5 py-1 rounded-full bg-white/80 hover:bg-white border border-black/10 text-[#111214] text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer"
+                      className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-white/85 hover:bg-white border border-black/10 text-[#111214] text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer"
                     >
                       <Mail size={11} /> Resend Rejection
                     </button>
@@ -2994,17 +3000,17 @@ function SubscribersTab({ subscribers }) {
         <div tabIndex={0} role="region" aria-label="Newsletter subscribers" className="admin-table-region">
           <table className="w-full text-sm border-collapse min-w-[460px]">
             <thead>
-              <tr className="border-b border-black/10 bg-white/40 backdrop-blur-md">
+              <tr className="border-b border-black/[0.08] bg-white/55 backdrop-blur-md">
                 {["Email", "Subscribed At"].map((h) => (
-                  <th key={h} scope="col" className="text-left px-4 py-3.5 font-bold text-zinc-600 uppercase tracking-wider text-[10px]">{h}</th>
+                  <th key={h} scope="col" className="text-left px-3.5 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px] whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {subscribers.map((s) => (
-                <tr key={s.id} className="border-t border-black/5 hover:bg-white/65 transition-colors">
-                  <td className="px-4 py-3.5 align-middle font-semibold text-[#111214]">{s.email}</td>
-                  <td className="px-4 py-3.5 align-middle text-zinc-700 text-xs">{new Date(s.subscribed_at).toLocaleString()}</td>
+                <tr key={s.id} className="border-t border-black/[0.06] bg-white/15 even:bg-white/30 hover:bg-white/65 transition-colors">
+                  <td className="px-3.5 py-3 align-middle font-semibold text-[#111214]">{s.email}</td>
+                  <td className="px-3.5 py-3 align-middle text-zinc-700 text-xs whitespace-nowrap">{new Date(s.subscribed_at).toLocaleString()}</td>
                 </tr>
               ))}
               {subscribers.length === 0 && (

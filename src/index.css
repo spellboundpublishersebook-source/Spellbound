@@ -80,37 +80,47 @@ header {
    ================================================================ */
 
 .admin-glass-backdrop {
+  position: relative;
+  overflow-x: clip;
   background:
-    radial-gradient(62% 55% at 8% 8%, rgba(233, 224, 152, 0.55) 0%, transparent 65%),
-    radial-gradient(58% 54% at 92% 10%, rgba(246, 189, 148, 0.52) 0%, transparent 62%),
-    radial-gradient(65% 60% at 50% 95%, rgba(212, 215, 212, 0.72) 0%, transparent 70%),
-    linear-gradient(145deg, #eceae0 0%, #ede6dc 48%, #e1e2de 100%);
+    radial-gradient(52% 48% at 6% 6%, rgba(242, 224, 96, 0.52) 0%, transparent 62%),
+    radial-gradient(50% 48% at 94% 8%, rgba(244, 158, 108, 0.46) 0%, transparent 60%),
+    radial-gradient(45% 45% at 50% 45%, rgba(203, 213, 225, 0.50) 0%, transparent 68%),
+    radial-gradient(60% 55% at 22% 92%, rgba(214, 211, 198, 0.65) 0%, transparent 70%),
+    linear-gradient(145deg, #dcd9cd 0%, #e1dbd1 45%, #cfd4d8 100%);
 }
 
 .admin-glass-shell {
-  background: rgba(255, 255, 255, 0.44);
-  backdrop-filter: blur(26px) saturate(145%);
-  -webkit-backdrop-filter: blur(26px) saturate(145%);
-  border: 1px solid rgba(255, 255, 255, 0.68);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.48) 0%, rgba(255, 255, 255, 0.28) 100%);
+  backdrop-filter: blur(28px) saturate(165%);
+  -webkit-backdrop-filter: blur(28px) saturate(165%);
+  border: 1px solid rgba(255, 255, 255, 0.78);
   box-shadow:
-    0 28px 70px -22px rgba(24, 24, 27, 0.14),
-    0 1px 0 inset rgba(255, 255, 255, 0.75);
+    0 28px 68px -22px rgba(15, 23, 42, 0.20),
+    0 0 0 1px rgba(17, 18, 20, 0.05),
+    inset 0 1px 1px rgba(255, 255, 255, 0.90),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .admin-glass-panel {
-  background: rgba(255, 255, 255, 0.56);
-  backdrop-filter: blur(18px) saturate(135%);
-  -webkit-backdrop-filter: blur(18px) saturate(135%);
-  border: 1px solid rgba(255, 255, 255, 0.76);
-  box-shadow: 0 12px 34px -16px rgba(17, 24, 39, 0.10);
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.62) 0%, rgba(255, 255, 255, 0.36) 100%);
+  backdrop-filter: blur(20px) saturate(155%);
+  -webkit-backdrop-filter: blur(20px) saturate(155%);
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  box-shadow:
+    0 14px 36px -18px rgba(15, 23, 42, 0.14),
+    0 0 0 1px rgba(17, 18, 20, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
 }
 
 .admin-glass-pill {
-  background: rgba(255, 255, 255, 0.52);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  box-shadow: 0 4px 14px -4px rgba(17, 24, 39, 0.06);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.68) 0%, rgba(255, 255, 255, 0.42) 100%);
+  backdrop-filter: blur(14px) saturate(145%);
+  -webkit-backdrop-filter: blur(14px) saturate(145%);
+  border: 1px solid rgba(255, 255, 255, 0.86);
+  box-shadow:
+    0 4px 14px -4px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
 }
 
 .admin-bento-card {
