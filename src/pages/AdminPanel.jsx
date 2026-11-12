@@ -25,8 +25,8 @@ const TABS = [
 export default function AdminPanel({
   books, licenses, uploaders, trialRequests, readers = [], subscribers = [], emailTemplates, featuredAuthors,
   activeReadingSessions = [],
-  onCreateLicense, onRevokeLicense, onToggleLicenseStatus, onEditInstitutionAccess, onRotateSemesterPassword,
-  onCreateReader, onRevokeReader, onToggleReaderStatus, onEditReaderAccess, onResendReaderEmail,
+  onCreateLicense, onRevokeLicense, onDeleteLicense, onToggleLicenseStatus, onEditInstitutionAccess, onRotateSemesterPassword,
+  onCreateReader, onRevokeReader, onDeleteReader, onToggleReaderStatus, onEditReaderAccess, onResendReaderEmail,
   onAddUploader, onRemoveUploader,
   onApproveTrial, onRejectTrial, onEditTrialAccess, onResendTrialEmail, onResendInstitutionEmail, onUpdateEmailTemplate,
   onAddFeaturedAuthor, onRemoveFeaturedAuthor,
@@ -114,6 +114,7 @@ export default function AdminPanel({
             activeSessionCounts={activeSessionCounts}
             onCreateLicense={onCreateLicense}
             onRevokeLicense={onRevokeLicense}
+            onDeleteLicense={onDeleteLicense}
             onToggleLicenseStatus={onToggleLicenseStatus}
             onResendEmail={onResendInstitutionEmail}
             onEditAccess={onEditInstitutionAccess}
@@ -126,6 +127,7 @@ export default function AdminPanel({
             readers={readers}
             onCreateReader={onCreateReader}
             onRevokeReader={onRevokeReader}
+            onDeleteReader={onDeleteReader}
             onToggleReaderStatus={onToggleReaderStatus}
             onResendEmail={onResendReaderEmail}
             onEditAccess={onEditReaderAccess}
@@ -157,6 +159,7 @@ function InstitutionsTab({
   activeSessionCounts = {},
   onCreateLicense,
   onRevokeLicense,
+  onDeleteLicense,
   onToggleLicenseStatus,
   onResendEmail,
   onEditAccess,
@@ -184,6 +187,18 @@ function InstitutionsTab({
   const [newSemesterPw, setNewSemesterPw] = useState("");
   const [isRotating, setIsRotating] = useState(false);
   const [rotatedSuccess, setRotatedSuccess] = useState(false);
+  const [deletingLicense, setDeletingLicense] = useState(null);
+  const [isDeletingLicense, setIsDeletingLicense] = useState(false);
+
+  async function handleConfirmDeleteLicense() {
+    if (!deletingLicense || !onDeleteLicense) return;
+    setIsDeletingLicense(true);
+    const ok = await onDeleteLicense(deletingLicense.id);
+    setIsDeletingLicense(false);
+    if (ok !== false) {
+      setDeletingLicense(null);
+    }
+  }
 
   function openRotatePassword(license) {
     setRotatingLicense(license);
@@ -329,12 +344,19 @@ function InstitutionsTab({
                     {!expired && !isOffline && (
                       <button onClick={() => onRevokeLicense(l.id)} className="text-[11px] font-semibold uppercase tracking-wider text-red-600">Revoke</button>
                     )}
+                    <button
+                      onClick={() => setDeletingLicense(l)}
+                      className="text-[11px] font-semibold uppercase tracking-wider text-red-700 hover:text-red-900 flex items-center gap-1 cursor-pointer"
+                      title="Permanently delete institution"
+                    >
+                      <Trash2 size={12} /> Delete
+                    </button>
                   </td>
                 </tr>
               );
             })}
             {licenses.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-6 text-center text-black">No institutions yet.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-6 text-center text-black">No institutions yet.</td></tr>
             )}
           </tbody>
         </table>
@@ -583,6 +605,35 @@ function InstitutionsTab({
           )}
         </Modal>
       )}
+
+      {deletingLicense && (
+        <Modal
+          title="Delete Institution License"
+          onClose={() => !isDeletingLicense && setDeletingLicense(null)}
+        >
+          <div className="space-y-4">
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-900">
+              <p className="font-semibold mb-1">Are you sure you want to permanently delete this institution?</p>
+              <p className="text-xs text-red-800">
+                <strong>{deletingLicense.name}</strong> (Login ID: <code>{deletingLicense.id}</code>) will be permanently removed from the database and will no longer be able to log in.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setDeletingLicense(null)} disabled={isDeletingLicense}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleConfirmDeleteLicense}
+                disabled={isDeletingLicense}
+                className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+              >
+                <Trash2 size={14} /> {isDeletingLicense ? "Deleting..." : "Delete Permanently"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -593,6 +644,7 @@ function ReadersTab({
   readers = [],
   onCreateReader,
   onRevokeReader,
+  onDeleteReader,
   onToggleReaderStatus,
   onResendEmail,
   onEditAccess
@@ -615,6 +667,18 @@ function ReadersTab({
 
   const [editReaderId, setEditReaderId] = useState(null);
   const [showEditAccessModal, setShowEditAccessModal] = useState(false);
+  const [deletingReader, setDeletingReader] = useState(null);
+  const [isDeletingReader, setIsDeletingReader] = useState(false);
+
+  async function handleConfirmDeleteReader() {
+    if (!deletingReader || !onDeleteReader) return;
+    setIsDeletingReader(true);
+    const ok = await onDeleteReader(deletingReader.id);
+    setIsDeletingReader(false);
+    if (ok !== false) {
+      setDeletingReader(null);
+    }
+  }
 
   const filteredBooks = useMemo(() => books.filter((b) =>
     (genreFilter === "All" || b.genre === genreFilter) &&
@@ -757,6 +821,13 @@ function ReadersTab({
                         Revoke
                       </button>
                     )}
+                    <button
+                      onClick={() => setDeletingReader(r)}
+                      className="text-[11px] font-semibold uppercase tracking-wider text-red-700 hover:text-red-900 flex items-center gap-1 cursor-pointer"
+                      title="Permanently delete user"
+                    >
+                      <Trash2 size={12} /> Delete
+                    </button>
                   </td>
                 </tr>
               );
@@ -948,6 +1019,35 @@ function ReadersTab({
           <Button onClick={handleSaveAccess} className="w-full">
             Save Changes
           </Button>
+        </Modal>
+      )}
+
+      {deletingReader && (
+        <Modal
+          title="Delete Individual User"
+          onClose={() => !isDeletingReader && setDeletingReader(null)}
+        >
+          <div className="space-y-4">
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-900">
+              <p className="font-semibold mb-1">Are you sure you want to permanently delete this user?</p>
+              <p className="text-xs text-red-800">
+                <strong>{deletingReader.name || deletingReader.loginId}</strong> (Login ID: <code>{deletingReader.loginId}</code>) will be permanently removed from the database and will no longer be able to log in.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setDeletingReader(null)} disabled={isDeletingReader}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleConfirmDeleteReader}
+                disabled={isDeletingReader}
+                className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+              >
+                <Trash2 size={14} /> {isDeletingReader ? "Deleting..." : "Delete Permanently"}
+              </Button>
+            </div>
+          </div>
         </Modal>
       )}
     </div>

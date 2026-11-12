@@ -558,6 +558,26 @@ export default function App() {
     setLicenses((prev) => prev.map((l) => (l.id === id ? { ...l, endDate: today() } : l)));
   }
 
+  async function handleDeleteLicense(id) {
+    try {
+      const { error } = await supabase.from('licenses').delete().eq('id', id);
+      if (error) {
+        console.error("Error deleting institution license:", error);
+        alert("Database error deleting institution: " + error.message);
+        return false;
+      }
+      // Best-effort cleanup of active telemetry sessions for this institution
+      await supabase.from('reading_sessions').delete().eq('license_id', id);
+    } catch (e) {
+      console.error("Error deleting institution license:", e);
+      alert("Error deleting institution: " + e.message);
+      return false;
+    }
+    setLicenses((prev) => prev.filter((l) => l.id !== id));
+    setActiveReadingSessions((prev) => prev.filter((s) => s.license_id !== id));
+    return true;
+  }
+
   async function handleToggleLicenseStatus(id, isOffline) {
     const newType = isOffline ? "offline" : "license";
     try {
@@ -634,6 +654,26 @@ export default function App() {
       console.error("Error revoking reader:", e);
       alert("Database error: " + e.message);
     }
+  }
+
+  async function handleDeleteReader(readerId) {
+    const reader = readers.find(r => r.id === readerId);
+    try {
+      const { error } = await supabase.from('readers').delete().eq('id', readerId);
+      if (error) {
+        console.error("Error deleting individual user:", error);
+        alert("Database error deleting user: " + error.message);
+        return false;
+      }
+      const sessionLicenseKey = reader?.loginId || readerId;
+      await supabase.from('reading_sessions').delete().eq('license_id', sessionLicenseKey);
+    } catch (e) {
+      console.error("Error deleting individual user:", e);
+      alert("Error deleting user: " + e.message);
+      return false;
+    }
+    setReaders(prev => prev.filter(r => r.id !== readerId));
+    return true;
   }
 
   async function handleResendReaderEmail(readerId) {
@@ -867,9 +907,9 @@ export default function App() {
         <AdminPanel
           books={books} licenses={licenses} uploaders={uploaders} trialRequests={trialRequests} readers={readers} subscribers={subscribers} emailTemplates={emailTemplates}
           featuredAuthors={featuredAuthors} activeReadingSessions={activeReadingSessions}
-          onCreateLicense={handleCreateLicense} onRevokeLicense={handleRevokeLicense} onToggleLicenseStatus={handleToggleLicenseStatus}
+          onCreateLicense={handleCreateLicense} onRevokeLicense={handleRevokeLicense} onDeleteLicense={handleDeleteLicense} onToggleLicenseStatus={handleToggleLicenseStatus}
           onEditInstitutionAccess={handleEditInstitutionAccess} onRotateSemesterPassword={handleRotateSemesterPassword}
-          onCreateReader={handleCreateReader} onRevokeReader={handleRevokeReader} onToggleReaderStatus={handleToggleReaderStatus}
+          onCreateReader={handleCreateReader} onRevokeReader={handleRevokeReader} onDeleteReader={handleDeleteReader} onToggleReaderStatus={handleToggleReaderStatus}
           onEditReaderAccess={handleEditReaderAccess} onResendReaderEmail={handleResendReaderEmail}
           onAddUploader={handleAddUploader} onRemoveUploader={handleRemoveUploader}
           onApproveTrial={handleApproveTrial} onRejectTrial={handleRejectTrial} onEditTrialAccess={handleEditTrialAccess}

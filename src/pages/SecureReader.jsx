@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { ChevronLeft, ChevronRight, ArrowLeft, ShieldAlert, Volume2, VolumeX } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowLeft, ShieldAlert, Volume2, VolumeX, ZoomIn, ZoomOut, RotateCcw, ScanSearch } from "lucide-react";
 import { palette, fontDisplay, fontBody } from "../theme";
 import { supabase } from "../supabaseClient";
 import Button from "../components/Button";
@@ -11,6 +11,11 @@ import BookLoader from "../components/BookLoader";
 // Set up pdf.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
+const BASE_PDF_WIDTH = 600;
+const MIN_ZOOM = 0.75;
+const MAX_ZOOM = 3.5;
+const ZOOM_STEP = 0.25;
+
 export default function SecureReader({ book, session, onBack }) {
   const [page, setPage] = useState(0); // For text pages
   const [pdfPageNumber, setPdfPageNumber] = useState(1);
@@ -19,6 +24,17 @@ export default function SecureReader({ book, session, onBack }) {
   const [isFocused, setIsFocused] = useState(true);
   const [jumpInput, setJumpInput] = useState("");
   const [isPlaying, setIsPlaying] = useState(false);
+
+  // PDF Zoom & Area Zoom state
+  const [zoom, setZoom] = useState(1);
+  const [areaZoomActive, setAreaZoomActive] = useState(false);
+  const [selectionRect, setSelectionRect] = useState(null);
+  const [isPanning, setIsPanning] = useState(false);
+  const viewportRef = useRef(null);
+  const pageBoxRef = useRef(null);
+  const areaStartRef = useRef(null);
+  const panStartRef = useRef(null);
+  const pendingFocusRef = useRef(null);
 
   // Per-session reading pace rate limit (prevents bot scraping)
   const [paceWarning, setPaceWarning] = useState(false);
@@ -64,8 +80,214 @@ export default function SecureReader({ book, session, onBack }) {
   // Save on page turn
   useEffect(() => {
     localStorage.setItem(`resume_${book.id}`, currentPageDisplay.toString());
-    localStorage.setItem(`last_read_book`, book.id);
   }, [currentPageDisplay, book.id]);
+
+  // Reset zoom state when switching books
+  useEffect(() => {
+    setZoom(1);
+    setAreaZoomActive(false);
+    setSelectionRect(null);
+    pendingFocusRef.current = null;
+  }, [book.id]);
+
+  const clampZoom = useCallback((val) => {
+    return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(val * 20) / 20));
+  }, []);
+
+  const scrollToPageFraction = useCallback((fracX, fracY, behavior = "smooth") => {
+    const vp = viewportRef.current;
+    const box = pageBoxRef.current;
+    if (!vp || !box) return;
+    const vpRect = vp.getBoundingClientRect();
+    const boxRect = box.getBoundingClientRect();
+    const targetX = (boxRect.left - vpRect.left + vp.scrollLeft) + fracX * boxRect.width;
+    const targetY = (boxRect.top - vpRect.top + vp.scrollTop) + fracY * boxRect.height;
+    vp.scrollTo({
+      left: Math.max(0, targetX - vp.clientWidth / 2),
+      top: Math.max(0, targetY - vp.clientHeight / 2),
+      behavior,
+    });
+  }, []);
+
+  const handleZoomIn = useCallback(() => {
+    setZoom((z) => clampZoom(z + ZOOM_STEP));
+  }, [clampZoom]);
+
+  const handleZoomOut = useCallback(() => {
+    setZoom((z) => clampZoom(z - ZOOM_STEP));
+  }, [clampZoom]);
+
+  const handleResetZoom = useCallback(() => {
+    setZoom(1);
+    setAreaZoomActive(false);
+    setSelectionRect(null);
+    pendingFocusRef.current = null;
+    if (viewportRef.current) {
+      viewportRef.current.scrollTo({ left: 0, top: 0, behavior: "smooth" });
+    }
+  }, []);
+
+  // Support Ctrl/Cmd + Wheel (and trackpad pinch) zoom over the PDF viewport
+  useEffect(() => {
+    const vp = viewportRef.current;
+    if (!vp || !book.pdfUrl) return;
+    const onWheel = (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const box = pageBoxRef.current;
+      if (box) {
+        const boxRect = box.getBoundingClientRect();
+        if (boxRect.width > 0 && boxRect.height > 0) {
+          const fracX = Math.min(1, Math.max(0, (e.clientX - boxRect.left) / boxRect.width));
+          const fracY = Math.min(1, Math.max(0, (e.clientY - boxRect.top) / boxRect.height));
+          pendingFocusRef.current = { fracX, fracY, behavior: "auto" };
+        }
+      }
+      const delta = e.deltaY < 0 ? 0.15 : -0.15;
+      setZoom((z) => clampZoom(z + delta));
+    };
+    vp.addEventListener("wheel", onWheel, { passive: false });
+    return () => vp.removeEventListener("wheel", onWheel);
+  }, [book.pdfUrl, clampZoom]);
+
+  const handlePageRenderSuccess = useCallback(() => {
+    if (pendingFocusRef.current) {
+      const { fracX, fracY, behavior } = pendingFocusRef.current;
+      pendingFocusRef.current = null;
+      requestAnimationFrame(() => scrollToPageFraction(fracX, fracY, behavior || "smooth"));
+    }
+  }, [scrollToPageFraction]);
+
+  const getRelativePoint = (clientX, clientY) => {
+    const box = pageBoxRef.current;
+    if (!box) return null;
+    const rect = box.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    return {
+      x: Math.min(rect.width, Math.max(0, clientX - rect.left)),
+      y: Math.min(rect.height, Math.max(0, clientY - rect.top)),
+      width: rect.width,
+      height: rect.height,
+    };
+  };
+
+  const handlePagePointerDown = (e) => {
+    if (!book.pdfUrl || e.button !== 0) return;
+
+    if (areaZoomActive) {
+      const pt = getRelativePoint(e.clientX, e.clientY);
+      if (!pt) return;
+      areaStartRef.current = { x: pt.x, y: pt.y };
+      setSelectionRect({ left: pt.x, top: pt.y, width: 0, height: 0 });
+      try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
+      return;
+    }
+
+    if (zoom > 1 && e.pointerType === "mouse" && viewportRef.current) {
+      setIsPanning(true);
+      panStartRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        scrollLeft: viewportRef.current.scrollLeft,
+        scrollTop: viewportRef.current.scrollTop,
+      };
+      try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
+    }
+  };
+
+  const handlePagePointerMove = (e) => {
+    if (areaZoomActive && areaStartRef.current) {
+      const pt = getRelativePoint(e.clientX, e.clientY);
+      if (!pt) return;
+      const start = areaStartRef.current;
+      setSelectionRect({
+        left: Math.min(start.x, pt.x),
+        top: Math.min(start.y, pt.y),
+        width: Math.abs(pt.x - start.x),
+        height: Math.abs(pt.y - start.y),
+      });
+      return;
+    }
+
+    if (isPanning && panStartRef.current && viewportRef.current) {
+      const dx = e.clientX - panStartRef.current.x;
+      const dy = e.clientY - panStartRef.current.y;
+      viewportRef.current.scrollLeft = panStartRef.current.scrollLeft - dx;
+      viewportRef.current.scrollTop = panStartRef.current.scrollTop - dy;
+    }
+  };
+
+  const handlePagePointerUp = (e) => {
+    try {
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+    } catch (_) {}
+
+    if (isPanning) {
+      setIsPanning(false);
+      panStartRef.current = null;
+    }
+
+    if (areaZoomActive && areaStartRef.current) {
+      const pt = getRelativePoint(e.clientX, e.clientY);
+      const start = areaStartRef.current;
+      areaStartRef.current = null;
+      setSelectionRect(null);
+
+      if (!pt) {
+        setAreaZoomActive(false);
+        return;
+      }
+
+      const boxLeft = Math.min(start.x, pt.x);
+      const boxTop = Math.min(start.y, pt.y);
+      const boxW = Math.abs(pt.x - start.x);
+      const boxH = Math.abs(pt.y - start.y);
+
+      let fracX;
+      let fracY;
+      let targetZoom;
+
+      if (boxW >= 16 && boxH >= 16 && viewportRef.current) {
+        fracX = (boxLeft + boxW / 2) / pt.width;
+        fracY = (boxTop + boxH / 2) / pt.height;
+        const scaleW = (viewportRef.current.clientWidth * 0.85) / boxW;
+        const scaleH = (viewportRef.current.clientHeight * 0.85) / boxH;
+        const fitMultiplier = Math.min(scaleW, scaleH);
+        targetZoom = clampZoom(Math.max(1.25, zoom * fitMultiplier));
+      } else {
+        // Single click zooms into the clicked spot
+        fracX = pt.x / pt.width;
+        fracY = pt.y / pt.height;
+        targetZoom = clampZoom(zoom < 1.75 ? 2 : zoom + 0.5);
+      }
+
+      setAreaZoomActive(false);
+      if (targetZoom === zoom) {
+        scrollToPageFraction(fracX, fracY, "smooth");
+      } else {
+        pendingFocusRef.current = { fracX, fracY, behavior: "smooth" };
+        setZoom(targetZoom);
+      }
+    }
+  };
+
+  const handlePageDoubleClick = (e) => {
+    if (!book.pdfUrl || areaZoomActive) return;
+    if (zoom > 1) {
+      handleResetZoom();
+      return;
+    }
+    const pt = getRelativePoint(e.clientX, e.clientY);
+    if (!pt) return;
+    pendingFocusRef.current = {
+      fracX: pt.x / pt.width,
+      fracY: pt.y / pt.height,
+      behavior: "smooth",
+    };
+    setZoom(2);
+  };
 
   // CDN Signed URL resolution for PDFs (expires in 2 hours = 7200s)
   useEffect(() => {
@@ -242,8 +464,28 @@ export default function SecureReader({ book, session, onBack }) {
           } catch(err) {}
         }
       }
-      if (e.key === "ArrowRight") next();
-      if (e.key === "ArrowLeft") prev();
+      const isTypingInInput = document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA";
+      if (e.type === "keydown" && !isTypingInInput) {
+        if (e.key === "Escape") {
+          setAreaZoomActive(false);
+          setSelectionRect(null);
+          areaStartRef.current = null;
+        }
+        if (book.pdfUrl && (e.key === "+" || e.key === "=")) {
+          e.preventDefault();
+          handleZoomIn();
+        }
+        if (book.pdfUrl && e.key === "-") {
+          e.preventDefault();
+          handleZoomOut();
+        }
+        if (book.pdfUrl && e.key === "0") {
+          e.preventDefault();
+          handleResetZoom();
+        }
+        if (e.key === "ArrowRight") next();
+        if (e.key === "ArrowLeft") prev();
+      }
     };
     
     document.addEventListener("contextmenu", blockContext);
@@ -259,7 +501,7 @@ export default function SecureReader({ book, session, onBack }) {
       window.removeEventListener("focus", handleFocus);
       window.removeEventListener("blur", handleBlur);
     };
-  }, [next, prev]);
+  }, [next, prev, book.pdfUrl, handleZoomIn, handleZoomOut, handleResetZoom]);
 
   // Watermark college name and date without exposing individual student PII
   const collegeName = session?.institution || session?.name || "Licensed Institution";
@@ -277,13 +519,77 @@ export default function SecureReader({ book, session, onBack }) {
         </div>
       )}
 
-      <div className="flex items-center justify-between px-6 py-3" style={{ backgroundColor: palette.forest }}>
-        <button onClick={onBack} className="flex items-center gap-2 text-sm" style={{ color: palette.cream }}>
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3" style={{ backgroundColor: palette.forest }}>
+        <button onClick={onBack} className="flex items-center gap-2 text-sm shrink-0" style={{ color: palette.cream }}>
           <ArrowLeft size={16} strokeWidth={1.8} /> Back to library
         </button>
-        <div className="text-sm text-center" style={{ ...fontDisplay, color: palette.brassLight }}>{book.title}</div>
-        <div className="flex items-center justify-end gap-3 w-32">
-          {!book.pdfUrl && (
+        <div className="text-sm text-center truncate max-w-xs sm:max-w-md" style={{ ...fontDisplay, color: palette.brassLight }}>{book.title}</div>
+        <div className="flex items-center justify-end gap-1.5 sm:gap-2">
+          {book.pdfUrl ? (
+            <div className="flex items-center gap-1 rounded-md px-1.5 py-1 border border-white/15 bg-black/20">
+              <button
+                type="button"
+                onClick={handleZoomOut}
+                disabled={zoom <= MIN_ZOOM}
+                title="Zoom out (-)"
+                aria-label="Zoom out"
+                className="p-1 rounded transition-colors hover:bg-white/10 disabled:opacity-35 cursor-pointer disabled:cursor-not-allowed"
+                style={{ color: palette.cream }}
+              >
+                <ZoomOut size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={handleResetZoom}
+                title="Reset zoom to 100%"
+                className="px-1.5 py-0.5 text-xs font-semibold rounded hover:bg-white/10 transition-colors min-w-[44px] text-center cursor-pointer"
+                style={{ color: palette.cream }}
+              >
+                {Math.round(zoom * 100)}%
+              </button>
+              <button
+                type="button"
+                onClick={handleZoomIn}
+                disabled={zoom >= MAX_ZOOM}
+                title="Zoom in (+)"
+                aria-label="Zoom in"
+                className="p-1 rounded transition-colors hover:bg-white/10 disabled:opacity-35 cursor-pointer disabled:cursor-not-allowed"
+                style={{ color: palette.cream }}
+              >
+                <ZoomIn size={15} />
+              </button>
+              <div className="w-px h-4 bg-white/15 mx-0.5" />
+              <button
+                type="button"
+                onClick={() => {
+                  setAreaZoomActive((a) => !a);
+                  setSelectionRect(null);
+                  areaStartRef.current = null;
+                }}
+                title="Select any area or point on the PDF to zoom in"
+                className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors cursor-pointer"
+                style={{
+                  backgroundColor: areaZoomActive ? palette.brassLight : "transparent",
+                  color: areaZoomActive ? palette.forest : palette.cream,
+                }}
+              >
+                <ScanSearch size={14} />
+                <span className="hidden sm:inline">{areaZoomActive ? "Selecting..." : "Zoom Area"}</span>
+              </button>
+              {zoom !== 1 && (
+                <button
+                  type="button"
+                  onClick={handleResetZoom}
+                  title="Reset zoom (0)"
+                  aria-label="Reset zoom"
+                  className="p-1 rounded transition-colors hover:bg-white/10 cursor-pointer"
+                  style={{ color: palette.brassLight }}
+                >
+                  <RotateCcw size={14} />
+                </button>
+              )}
+            </div>
+          ) : (
             <button 
               onClick={toggleReadAloud} 
               className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded transition-colors"
@@ -295,6 +601,13 @@ export default function SecureReader({ book, session, onBack }) {
           )}
         </div>
       </div>
+
+      {areaZoomActive && book.pdfUrl && (
+        <div className="flex items-center justify-center gap-2 py-1.5 px-4 text-xs font-semibold" style={{ backgroundColor: palette.brassLight, color: palette.forest }}>
+          <ScanSearch size={14} />
+          <span>Click a spot or drag a box over any part of the page to zoom in. Press Esc to cancel.</span>
+        </div>
+      )}
 
       {warning && (
         <div className="flex items-center gap-2 justify-center py-2 text-sm" style={{ backgroundColor: palette.burgundy, color: palette.cream }}>
@@ -308,9 +621,22 @@ export default function SecureReader({ book, session, onBack }) {
         </div>
       )}
 
-      <div className="flex-1 flex items-center justify-center p-6 overflow-auto">
+      <div ref={viewportRef} className="flex-1 flex p-4 sm:p-6 overflow-auto">
         <div
-          className="no-select relative rounded-md shadow-2xl overflow-hidden flex flex-col items-center"
+          ref={pageBoxRef}
+          onPointerDown={handlePagePointerDown}
+          onPointerMove={handlePagePointerMove}
+          onPointerUp={handlePagePointerUp}
+          onPointerCancel={handlePagePointerUp}
+          onDoubleClick={handlePageDoubleClick}
+          onDragStart={(e) => e.preventDefault()}
+          className={`m-auto no-select select-none relative rounded-md shadow-2xl overflow-hidden flex flex-col items-center ${
+            areaZoomActive && book.pdfUrl
+              ? "cursor-crosshair touch-none"
+              : zoom > 1 && book.pdfUrl
+                ? isPanning ? "cursor-grabbing" : "cursor-grab"
+                : ""
+          }`}
           style={{ backgroundColor: palette.cream, minHeight: 460, ...fontBody, color: palette.ink }}
           onContextMenu={(e) => e.preventDefault()}
         >
@@ -325,6 +651,18 @@ export default function SecureReader({ book, session, onBack }) {
               </span>
             ))}
           </div>
+
+          {selectionRect && (
+            <div
+              className="pointer-events-none absolute z-40 border-2 border-dashed border-[#D97706] bg-[#FDD132]/25 rounded-sm"
+              style={{
+                left: selectionRect.left,
+                top: selectionRect.top,
+                width: selectionRect.width,
+                height: selectionRect.height,
+              }}
+            />
+          )}
 
           {book.pdfUrl ? (
             <div className="w-full h-full flex items-center justify-center pointer-events-none">
@@ -348,7 +686,8 @@ export default function SecureReader({ book, session, onBack }) {
                   pageNumber={pdfPageNumber} 
                   renderTextLayer={false} 
                   renderAnnotationLayer={false}
-                  width={600}
+                  width={Math.round(BASE_PDF_WIDTH * zoom)}
+                  onRenderSuccess={handlePageRenderSuccess}
                   loading={
                     <div className="flex items-center justify-center min-h-[480px] w-full">
                       <BookLoader size="sm" message={`Rendering page ${pdfPageNumber}...`} />

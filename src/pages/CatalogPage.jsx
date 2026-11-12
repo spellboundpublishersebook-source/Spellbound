@@ -183,9 +183,6 @@ export default function CatalogPage({ books, onNavigate }) {
 
   const homepageConfig = useMemo(() => getHomepageConfig(), [books]);
 
-  const resumeBookId = localStorage.getItem("last_read_book");
-  const resumeBook = useMemo(() => books.find(b => b.id === resumeBookId), [books, resumeBookId]);
-
   const [trendingIndex, setTrendingIndex] = useState(0);
 
   const trendingPool = useMemo(() => {
@@ -453,28 +450,6 @@ export default function CatalogPage({ books, onNavigate }) {
           <div className="flex items-center gap-2"><Library size={20} /> Institutional Access</div>
         </div>
       </section>
-
-      {resumeBook && (
-        <section className="max-w-7xl mx-auto px-6 pt-10">
-          <div className="bg-white border border-[#FDD132] rounded-xl p-4 md:p-6 flex flex-col md:flex-row items-center gap-6 justify-between">
-            <div className="flex items-center gap-4">
-              <BookCover book={resumeBook} className="w-16 h-24 rounded" />
-              <div>
-                <h3 className="font-bold text-sm text-black uppercase tracking-wider mb-1">Pick up where you left off</h3>
-                <h2 className="text-xl font-bold" style={fontDisplay}>{resumeBook.title}</h2>
-                <p className="text-sm text-black mt-1">by {resumeBook.author}</p>
-              </div>
-            </div>
-            <AnimatedSweepButton 
-              onClick={() => onNavigate("book-details", resumeBook.id)}
-              variant="yellow"
-              className="font-bold px-6 py-3 rounded text-sm w-full md:w-auto"
-            >
-              Continue Reading
-            </AnimatedSweepButton>
-          </div>
-        </section>
-      )}
 
       {/* NEW RELEASES */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
