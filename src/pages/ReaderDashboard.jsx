@@ -158,7 +158,7 @@ function CategoryCarouselRow({ genre, books, onOpenBook, onSelectGenre }) {
         <button
           type="button"
           onClick={() => onSelectGenre(genre)}
-          className="admin-glass-pill flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold text-[#111214] hover:bg-[#111214] hover:text-[#F5F23B] transition-all cursor-pointer group"
+          className="admin-glass-pill inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold text-[#111214] hover:bg-[#111214] hover:text-[#F5F23B] transition-all cursor-pointer group whitespace-nowrap shrink-0"
         >
           <span>View All</span>
           <ChevronRight size={15} className="transition-transform group-hover:translate-x-0.5" />
@@ -446,7 +446,7 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
             <div className="flex flex-col lg:flex-row gap-8 w-full items-start">
               
               {/* LEFT SIDEBAR */}
-              <aside className="w-full lg:w-68 flex-shrink-0 space-y-6 admin-glass-panel rounded-[24px] p-5">
+              <aside className="w-full lg:w-64 flex-shrink-0 space-y-6 admin-glass-panel rounded-[24px] p-5">
                 
                 {/* CLEAR ALL BUTTON AT TOP */}
                 <div className="pb-2 border-b border-black/10 flex items-center justify-between">
