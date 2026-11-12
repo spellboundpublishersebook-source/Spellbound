@@ -154,22 +154,28 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
           </div>
         )}
         {embedded && (
-          <div className="flex justify-between items-center mb-5">
+          <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
             {dbIndicator}
-            <Button onClick={() => { setEditingId(null); setForm(getFreshDefaultForm()); setShowForm(true); }}><Plus size={16} strokeWidth={2} /> Publish new book</Button>
+            <button
+              type="button"
+              onClick={() => { setEditingId(null); setForm(getFreshDefaultForm()); setShowForm(true); }}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold text-[#111214] bg-[#F2F032] hover:bg-[#e7e424] shadow-md hover:shadow-lg transition-all cursor-pointer"
+            >
+              <Plus size={15} strokeWidth={2.4} /> Publish new book
+            </button>
           </div>
         )}
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {pendingUpload && (
-            <div className="flex gap-4 rounded-md border p-4 relative overflow-hidden bg-white border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+            <div className={`flex gap-4 rounded-2xl border p-4 relative overflow-hidden transition-shadow ${embedded ? 'bg-white/65 backdrop-blur-xl border-white/80 shadow-sm' : 'bg-white border-gray-100 shadow-sm hover:shadow-md'}`}>
               {/* Progress Bar Background */}
               <div 
                 className="absolute left-0 top-0 bottom-0 bg-[#FDD132] opacity-20 transition-all duration-300"
                 style={{ width: `${uploadProgress}%` }}
               />
               <div 
-                className="w-20 rounded-md flex-shrink-0 z-10 bg-contain bg-no-repeat bg-center shadow-sm" 
+                className="w-20 rounded-xl flex-shrink-0 z-10 bg-contain bg-no-repeat bg-center shadow-sm" 
                 style={{ backgroundColor: pendingUpload.color, minHeight: 110, backgroundImage: pendingUpload.coverImage ? `url(${URL.createObjectURL(pendingUpload.coverImage)})` : 'none' }} 
               />
               <div className="flex flex-col min-w-0 flex-1 z-10">
@@ -186,9 +192,9 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
           )}
 
           {books.map((b) => (
-            <div key={b.id} className="flex gap-4 rounded-xl border border-gray-100 p-5 bg-white shadow-sm hover:shadow-md transition-shadow">
+            <div key={b.id} className={`flex gap-4 p-5 transition-all ${embedded ? 'rounded-2xl bg-white/60 backdrop-blur-xl border border-white/80 shadow-sm hover:bg-white/80 hover:-translate-y-0.5 hover:shadow-md' : 'rounded-xl border border-gray-100 bg-white shadow-sm hover:shadow-md'}`}>
               <div 
-                className="w-20 rounded-md flex-shrink-0 bg-contain bg-no-repeat bg-center shadow-sm" 
+                className="w-20 rounded-xl flex-shrink-0 bg-contain bg-no-repeat bg-center shadow-sm" 
                 style={{ backgroundColor: b.color, minHeight: 110, backgroundImage: (b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "") ? `url(${b.coverUrl})` : 'none' }} 
               />
               <div className="flex flex-col min-w-0 flex-1">

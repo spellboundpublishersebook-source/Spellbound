@@ -1,11 +1,18 @@
 import { supabase } from "../supabaseClient";
-import React, { useState, useMemo } from "react";
-import { Plus, Trash2, Check, X, Users, UploadCloud, Gift, LayoutGrid, Search, BookOpen, Settings, LayoutTemplate, Mail, AlertTriangle, Key, Activity, Eye, Edit3 } from "lucide-react";
+import React, { useState, useMemo, useRef } from "react";
+import { Plus, Trash2, Check, X, Users, UploadCloud, Gift, LayoutGrid, Search, BookOpen, Settings, LayoutTemplate, Mail, AlertTriangle, Key, Activity, Eye, Edit3, ArrowUpRight, SlidersHorizontal, ChevronRight, ChevronLeft, PanelLeft } from "lucide-react";
 import { palette, fontDisplay, getGenres, setGenres as saveGenres, getPubTypes, setPubTypes as savePubTypes, getPublishers, setPublishers as savePublishers, getCustomHeadings, setCustomHeadings as saveCustomHeadings, getHomepageConfig, setHomepageConfig, getPages, setPages } from "../theme";
 import { addMonths, today, daysUntil, genCredentialId, genPassword } from "../data/mockData";
 import { renderEmailHtml, COMPANY_LOGO_URL } from "../email";
 import Button from "../components/Button";
-import { Field, Select, Modal, Badge, StatCard } from "../components/UI";
+import { Field, Select, Modal, Badge } from "../components/UI";
+import {
+  BrandEmblem3D,
+  AdminTabIcon3D,
+  YellowCardPatternSVG,
+  OrangePiePatternSVG,
+  Book3DFallbackSVG,
+} from "../components/AdminGlassIcons";
 import UploaderPanel from "./UploaderPanel";
 
 const TABS = [
@@ -33,8 +40,28 @@ export default function AdminPanel({
   onAddBook, onEditBook, onDeleteBook, onRenameBookMetadata, dbStatus, onNavigate
 }) {
   const [tab, setTab] = useState("institutions");
+  const [railExpanded, setRailExpanded] = useState(false);
+  const [showOverview, setShowOverview] = useState(true);
+  const [spotlightIdx, setSpotlightIdx] = useState(0);
+  const tabButtonRefs = useRef({});
 
   const pendingTrials = trialRequests.filter((t) => t.status === "pending").length;
+  const activeInstitutionsCount = useMemo(
+    () => licenses.filter((l) => daysUntil(l.endDate) >= 0 && l.type !== "offline").length,
+    [licenses]
+  );
+  const inactiveAccountsCount = useMemo(() => {
+    const offLic = licenses.filter((l) => daysUntil(l.endDate) < 0 || l.type === "offline").length;
+    const offRead = readers.filter((r) => daysUntil(r.endDate) < 0 || r.status === "offline" || r.status === "revoked").length;
+    return offLic + offRead;
+  }, [licenses, readers]);
+
+  const pdfBooksCount = useMemo(() => books.filter((b) => Boolean(b.pdfUrl)).length, [books]);
+  const genresCount = useMemo(() => new Set(books.map((b) => b.genre).filter(Boolean)).size, [books]);
+  const authorsCount = useMemo(() => new Set(books.map((b) => b.author).filter(Boolean)).size, [books]);
+
+  const spotlightBooks = useMemo(() => books.slice(0, 6), [books]);
+  const currentSpotlight = spotlightBooks.length > 0 ? spotlightBooks[spotlightIdx % spotlightBooks.length] : null;
 
   // Active reading sessions telemetry and spike analysis
   const activeSessionCounts = useMemo(() => {
@@ -52,101 +79,448 @@ export default function AdminPanel({
     return licenses.filter(l => (activeSessionCounts[l.id] || 0) >= 50);
   }, [licenses, activeSessionCounts]);
 
+  const activeTabMeta = TABS.find((t) => t.id === tab) || TABS[0];
+
+  const handleSelectTab = (nextId) => {
+    setTab(nextId);
+    const btn = tabButtonRefs.current[nextId];
+    if (btn && typeof btn.scrollIntoView === "function") {
+      btn.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+    }
+  };
+
   return (
-    <div className="bg-[#f8f9fa] min-h-screen pb-20">
-      <div className="max-w-6xl mx-auto px-6 py-10">
-        <h1 className="text-3xl font-extrabold mb-1 text-[#111111]" style={fontDisplay}>Super Admin</h1>
-        <p className="text-sm mb-8 text-black font-medium">Full control over institutions, uploaders, and trial approvals.</p>
-
-        {/* Unusual Traffic Spike Alert Banner */}
-        {spikedInstitutions.length > 0 && (
-          <div className="mb-8 p-4 rounded-xl border border-amber-300 bg-amber-50 flex items-start gap-3 shadow-sm">
-            <AlertTriangle className="text-amber-600 mt-0.5 shrink-0" size={22} />
-            <div>
-              <h3 className="font-bold text-amber-900 text-sm flex items-center gap-2">
-                Unusual Traffic Spike Detected (High Concurrent Campus Load)
-                <Badge tone="warn">{spikedInstitutions.length} Institution{spikedInstitutions.length > 1 ? "s" : ""}</Badge>
-              </h3>
-              <p className="text-xs text-amber-800 mt-1">
-                The following institution(s) are experiencing rapid student login surges:
-                {spikedInstitutions.map((inst) => ` ${inst.name} (${activeSessionCounts[inst.id]} concurrent readers)`).join(",")}.
-                Read requests are automatically offloaded to Cloudflare edge CDN and Supabase connection pooler with 0 seat caps.
-              </p>
+    <div className="admin-glass-backdrop min-h-screen py-4 sm:py-6 px-3 sm:px-6 pb-20">
+      <div className="max-w-[1380px] mx-auto admin-glass-shell rounded-[28px] p-3 sm:p-5 lg:p-6 flex flex-col lg:flex-row gap-4 lg:gap-6">
+        {/* LEFT GLASS ICON RAIL (DESKTOP) */}
+        <aside
+          aria-label="Admin navigation rail"
+          className={`hidden lg:flex flex-col justify-between shrink-0 py-3 px-2 rounded-2xl bg-white/35 border border-white/60 backdrop-blur-xl transition-all duration-300 ${
+            railExpanded ? "w-56" : "w-[74px]"
+          }`}
+        >
+          <div className="flex flex-col items-center gap-4">
+            <div className={`w-full flex items-center ${railExpanded ? "justify-between px-2" : "justify-center"} pt-1 pb-2`}>
+              <div className="flex items-center gap-2.5">
+                <BrandEmblem3D size={32} />
+                {railExpanded && (
+                  <span className="font-bold text-sm tracking-tight text-[#111214]" style={fontDisplay}>
+                    SpellBound
+                  </span>
+                )}
+              </div>
             </div>
+
+            <nav role="tablist" aria-label="Admin dashboard sections" className="w-full flex flex-col gap-1.5">
+              {TABS.map((t) => {
+                const isActive = tab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    title={t.label}
+                    onClick={() => handleSelectTab(t.id)}
+                    className={`group relative flex items-center gap-3 w-full rounded-2xl transition-all duration-200 cursor-pointer ${
+                      railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
+                    } ${
+                      isActive
+                        ? "bg-white text-[#111214] shadow-[0_10px_24px_-8px_rgba(0,0,0,0.22)] ring-1 ring-black/5 scale-[1.02]"
+                        : "text-zinc-700 hover:bg-white/65 hover:text-[#111214]"
+                    }`}
+                  >
+                    {isActive && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-[#111214]"
+                      />
+                    )}
+                    <span className="transition-transform duration-200 group-hover:scale-110 shrink-0">
+                      <AdminTabIcon3D id={t.id} active={isActive} size={22} />
+                    </span>
+                    {railExpanded && (
+                      <span className="text-xs font-bold truncate">{t.label}</span>
+                    )}
+                    {t.id === "trials" && pendingTrials > 0 && (
+                      <span className={`${railExpanded ? "ml-auto" : "absolute -top-1 -right-1"} min-w-[18px] h-[18px] px-1 rounded-full bg-[#F97316] text-white text-[10px] font-extrabold flex items-center justify-center shadow-sm`}>
+                        {pendingTrials}
+                      </span>
+                    )}
+                    {!railExpanded && (
+                      <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-2.5 py-1.5 rounded-xl bg-[#111214] text-white text-xs font-semibold shadow-lg">
+                        {t.label}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
           </div>
-        )}
 
-        <div className="grid sm:grid-cols-3 gap-4 mb-8">
-          <StatCard label="Books in catalog" value={books.length} icon={LayoutGrid} />
-          <StatCard label="Active institutions" value={licenses.filter((l) => daysUntil(l.endDate) >= 0).length} icon={Users} />
-          <StatCard label="Pending trial requests" value={pendingTrials} icon={Gift} />
-        </div>
-
-        <div className="flex gap-2 mb-8 border-b border-gray-200 overflow-x-auto pb-px">
-          {TABS.map((t) => (
+          <div className="flex flex-col items-center gap-2 pt-4 border-t border-black/5">
             <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-bold border-b-2 -mb-px whitespace-nowrap transition-colors ${tab === t.id ? 'text-[#111111] border-[#FDD132]' : 'text-black border-transparent hover:text-black hover:border-gray-300'}`}
+              type="button"
+              onClick={() => setRailExpanded((v) => !v)}
+              title={railExpanded ? "Collapse sidebar" : "Expand sidebar labels"}
+              className={`w-full flex items-center ${railExpanded ? "justify-between px-3" : "justify-center"} py-2 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-white/70 transition-colors cursor-pointer`}
             >
-              <t.icon size={15} strokeWidth={1.8} />
-              {t.label}
-              {t.id === "trials" && pendingTrials > 0 && <Badge tone="warn">{pendingTrials}</Badge>}
+              <PanelLeft size={16} />
+              {railExpanded && <span>Compact Rail</span>}
             </button>
-          ))}
-        </div>
+          </div>
+        </aside>
 
-        {tab === "books" && (
-          <UploaderPanel 
-            books={books} 
-            onAddBook={onAddBook} 
-            onEditBook={onEditBook}
-            onDeleteBook={onDeleteBook} 
-            embedded={true}
-            dbStatus={dbStatus}
-            onNavigate={onNavigate}
-          />
-        )}
-        {tab === "institutions" && (
-          <InstitutionsTab
-            books={books}
-            licenses={licenses}
-            activeSessionCounts={activeSessionCounts}
-            onCreateLicense={onCreateLicense}
-            onRevokeLicense={onRevokeLicense}
-            onDeleteLicense={onDeleteLicense}
-            onToggleLicenseStatus={onToggleLicenseStatus}
-            onResendEmail={onResendInstitutionEmail}
-            onEditAccess={onEditInstitutionAccess}
-            onRotateSemesterPassword={onRotateSemesterPassword}
-          />
-        )}
-        {tab === "readers" && (
-          <ReadersTab
-            books={books}
-            readers={readers}
-            onCreateReader={onCreateReader}
-            onRevokeReader={onRevokeReader}
-            onDeleteReader={onDeleteReader}
-            onToggleReaderStatus={onToggleReaderStatus}
-            onResendEmail={onResendReaderEmail}
-            onEditAccess={onEditReaderAccess}
-          />
-        )}
-        {tab === "uploaders" && (
-          <UploadersTab uploaders={uploaders} onAddUploader={onAddUploader} onRemoveUploader={onRemoveUploader} />
-        )}
-        {tab === "trials" && (
-          <TrialsTab books={books} trialRequests={trialRequests} onApproveTrial={onApproveTrial} onRejectTrial={onRejectTrial} onResendEmail={onResendTrialEmail} onEditAccess={onEditTrialAccess} />
-        )}
-        {tab === "authors" && (
-          <FeaturedAuthorsTab books={books} authors={featuredAuthors} onAddAuthor={onAddFeaturedAuthor} onRemoveAuthor={onRemoveFeaturedAuthor} />
-        )}
-        {tab === "filters" && <FiltersTab onRenameBookMetadata={onRenameBookMetadata} />}
-        {tab === "homepage" && <HomepageTab books={books} />}
-        {tab === "pages" && <PagesTab />}
-        {tab === "emails" && <EmailsTab emailTemplates={emailTemplates} onUpdateEmailTemplate={onUpdateEmailTemplate} />}
-        {tab === "subscribers" && <SubscribersTab subscribers={subscribers} />}
+        {/* MAIN CONTENT AREA */}
+        <div className="flex-1 min-w-0 flex flex-col gap-5">
+          {/* TOP HEADER BAR */}
+          <header className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 px-1">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="lg:hidden">
+                <BrandEmblem3D size={30} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-[#111214]" style={fontDisplay}>
+                    {activeTabMeta.label}
+                  </h1>
+                  <span className="admin-glass-pill px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider text-zinc-800 inline-flex items-center gap-1.5">
+                    <span className={`w-2 h-2 rounded-full ${dbStatus === "connected" ? "bg-emerald-500" : dbStatus === "error" ? "bg-red-500" : "bg-amber-400 animate-pulse"}`} />
+                    Super Admin
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-600 font-medium mt-0.5">
+                  Manage institutional licenses, individual orders, catalog titles & global portal settings.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => handleSelectTab("books")}
+                className="admin-glass-pill px-3.5 py-2 rounded-full text-xs font-semibold text-[#111214] inline-flex items-center gap-2 hover:bg-white/80 transition-all cursor-pointer"
+              >
+                <AdminTabIcon3D id="books" active size={16} />
+                <span>Catalog: <strong>{books.length}</strong> titles · <strong>{genresCount}</strong> genres</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSelectTab("institutions")}
+                className="admin-glass-pill px-3.5 py-2 rounded-full text-xs font-semibold text-[#111214] inline-flex items-center gap-2 hover:bg-white/80 transition-all cursor-pointer"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Live Readers: <strong>{activeReadingSessions.length}</strong></span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSelectTab("filters")}
+                title="Global Filters"
+                className="admin-glass-pill w-9 h-9 rounded-full flex items-center justify-center hover:bg-white/85 transition-all cursor-pointer"
+              >
+                <AdminTabIcon3D id="filters" active size={18} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowOverview((v) => !v)}
+                title={showOverview ? "Hide analytics cards" : "Show analytics cards"}
+                className="admin-glass-pill px-3 py-2 rounded-full text-xs font-bold text-[#111214] inline-flex items-center gap-1.5 hover:bg-white/85 transition-all cursor-pointer"
+              >
+                <SlidersHorizontal size={14} />
+                <span className="hidden sm:inline">{showOverview ? "Hide Bento" : "Show Bento"}</span>
+              </button>
+            </div>
+          </header>
+
+          {/* MOBILE / TABLET HORIZONTAL GLASS TAB SCROLLER */}
+          <div
+            role="tablist"
+            aria-label="Admin sections"
+            className="lg:hidden admin-tab-scroller flex items-center gap-2 overflow-x-auto pb-1"
+          >
+            {TABS.map((t) => {
+              const isActive = tab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  ref={(el) => { tabButtonRefs.current[t.id] = el; }}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => handleSelectTab(t.id)}
+                  className={`flex-none inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border ${
+                    isActive
+                      ? "bg-white text-[#111214] border-black/15 shadow-md underline decoration-[#111214] decoration-2 underline-offset-4"
+                      : "bg-white/45 text-zinc-700 border-white/70 hover:bg-white/75"
+                  }`}
+                >
+                  <AdminTabIcon3D id={t.id} active={isActive} size={17} />
+                  <span>{t.label}</span>
+                  {t.id === "trials" && pendingTrials > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-full bg-[#F97316] text-white text-[10px] leading-none">
+                      {pendingTrials}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* UNUSUAL TRAFFIC SPIKE ALERT BANNER */}
+          {spikedInstitutions.length > 0 && (
+            <div className="p-4 rounded-2xl border border-amber-300/80 bg-amber-50/80 backdrop-blur-md flex items-start gap-3 shadow-sm">
+              <AlertTriangle className="text-amber-600 mt-0.5 shrink-0" size={22} />
+              <div>
+                <h3 className="font-bold text-amber-900 text-sm flex items-center gap-2">
+                  Unusual Traffic Spike Detected (High Concurrent Campus Load)
+                  <Badge tone="warn">{spikedInstitutions.length} Institution{spikedInstitutions.length > 1 ? "s" : ""}</Badge>
+                </h3>
+                <p className="text-xs text-amber-800 mt-1">
+                  The following institution(s) are experiencing rapid student login surges:
+                  {spikedInstitutions.map((inst) => ` ${inst.name} (${activeSessionCounts[inst.id]} concurrent readers)`).join(",")}.
+                  Read requests are automatically offloaded to Cloudflare edge CDN and Supabase connection pooler with 0 seat caps.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* BENTO ANALYTICS HERO ROW (SIGNATURE REFERENCE CARDS) */}
+          {showOverview && (
+            <section aria-label="Platform Analytics Overview" className="grid grid-cols-1 md:grid-cols-12 gap-4">
+              {/* CARD 1: ACID YELLOW — SUBSCRIPTIONS & ACCESS */}
+              <div
+                className="md:col-span-4 admin-bento-card rounded-[24px] p-5 flex flex-col justify-between relative overflow-hidden shadow-md"
+                style={{ background: "linear-gradient(145deg, #F5F23B 0%, #EAE322 100%)" }}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-black/65">Access & Trials</span>
+                    <h2 className="text-lg font-bold text-[#111214] leading-tight">Accounts Overview</h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectTab("trials")}
+                    title="View Trial Requests"
+                    className="w-9 h-9 rounded-full bg-black/10 hover:bg-black/15 flex items-center justify-center text-[#111214] transition-colors cursor-pointer"
+                  >
+                    <SlidersHorizontal size={15} />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2 items-end mt-4 mb-1 relative z-10">
+                  <button type="button" onClick={() => handleSelectTab("trials")} className="text-left cursor-pointer group">
+                    <div className="text-xl font-extrabold text-[#111214] leading-none group-hover:underline">{pendingTrials}</div>
+                    <div className="text-[10px] font-semibold text-black/75 mt-1 leading-tight">Pending Trials</div>
+                  </button>
+                  <button type="button" onClick={() => handleSelectTab("institutions")} className="text-left cursor-pointer group">
+                    <div className="text-xl font-extrabold text-[#111214] leading-none group-hover:underline">{inactiveAccountsCount}</div>
+                    <div className="text-[10px] font-semibold text-black/75 mt-1 leading-tight">Expired / Off</div>
+                  </button>
+                  <button type="button" onClick={() => handleSelectTab("readers")} className="text-left cursor-pointer group">
+                    <div className="text-xl font-extrabold text-[#111214] leading-none group-hover:underline">{readers.length}</div>
+                    <div className="text-[10px] font-semibold text-black/75 mt-1 leading-tight">Individuals</div>
+                  </button>
+                  <button type="button" onClick={() => handleSelectTab("institutions")} className="text-left cursor-pointer group">
+                    <div className="text-xl font-extrabold text-[#111214] leading-none group-hover:underline">{activeInstitutionsCount}</div>
+                    <div className="text-[10px] font-semibold text-black/75 mt-1 leading-tight">Active Inst.</div>
+                  </button>
+                </div>
+
+                <YellowCardPatternSVG />
+              </div>
+
+              {/* CARD 2: CORAL ORANGE — CATALOG & GENRE DISTRIBUTION */}
+              <div
+                className="md:col-span-4 admin-bento-card rounded-[24px] p-5 flex flex-col justify-between relative overflow-hidden shadow-md"
+                style={{ background: "linear-gradient(145deg, #FF9451 0%, #FA7336 100%)" }}
+              >
+                <div className="flex items-start justify-between gap-2 relative z-10">
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-black/65">Catalog Mix</span>
+                    <h2 className="text-lg font-bold text-[#111214] leading-tight">Library Inventory</h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectTab("filters")}
+                    title="Manage Global Filters"
+                    className="w-9 h-9 rounded-full bg-black/10 hover:bg-black/15 flex items-center justify-center text-[#111214] transition-colors cursor-pointer"
+                  >
+                    <SlidersHorizontal size={15} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 mt-2 relative z-10">
+                  <ul className="space-y-2 text-xs font-semibold text-[#181412]">
+                    <li className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#181412]" />
+                      <span>PDF Titles ({pdfBooksCount})</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-white/80 border border-black/30" />
+                      <span>Subjects ({genresCount})</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-black/45" />
+                      <span>Authors ({authorsCount})</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#F5F23B]" />
+                      <span>Featured ({featuredAuthors.length})</span>
+                    </li>
+                  </ul>
+
+                  <div className="relative flex items-center justify-center shrink-0">
+                    <OrangePiePatternSVG />
+                    <button
+                      type="button"
+                      onClick={() => handleSelectTab("books")}
+                      className="absolute top-6 left-1/2 -translate-x-1/2 px-3.5 py-1.5 rounded-full bg-[#F5F23B] text-[#111214] text-xs font-extrabold shadow-md hover:scale-105 transition-transform cursor-pointer"
+                    >
+                      {books.length} Books
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* CARD 3: OBSIDIAN DARK — CATALOG SPOTLIGHT STACKED CARD */}
+              <div
+                className="md:col-span-4 admin-bento-card rounded-[24px] p-5 flex flex-col justify-between relative overflow-hidden shadow-xl text-white"
+                style={{ background: "linear-gradient(155deg, #17181c 0%, #0b0c0e 100%)" }}
+              >
+                <div className="flex items-center justify-between gap-2 relative z-10">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-bold text-white">Spotlight</span>
+                    {spotlightBooks.length > 1 && (
+                      <div className="flex items-center gap-1">
+                        {spotlightBooks.slice(0, 4).map((sb, idx) => (
+                          <button
+                            key={sb.id}
+                            type="button"
+                            aria-label={`Show spotlight book ${idx + 1}`}
+                            onClick={() => setSpotlightIdx(idx)}
+                            className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                              (spotlightIdx % spotlightBooks.length) === idx ? "w-5 bg-white" : "w-2 bg-white/30 hover:bg-white/55"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectTab("books")}
+                    title="Manage all books"
+                    className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
+                  >
+                    <ArrowUpRight size={15} />
+                  </button>
+                </div>
+
+                {currentSpotlight ? (
+                  <div className="mt-3 relative">
+                    {/* Stacked translucent background layer */}
+                    <div className="mx-3 h-3 rounded-t-2xl bg-white/10 border-t border-x border-white/15 -mb-1" />
+                    <div className="rounded-2xl p-3.5 bg-white/[0.08] border border-white/15 backdrop-blur-md flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {currentSpotlight.coverUrl && currentSpotlight.coverUrl !== "null" ? (
+                          <img
+                            src={currentSpotlight.coverUrl}
+                            alt={currentSpotlight.title}
+                            className="w-12 h-16 rounded-lg object-cover shadow-lg ring-1 ring-white/20 shrink-0"
+                          />
+                        ) : (
+                          <div className="shrink-0">
+                            <Book3DFallbackSVG color={currentSpotlight.color || "#F97316"} />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#F97316] text-white mb-1">
+                            {currentSpotlight.genre || "Featured"}
+                          </span>
+                          <h3 className="text-sm font-bold text-white truncate">{currentSpotlight.title}</h3>
+                          <p className="text-[11px] text-white/70 truncate">
+                            {currentSpotlight.author} · {currentSpotlight.totalPages || 0}p
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => onNavigate && onNavigate("reading", currentSpotlight.id)}
+                          title="Preview book in Secure Reader"
+                          className="w-10 h-10 rounded-xl bg-[#F5F23B] hover:bg-[#ebe72b] text-[#111214] flex items-center justify-center shadow-md hover:scale-105 transition-transform cursor-pointer"
+                        >
+                          <Eye size={16} strokeWidth={2.3} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-xs text-white/60">No books published yet.</div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* ACTIVE TAB PANEL */}
+          <main className="min-w-0">
+            {tab === "books" && (
+              <UploaderPanel
+                books={books}
+                onAddBook={onAddBook}
+                onEditBook={onEditBook}
+                onDeleteBook={onDeleteBook}
+                embedded={true}
+                dbStatus={dbStatus}
+                onNavigate={onNavigate}
+              />
+            )}
+            {tab === "institutions" && (
+              <InstitutionsTab
+                books={books}
+                licenses={licenses}
+                activeSessionCounts={activeSessionCounts}
+                onCreateLicense={onCreateLicense}
+                onRevokeLicense={onRevokeLicense}
+                onDeleteLicense={onDeleteLicense}
+                onToggleLicenseStatus={onToggleLicenseStatus}
+                onResendEmail={onResendInstitutionEmail}
+                onEditAccess={onEditInstitutionAccess}
+                onRotateSemesterPassword={onRotateSemesterPassword}
+              />
+            )}
+            {tab === "readers" && (
+              <ReadersTab
+                books={books}
+                readers={readers}
+                onCreateReader={onCreateReader}
+                onRevokeReader={onRevokeReader}
+                onDeleteReader={onDeleteReader}
+                onToggleReaderStatus={onToggleReaderStatus}
+                onResendEmail={onResendReaderEmail}
+                onEditAccess={onEditReaderAccess}
+              />
+            )}
+            {tab === "uploaders" && (
+              <UploadersTab uploaders={uploaders} onAddUploader={onAddUploader} onRemoveUploader={onRemoveUploader} />
+            )}
+            {tab === "trials" && (
+              <TrialsTab books={books} trialRequests={trialRequests} onApproveTrial={onApproveTrial} onRejectTrial={onRejectTrial} onResendEmail={onResendTrialEmail} onEditAccess={onEditTrialAccess} />
+            )}
+            {tab === "authors" && (
+              <FeaturedAuthorsTab books={books} authors={featuredAuthors} onAddAuthor={onAddFeaturedAuthor} onRemoveAuthor={onRemoveFeaturedAuthor} />
+            )}
+            {tab === "filters" && <FiltersTab onRenameBookMetadata={onRenameBookMetadata} />}
+            {tab === "homepage" && <HomepageTab books={books} />}
+            {tab === "pages" && <PagesTab />}
+            {tab === "emails" && <EmailsTab emailTemplates={emailTemplates} onUpdateEmailTemplate={onUpdateEmailTemplate} />}
+            {tab === "subscribers" && <SubscribersTab subscribers={subscribers} />}
+          </main>
+        </div>
       </div>
     </div>
   );
@@ -276,90 +650,165 @@ function InstitutionsTab({
     setName(""); setEmail(""); setSeats(100); setPrice(""); setSelected([]); setStartDate(today()); setDuration(12); setIsTest(false); setCustomId(""); setCustomPassword("");
   }
 
+  const [tableSearch, setTableSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const filteredLicenses = useMemo(() => {
+    const q = tableSearch.trim().toLowerCase();
+    return licenses.filter((l) => {
+      const left = daysUntil(l.endDate);
+      const expired = left < 0;
+      const isOffline = l.type === "offline";
+      const statusKey = isOffline ? "offline" : expired ? "expired" : "active";
+      if (statusFilter !== "all" && statusFilter !== statusKey) return false;
+      if (!q) return true;
+      return (
+        (l.name || "").toLowerCase().includes(q) ||
+        (l.id || "").toLowerCase().includes(q) ||
+        (l.email || "").toLowerCase().includes(q)
+      );
+    });
+  }, [licenses, tableSearch, statusFilter]);
+
   return (
-    <div>
-      <div className="flex justify-end mb-5">
-        <Button onClick={() => setShowForm(true)}><Plus size={16} strokeWidth={2} /> Create institution license</Button>
+    <div className="space-y-4">
+      {/* GLASS SEARCH / FILTER TOOLBAR */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[240px]">
+          <div className="admin-glass-pill flex items-center gap-2 px-3.5 py-2 rounded-full flex-1 max-w-sm">
+            <Search size={14} className="text-zinc-600 shrink-0" />
+            <input
+              type="text"
+              value={tableSearch}
+              onChange={(e) => setTableSearch(e.target.value)}
+              placeholder="Search institutions, login ID or email..."
+              className="w-full bg-transparent text-xs font-medium text-[#111214] placeholder:text-zinc-500 outline-none"
+            />
+            {tableSearch && (
+              <button type="button" onClick={() => setTableSearch("")} className="text-zinc-500 hover:text-black cursor-pointer">
+                <X size={13} />
+              </button>
+            )}
+          </div>
+          <select
+            aria-label="Filter institutions by status"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="admin-glass-pill px-3.5 py-2 rounded-full text-xs font-semibold text-[#111214] outline-none cursor-pointer"
+          >
+            <option value="all">Status: All ({licenses.length})</option>
+            <option value="active">Active</option>
+            <option value="offline">Offline</option>
+            <option value="expired">Expired</option>
+          </select>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowForm(true)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold text-[#111214] bg-[#F5F23B] hover:bg-[#ebe72b] shadow-md hover:shadow-lg transition-all cursor-pointer"
+        >
+          <Plus size={15} strokeWidth={2.4} /> Create institution license
+        </button>
       </div>
 
-      <div className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              {["Institution", "Login ID", "Password", "Active Readers", "Books", "Term", "Status", ""].map((h) => (
-                <th key={h} className="text-left px-4 py-3 font-bold text-black uppercase tracking-wider text-[11px]">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {licenses.map((l) => {
-              const left = daysUntil(l.endDate);
-              const expired = left < 0;
-              const soon = left <= 15 && !expired;
-              const isOffline = l.type === "offline";
-              const activeCount = activeSessionCounts[l.id] || 0;
-              const isSpiked = activeCount >= 50;
-              return (
-                <tr key={l.id} className="border-t border-gray-100 bg-white hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-gray-900">{l.name}</td>
-                  <td className="px-4 py-3"><code>{l.id}</code></td>
-                  <td className="px-4 py-3"><code>{l.password}</code></td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-gray-800">{activeCount}</span>
-                      {isSpiked ? (
-                        <Badge tone="warn" className="animate-pulse flex items-center gap-1 text-[10px]">
-                          <Activity size={10} /> Spike
-                        </Badge>
-                      ) : activeCount > 0 ? (
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" title="Active readers" />
-                      ) : null}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">{l.bookIds.length} titles</td>
-                  <td className="px-4 py-3">{l.startDate.slice(0, 10)} → {l.endDate.slice(0, 10)}</td>
-                  <td className="px-4 py-3">
-                    {isOffline ? <Badge tone="bad">Offline</Badge> : expired ? <Badge tone="bad">Expired</Badge> : soon ? <Badge tone="warn">{left}d left</Badge> : <Badge tone="good">Active</Badge>}
-                  </td>
-                  <td className="px-4 py-3 flex gap-3 items-center h-full flex-wrap">
-                    {l.email && (
-                      <button onClick={() => onResendEmail && onResendEmail(l.id)} className="text-xs font-semibold flex items-center gap-1 text-[#D4A017] hover:text-[#b8860b]">
-                        <Mail size={12} /> Resend Email
-                      </button>
-                    )}
-                    <button
-                      onClick={() => openRotatePassword(l)}
-                      className="text-xs font-semibold flex items-center gap-1 text-indigo-600 hover:text-indigo-800 uppercase tracking-wider"
-                    >
-                      <Key size={12} /> Rotate Semester PW
-                    </button>
-                    <button onClick={() => openEditAccess(l)} className="text-xs font-semibold text-black uppercase tracking-wider">
-                      Edit Access
-                    </button>
-                    {!expired && (
-                      <button onClick={() => onToggleLicenseStatus(l.id, !isOffline)} className={`text-[11px] font-semibold uppercase tracking-wider ${isOffline ? "text-green-600" : "text-yellow-600"}`}>
-                        {isOffline ? "Set Online" : "Set Offline"}
-                      </button>
-                    )}
-                    {!expired && !isOffline && (
-                      <button onClick={() => onRevokeLicense(l.id)} className="text-[11px] font-semibold uppercase tracking-wider text-red-600">Revoke</button>
-                    )}
-                    <button
-                      onClick={() => setDeletingLicense(l)}
-                      className="text-[11px] font-semibold uppercase tracking-wider text-red-700 hover:text-red-900 flex items-center gap-1 cursor-pointer"
-                      title="Permanently delete institution"
-                    >
-                      <Trash2 size={12} /> Delete
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-            {licenses.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-6 text-center text-black">No institutions yet.</td></tr>
-            )}
-          </tbody>
-        </table>
+      <div className="admin-glass-panel rounded-[22px] overflow-hidden">
+        <div tabIndex={0} role="region" aria-label="Institutions directory" className="admin-table-region">
+          <table className="w-full text-sm border-collapse min-w-[820px]">
+            <thead>
+              <tr className="border-b border-black/10 bg-white/40 backdrop-blur-md">
+                {["Institution", "Login ID", "Password", "Active Readers", "Books", "Term", "Status", "Actions"].map((h) => (
+                  <th key={h} scope="col" className="text-left px-4 py-3.5 font-bold text-zinc-600 uppercase tracking-wider text-[10px]">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredLicenses.map((l) => {
+                const left = daysUntil(l.endDate);
+                const expired = left < 0;
+                const soon = left <= 15 && !expired;
+                const isOffline = l.type === "offline";
+                const activeCount = activeSessionCounts[l.id] || 0;
+                const isSpiked = activeCount >= 50;
+                const initial = String(l.name || "I").charAt(0).toUpperCase();
+                return (
+                  <tr key={l.id} className="border-t border-black/5 hover:bg-white/65 transition-colors">
+                    <td className="px-4 py-3.5 font-semibold text-[#111214]">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#F5F23B] to-[#F97316] text-[#111214] font-extrabold text-xs flex items-center justify-center shadow-sm shrink-0">
+                          {initial}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="truncate font-semibold text-xs sm:text-sm">{l.name}</div>
+                          {l.email && <div className="text-[11px] text-zinc-500 truncate">{l.email}</div>}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5"><code className="px-2 py-0.5 rounded-md bg-white/70 border border-black/10 text-xs">{l.id}</code></td>
+                    <td className="px-4 py-3.5"><code className="px-2 py-0.5 rounded-md bg-white/70 border border-black/10 text-xs">{l.password}</code></td>
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-zinc-800">{activeCount}</span>
+                        {isSpiked ? (
+                          <Badge tone="warn" className="animate-pulse flex items-center gap-1 text-[10px]">
+                            <Activity size={10} /> Spike
+                          </Badge>
+                        ) : activeCount > 0 ? (
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" title="Active readers" />
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 text-xs font-semibold text-zinc-700">{l.bookIds.length} titles</td>
+                    <td className="px-4 py-3.5 text-xs text-zinc-700 whitespace-nowrap">{l.startDate.slice(0, 10)} → {l.endDate.slice(0, 10)}</td>
+                    <td className="px-4 py-3.5">
+                      {isOffline ? <Badge tone="bad">Offline</Badge> : expired ? <Badge tone="bad">Expired</Badge> : soon ? <Badge tone="warn">{left}d left</Badge> : <Badge tone="good">Active</Badge>}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <div className="flex gap-1.5 items-center flex-wrap">
+                        {l.email && (
+                          <button onClick={() => onResendEmail && onResendEmail(l.id)} className="px-2.5 py-1 rounded-full bg-amber-100/80 hover:bg-amber-200/80 text-amber-900 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer">
+                            <Mail size={11} /> Resend
+                          </button>
+                        )}
+                        <button
+                          onClick={() => openRotatePassword(l)}
+                          className="px-2.5 py-1 rounded-full bg-indigo-100/80 hover:bg-indigo-200/80 text-indigo-800 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          <Key size={11} /> Rotate PW
+                        </button>
+                        <button onClick={() => openEditAccess(l)} className="px-2.5 py-1 rounded-full bg-white/80 hover:bg-white border border-black/10 text-[#111214] text-[11px] font-semibold transition-colors cursor-pointer">
+                          Edit Access
+                        </button>
+                        {!expired && (
+                          <button onClick={() => onToggleLicenseStatus(l.id, !isOffline)} className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors cursor-pointer ${isOffline ? "bg-emerald-100/85 text-emerald-800 hover:bg-emerald-200/80" : "bg-amber-100/85 text-amber-800 hover:bg-amber-200/80"}`}>
+                            {isOffline ? "Set Online" : "Set Offline"}
+                          </button>
+                        )}
+                        {!expired && !isOffline && (
+                          <button onClick={() => onRevokeLicense(l.id)} className="px-2.5 py-1 rounded-full bg-orange-100/85 hover:bg-orange-200/85 text-orange-800 text-[11px] font-semibold transition-colors cursor-pointer">
+                            Revoke
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setDeletingLicense(l)}
+                          className="px-2.5 py-1 rounded-full bg-red-100/85 hover:bg-red-200/90 text-red-700 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Permanently delete institution"
+                        >
+                          <Trash2 size={11} /> Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {filteredLicenses.length === 0 && (
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-zinc-600 text-xs font-medium">No matching institutions found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {showForm && (
@@ -740,105 +1189,171 @@ function ReadersTab({
     setName(""); setEmail(""); setPrice(""); setSelected([]); setStartDate(today()); setDuration(12); setIsTest(false); setCustomId(""); setCustomPassword("");
   }
 
+  const [tableSearch, setTableSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const filteredReaders = useMemo(() => {
+    const q = tableSearch.trim().toLowerCase();
+    return readers.filter((r) => {
+      const left = daysUntil(r.endDate);
+      const expired = left < 0 || r.status === "revoked" || r.status === "expired";
+      const isOffline = r.status === "offline";
+      const statusKey = isOffline ? "offline" : expired ? "expired" : "active";
+      if (statusFilter !== "all" && statusFilter !== statusKey) return false;
+      if (!q) return true;
+      return (
+        (r.name || "").toLowerCase().includes(q) ||
+        (r.loginId || "").toLowerCase().includes(q) ||
+        (r.email || "").toLowerCase().includes(q)
+      );
+    });
+  }, [readers, tableSearch, statusFilter]);
+
   return (
-    <div>
-      <div className="flex justify-between items-center mb-5">
-        <h3 className="text-lg font-bold text-black">Individual Users / Orders</h3>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus size={16} strokeWidth={2} /> Create individual user / order
-        </Button>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[240px]">
+          <div className="admin-glass-pill flex items-center gap-2 px-3.5 py-2 rounded-full flex-1 max-w-sm">
+            <Search size={14} className="text-zinc-600 shrink-0" />
+            <input
+              type="text"
+              value={tableSearch}
+              onChange={(e) => setTableSearch(e.target.value)}
+              placeholder="Search user name, login ID or email..."
+              className="w-full bg-transparent text-xs font-medium text-[#111214] placeholder:text-zinc-500 outline-none"
+            />
+            {tableSearch && (
+              <button type="button" onClick={() => setTableSearch("")} className="text-zinc-500 hover:text-black cursor-pointer">
+                <X size={13} />
+              </button>
+            )}
+          </div>
+          <select
+            aria-label="Filter individual users by status"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="admin-glass-pill px-3.5 py-2 rounded-full text-xs font-semibold text-[#111214] outline-none cursor-pointer"
+          >
+            <option value="all">Status: All ({readers.length})</option>
+            <option value="active">Active</option>
+            <option value="offline">Offline</option>
+            <option value="expired">Expired</option>
+          </select>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowForm(true)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold text-[#111214] bg-[#F5F23B] hover:bg-[#ebe72b] shadow-md hover:shadow-lg transition-all cursor-pointer"
+        >
+          <Plus size={15} strokeWidth={2.4} /> Create individual user / order
+        </button>
       </div>
 
-      <div className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              {["User", "Login ID", "Password", "Books", "Term", "Status", ""].map((h) => (
-                <th key={h} className="text-left px-4 py-3 font-bold text-black uppercase tracking-wider text-[11px]">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {readers.map((r) => {
-              const left = daysUntil(r.endDate);
-              const expired = left < 0 || r.status === "revoked" || r.status === "expired";
-              const soon = left <= 15 && !expired;
-              const isOffline = r.status === "offline";
-              const bookCount = Array.isArray(r.bookIds) ? r.bookIds.length : (r.bookIds === "all" ? books.length : 0);
-              return (
-                <tr key={r.id} className="border-t border-gray-100 bg-white hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="font-semibold text-black">{r.name || "—"}</div>
-                    {r.email && <div className="text-xs text-gray-500">{r.email}</div>}
-                  </td>
-                  <td className="px-4 py-3"><code>{r.loginId}</code></td>
-                  <td className="px-4 py-3"><code>{r.password}</code></td>
-                  <td className="px-4 py-3">{bookCount} titles</td>
-                  <td className="px-4 py-3 text-xs">
-                    {r.startDate ? r.startDate.slice(0, 10) : "—"} → {r.endDate ? r.endDate.slice(0, 10) : "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    {isOffline ? (
-                      <Badge tone="bad">Offline</Badge>
-                    ) : expired ? (
-                      <Badge tone="bad">Expired</Badge>
-                    ) : soon ? (
-                       <Badge tone="warn">{left}d left</Badge>
-                    ) : (
-                      <Badge tone="good">Active</Badge>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 flex gap-3 items-center h-full flex-wrap">
-                    {r.email && (
-                      <button
-                        onClick={() => onResendEmail && onResendEmail(r.id)}
-                        className="text-xs font-semibold flex items-center gap-1 text-[#D4A017] hover:text-[#b8860b] cursor-pointer"
-                      >
-                        <Mail size={12} /> Resend Email
-                      </button>
-                    )}
-                    <button
-                      onClick={() => openEditAccess(r)}
-                      className="text-xs font-semibold text-black uppercase tracking-wider cursor-pointer hover:underline"
-                    >
-                      Edit Access
-                    </button>
-                    {!expired && (
-                      <button
-                        onClick={() => onToggleReaderStatus && onToggleReaderStatus(r.id, !isOffline)}
-                        className={`text-[11px] font-semibold uppercase tracking-wider cursor-pointer ${
-                          isOffline ? "text-green-600 hover:text-green-700" : "text-yellow-600 hover:text-yellow-700"
-                        }`}
-                      >
-                        {isOffline ? "Set Online" : "Set Offline"}
-                      </button>
-                    )}
-                    {!expired && !isOffline && (
-                      <button
-                        onClick={() => onRevokeReader && onRevokeReader(r.id)}
-                        className="text-[11px] font-semibold uppercase tracking-wider text-red-600 hover:text-red-700 cursor-pointer"
-                      >
-                        Revoke
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setDeletingReader(r)}
-                      className="text-[11px] font-semibold uppercase tracking-wider text-red-700 hover:text-red-900 flex items-center gap-1 cursor-pointer"
-                      title="Permanently delete user"
-                    >
-                      <Trash2 size={12} /> Delete
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-            {readers.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-black">No individual users yet.</td>
+      <div className="admin-glass-panel rounded-[22px] overflow-hidden">
+        <div tabIndex={0} role="region" aria-label="Individual users and orders" className="admin-table-region">
+          <table className="w-full text-sm border-collapse min-w-[780px]">
+            <thead>
+              <tr className="border-b border-black/10 bg-white/40 backdrop-blur-md">
+                {["User", "Login ID", "Password", "Books", "Term", "Status", "Actions"].map((h) => (
+                  <th key={h} scope="col" className="text-left px-4 py-3.5 font-bold text-zinc-600 uppercase tracking-wider text-[10px]">
+                    {h}
+                  </th>
+                ))}
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredReaders.map((r) => {
+                const left = daysUntil(r.endDate);
+                const expired = left < 0 || r.status === "revoked" || r.status === "expired";
+                const soon = left <= 15 && !expired;
+                const isOffline = r.status === "offline";
+                const bookCount = Array.isArray(r.bookIds) ? r.bookIds.length : (r.bookIds === "all" ? books.length : 0);
+                const initial = String(r.name || r.loginId || "U").charAt(0).toUpperCase();
+                return (
+                  <tr key={r.id} className="border-t border-black/5 hover:bg-white/65 transition-colors">
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#60A5FA] to-[#4F46E5] text-white font-bold text-xs flex items-center justify-center shadow-sm shrink-0">
+                          {initial}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-[#111214] truncate">{r.name || "—"}</div>
+                          {r.email && <div className="text-[11px] text-zinc-500 truncate">{r.email}</div>}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5"><code className="px-2 py-0.5 rounded-md bg-white/70 border border-black/10 text-xs">{r.loginId}</code></td>
+                    <td className="px-4 py-3.5"><code className="px-2 py-0.5 rounded-md bg-white/70 border border-black/10 text-xs">{r.password}</code></td>
+                    <td className="px-4 py-3.5 text-xs font-semibold text-zinc-700">{bookCount} titles</td>
+                    <td className="px-4 py-3.5 text-xs text-zinc-700 whitespace-nowrap">
+                      {r.startDate ? r.startDate.slice(0, 10) : "—"} → {r.endDate ? r.endDate.slice(0, 10) : "—"}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      {isOffline ? (
+                        <Badge tone="bad">Offline</Badge>
+                      ) : expired ? (
+                        <Badge tone="bad">Expired</Badge>
+                      ) : soon ? (
+                        <Badge tone="warn">{left}d left</Badge>
+                      ) : (
+                        <Badge tone="good">Active</Badge>
+                      )}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <div className="flex gap-1.5 items-center flex-wrap">
+                        {r.email && (
+                          <button
+                            onClick={() => onResendEmail && onResendEmail(r.id)}
+                            className="px-2.5 py-1 rounded-full bg-amber-100/80 hover:bg-amber-200/80 text-amber-900 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                          >
+                            <Mail size={11} /> Resend
+                          </button>
+                        )}
+                        <button
+                          onClick={() => openEditAccess(r)}
+                          className="px-2.5 py-1 rounded-full bg-white/80 hover:bg-white border border-black/10 text-[#111214] text-[11px] font-semibold transition-colors cursor-pointer"
+                        >
+                          Edit Access
+                        </button>
+                        {!expired && (
+                          <button
+                            onClick={() => onToggleReaderStatus && onToggleReaderStatus(r.id, !isOffline)}
+                            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors cursor-pointer ${
+                              isOffline ? "bg-emerald-100/85 text-emerald-800 hover:bg-emerald-200/80" : "bg-amber-100/85 text-amber-800 hover:bg-amber-200/80"
+                            }`}
+                          >
+                            {isOffline ? "Set Online" : "Set Offline"}
+                          </button>
+                        )}
+                        {!expired && !isOffline && (
+                          <button
+                            onClick={() => onRevokeReader && onRevokeReader(r.id)}
+                            className="px-2.5 py-1 rounded-full bg-orange-100/85 hover:bg-orange-200/85 text-orange-800 text-[11px] font-semibold transition-colors cursor-pointer"
+                          >
+                            Revoke
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setDeletingReader(r)}
+                          className="px-2.5 py-1 rounded-full bg-red-100/85 hover:bg-red-200/90 text-red-700 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Permanently delete user"
+                        >
+                          <Trash2 size={11} /> Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {filteredReaders.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-zinc-600 text-xs font-medium">No matching individual users found.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {showForm && (
@@ -1071,35 +1586,43 @@ function UploadersTab({ uploaders, onAddUploader, onRemoveUploader }) {
   }
 
   return (
-    <div>
-      <div className="flex justify-end mb-5">
-        <Button onClick={() => setShowForm(true)}><Plus size={16} strokeWidth={2} /> Add uploader</Button>
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setShowForm(true)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold text-[#111214] bg-[#F5F23B] hover:bg-[#ebe72b] shadow-md hover:shadow-lg transition-all cursor-pointer"
+        >
+          <Plus size={15} strokeWidth={2.4} /> Add uploader
+        </button>
       </div>
-      <div className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              {["Name", "Email", "Login ID", "Password", ""].map((h) => (
-                <th key={h} className="text-left px-4 py-3 font-bold text-black uppercase tracking-wider text-[11px]">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {uploaders.map((u) => (
-              <tr key={u.id} className="border-t border-gray-100 bg-white hover:bg-gray-50 transition-colors">
-                <td className="px-4 py-3">{u.name}</td>
-                <td className="px-4 py-3">{u.email || "—"}</td>
-                <td className="px-4 py-3"><code>{u.id}</code></td>
-                <td className="px-4 py-3"><code>{u.password}</code></td>
-                <td className="px-4 py-3">
-                  <button onClick={() => onRemoveUploader(u.id)} className="flex items-center gap-1 text-xs text-red-600 hover:text-red-800 transition-colors">
-                    <Trash2 size={13} strokeWidth={1.8} /> Remove
-                  </button>
-                </td>
+      <div className="admin-glass-panel rounded-[22px] overflow-hidden">
+        <div tabIndex={0} role="region" aria-label="Uploaders list" className="admin-table-region">
+          <table className="w-full text-sm border-collapse min-w-[600px]">
+            <thead>
+              <tr className="border-b border-black/10 bg-white/40 backdrop-blur-md">
+                {["Name", "Email", "Login ID", "Password", ""].map((h) => (
+                  <th key={h} scope="col" className="text-left px-4 py-3.5 font-bold text-zinc-600 uppercase tracking-wider text-[10px]">{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {uploaders.map((u) => (
+                <tr key={u.id} className="border-t border-black/5 hover:bg-white/65 transition-colors">
+                  <td className="px-4 py-3.5 font-semibold text-[#111214]">{u.name}</td>
+                  <td className="px-4 py-3.5 text-zinc-700">{u.email || "—"}</td>
+                  <td className="px-4 py-3.5"><code className="px-2 py-0.5 rounded-md bg-white/70 border border-black/10 text-xs">{u.id}</code></td>
+                  <td className="px-4 py-3.5"><code className="px-2 py-0.5 rounded-md bg-white/70 border border-black/10 text-xs">{u.password}</code></td>
+                  <td className="px-4 py-3.5">
+                    <button onClick={() => onRemoveUploader(u.id)} className="px-2.5 py-1 rounded-full bg-red-100/85 hover:bg-red-200/90 text-red-700 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer">
+                      <Trash2 size={11} strokeWidth={1.8} /> Remove
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {showForm && (
@@ -1173,70 +1696,72 @@ function TrialsTab({ books, trialRequests, onApproveTrial, onRejectTrial, onRese
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm">
-      <table className="w-full text-sm">
-        <thead className="bg-gray-50 border-b border-gray-200">
-          <tr>
-            {["Name", "Email", "Institution", "Requested", "Status", "Actions"].map((h) => (
-              <th key={h} className="text-left px-4 py-3 font-bold text-black uppercase tracking-wider text-[11px]">{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {trialRequests.map((t) => (
-            <tr key={t.id} className="border-t border-gray-100 bg-white hover:bg-gray-50 transition-colors">
-              <td className="px-4 py-3">{t.name}</td>
-              <td className="px-4 py-3">{t.email}</td>
-              <td className="px-4 py-3">{t.institution || "—"}</td>
-              <td className="px-4 py-3">{t.requestedAt}</td>
-              <td className="px-4 py-3">
-                {t.status === "pending" && <Badge tone="warn">Pending</Badge>}
-                {t.status === "approved" && <Badge tone="good">Approved · ends {t.expiresAt}</Badge>}
-                {t.status === "rejected" && <Badge tone="bad">Rejected</Badge>}
-              </td>
-              <td className="px-4 py-3">
-                {t.status === "pending" && (
-                  <div className="flex gap-3">
-                    <button onClick={() => handleOpenApprove(t.id)} className="flex items-center gap-1 text-xs font-semibold text-green-600 hover:text-green-800 transition-colors">
-                      <Check size={13} strokeWidth={2} /> Approve
-                    </button>
-                    <button onClick={() => onRejectTrial(t.id)} className="flex items-center gap-1 text-xs font-semibold text-red-600 hover:text-red-800 transition-colors">
-                      <X size={13} strokeWidth={2} /> Reject
-                    </button>
-                  </div>
-                )}
-                {t.status === "approved" && (
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-3">
-                      <button onClick={() => handleOpenEdit(t)} className="text-xs font-semibold text-black uppercase tracking-wider text-xs">
-                        Edit Access
+    <div className="admin-glass-panel rounded-[22px] overflow-hidden">
+      <div tabIndex={0} role="region" aria-label="Trial requests" className="admin-table-region">
+        <table className="w-full text-sm border-collapse min-w-[760px]">
+          <thead>
+            <tr className="border-b border-black/10 bg-white/40 backdrop-blur-md">
+              {["Name", "Email", "Institution", "Requested", "Status", "Actions"].map((h) => (
+                <th key={h} scope="col" className="text-left px-4 py-3.5 font-bold text-zinc-600 uppercase tracking-wider text-[10px]">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {trialRequests.map((t) => (
+              <tr key={t.id} className="border-t border-black/5 hover:bg-white/65 transition-colors">
+                <td className="px-4 py-3.5 font-semibold text-[#111214]">{t.name}</td>
+                <td className="px-4 py-3.5 text-zinc-700">{t.email}</td>
+                <td className="px-4 py-3.5 text-zinc-700">{t.institution || "—"}</td>
+                <td className="px-4 py-3.5 text-xs text-zinc-700">{t.requestedAt}</td>
+                <td className="px-4 py-3.5">
+                  {t.status === "pending" && <Badge tone="warn">Pending</Badge>}
+                  {t.status === "approved" && <Badge tone="good">Approved · ends {t.expiresAt}</Badge>}
+                  {t.status === "rejected" && <Badge tone="bad">Rejected</Badge>}
+                </td>
+                <td className="px-4 py-3.5">
+                  {t.status === "pending" && (
+                    <div className="flex gap-2">
+                      <button onClick={() => handleOpenApprove(t.id)} className="px-2.5 py-1 rounded-full bg-emerald-100/85 hover:bg-emerald-200/85 text-emerald-800 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer">
+                        <Check size={12} strokeWidth={2.2} /> Approve
                       </button>
-                      <button
-                        onClick={() => onResendEmail && onResendEmail(t.id, 'approved')}
-                        className="flex items-center gap-1 text-xs font-semibold text-[#D4A017] hover:text-[#b8860b] transition-colors"
-                      >
-                        <Mail size={12} /> Resend Email
+                      <button onClick={() => onRejectTrial(t.id)} className="px-2.5 py-1 rounded-full bg-red-100/85 hover:bg-red-200/85 text-red-700 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer">
+                        <X size={12} strokeWidth={2.2} /> Reject
                       </button>
                     </div>
-                    {t.password && <span className="text-[11px] font-semibold uppercase tracking-wider text-black">Login: <code>{t.email}</code> / <code>{t.password}</code></span>}
-                  </div>
-                )}
-                {t.status === "rejected" && (
-                  <button
-                    onClick={() => onResendEmail && onResendEmail(t.id, 'rejected')}
-                    className="flex items-center gap-1 text-xs font-semibold text-black"
-                  >
-                    <Mail size={12} /> Resend Rejection Email
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
-          {trialRequests.length === 0 && (
-            <tr><td colSpan={6} className="px-4 py-6 text-center text-black">No trial requests yet.</td></tr>
-          )}
-        </tbody>
-      </table>
+                  )}
+                  {t.status === "approved" && (
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button onClick={() => handleOpenEdit(t)} className="px-2.5 py-1 rounded-full bg-white/80 hover:bg-white border border-black/10 text-[#111214] text-[11px] font-semibold cursor-pointer">
+                          Edit Access
+                        </button>
+                        <button
+                          onClick={() => onResendEmail && onResendEmail(t.id, 'approved')}
+                          className="px-2.5 py-1 rounded-full bg-amber-100/80 hover:bg-amber-200/80 text-amber-900 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          <Mail size={11} /> Resend Email
+                        </button>
+                      </div>
+                      {t.password && <span className="text-[11px] font-semibold text-zinc-700">Login: <code>{t.email}</code> / <code>{t.password}</code></span>}
+                    </div>
+                  )}
+                  {t.status === "rejected" && (
+                    <button
+                      onClick={() => onResendEmail && onResendEmail(t.id, 'rejected')}
+                      className="px-2.5 py-1 rounded-full bg-white/80 hover:bg-white border border-black/10 text-[#111214] text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <Mail size={11} /> Resend Rejection
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {trialRequests.length === 0 && (
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-zinc-600 text-xs font-medium">No trial requests yet.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {(showApproveModal || showEditModal) && (
         <Modal title={showApproveModal ? "Approve Trial & Select Books" : "Edit Trial Access"} onClose={() => { setShowApproveModal(false); setShowEditModal(false); }} wide>
@@ -1337,12 +1862,12 @@ function EditableFilterList({
   };
 
   return (
-    <div>
-      <h3 className="font-bold text-lg mb-2 border-b pb-2">{title}</h3>
-      {description && <p className="text-xs text-gray-600 mb-3">{description}</p>}
+    <div className="rounded-2xl bg-white/45 border border-white/70 p-4 backdrop-blur-md">
+      <h3 className="font-bold text-base mb-2 border-b border-black/10 pb-2 text-[#111214]">{title}</h3>
+      {description && <p className="text-xs text-zinc-600 mb-3">{description}</p>}
       <form onSubmit={onAdd} className="flex gap-2 mb-4">
         <input
-          className="flex-1 border rounded px-3 py-2 text-sm outline-none focus:border-[#FDD132]"
+          className="flex-1 rounded-full bg-white/80 border border-white px-3.5 py-2 text-xs font-medium outline-none focus:border-[#F5F23B]"
           placeholder={placeholder}
           value={newValue}
           onChange={(e) => onChangeNewValue(e.target.value)}
@@ -1350,11 +1875,11 @@ function EditableFilterList({
         />
         <Button type="submit" variant="brass" size="sm">Add</Button>
       </form>
-      <ul className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar border rounded p-2 bg-gray-50">
+      <ul className="space-y-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
         {items.map((item) => {
           const isEditing = editingOld === item;
           return (
-            <li key={item} className="flex justify-between items-center gap-2 bg-white p-2 border rounded text-sm shadow-sm">
+            <li key={item} className="flex justify-between items-center gap-2 bg-white/85 px-3 py-2 border border-white rounded-xl text-sm shadow-sm">
               {isEditing ? (
                 <>
                   <input
@@ -1579,8 +2104,8 @@ function FiltersTab({ onRenameBookMetadata }) {
   };
 
   return (
-    <div className="bg-white p-6 rounded shadow-sm border border-gray-200">
-      <h2 className="text-xl font-bold mb-6 text-black">Manage Dropdown Filters</h2>
+    <div className="admin-glass-panel p-6 rounded-[22px]">
+      <h2 className="text-xl font-bold mb-2 text-[#111214]">Manage Dropdown Filters</h2>
       <p className="text-sm text-black mb-8 max-w-3xl">
         Add, edit spelling/format, or remove items from these lists to control the options available when adding or editing books.
         Editing an existing item will also update matching books across your catalog.
@@ -1760,8 +2285,8 @@ function HomepageTab({ books }) {
   const allAuthors = Array.from(new Set(books.map(b => b.author).filter(Boolean))).sort();
 
   return (
-    <div className="bg-white p-6 rounded shadow-sm border border-gray-200">
-      <h2 className="text-xl font-bold mb-6 text-black">Homepage Layout</h2>
+    <div className="admin-glass-panel p-6 rounded-[22px]">
+      <h2 className="text-xl font-bold mb-2 text-[#111214]">Homepage Layout</h2>
       <p className="text-sm text-black mb-8 max-w-3xl">
         Control how books and authors are listed on the main Catalog page. 
         You can leave a section on "Auto" to dynamically fetch the most recent data, or switch it to "Manual" to hand-pick the exact items to feature.
@@ -1932,8 +2457,8 @@ function PagesTab() {
   };
 
   return (
-    <div className="bg-white p-6 rounded shadow-sm border border-gray-200">
-      <h2 className="text-xl font-bold mb-6 text-black">Manage Static Pages</h2>
+    <div className="admin-glass-panel p-6 rounded-[22px]">
+      <h2 className="text-xl font-bold mb-2 text-[#111214]">Manage Static Pages</h2>
       <p className="text-sm text-black mb-8 max-w-3xl">
         Edit the content of the footer pages (About Us, Contact Us, Terms, Privacy Policy, FAQs). Changes reflect instantly on the live site.
       </p>
@@ -2046,20 +2571,20 @@ function EmailsTab({ emailTemplates, onUpdateEmailTemplate }) {
       </div>
 
       <div className="grid md:grid-cols-4 gap-6">
-        <div className="md:col-span-1 rounded-md border bg-white p-4 border-gray-200">
+        <div className="md:col-span-1 admin-glass-panel rounded-[20px] p-4">
           <h3 className="font-semibold mb-4 text-sm uppercase tracking-wider text-black">Available Templates</h3>
           <div className="flex flex-col gap-2">
             {DEFAULT_TEMPLATES.map(t => (
               <button
                 key={t.id}
                 onClick={() => setActiveTemplate(t.id)}
-                className={`text-left px-3 py-2 rounded text-sm transition-colors ${activeTemplate === t.id ? 'bg-[#111] text-white font-bold' : 'hover:bg-gray-100 text-black'}`}
+                className={`text-left px-3 py-2 rounded-xl text-sm transition-colors cursor-pointer ${activeTemplate === t.id ? 'bg-[#111214] text-white font-bold shadow-sm' : 'hover:bg-white/70 text-black'}`}
               >
                 {t.name}
               </button>
             ))}
           </div>
-          <div className="mt-8 text-xs text-black bg-gray-50 p-3 rounded border">
+          <div className="mt-8 text-xs text-black bg-white/60 p-3 rounded-xl border border-white/70">
             <strong>Available Variables:</strong>
             <ul className="mt-2 space-y-1">
               <li><code>{`{{name}}`}</code> - User/Institution Name</li>
@@ -2072,7 +2597,7 @@ function EmailsTab({ emailTemplates, onUpdateEmailTemplate }) {
         </div>
 
         <div className="md:col-span-3">
-          <div className="bg-white rounded-md border p-6 border-gray-200">
+          <div className="admin-glass-panel rounded-[20px] p-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-gray-100">
               <div>
                 <h2 className="text-xl font-bold" style={fontDisplay}>Edit {currentDefault?.name} Email</h2>
@@ -2209,15 +2734,21 @@ function FeaturedAuthorsTab({ books = [], authors = [], onAddAuthor, onRemoveAut
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-black">Featured Authors</h2>
-        <Button onClick={() => setShowForm(true)}><Plus size={16} strokeWidth={2} /> Add Featured Author</Button>
+        <h2 className="text-xl font-bold text-[#111214]">Featured Authors</h2>
+        <button
+          type="button"
+          onClick={() => setShowForm(true)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold text-[#111214] bg-[#F5F23B] hover:bg-[#ebe72b] shadow-md hover:shadow-lg transition-all cursor-pointer"
+        >
+          <Plus size={15} strokeWidth={2.4} /> Add Featured Author
+        </button>
       </div>
 
-      <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
         {authors.map((author) => {
           if (!author) return null;
           return (
-            <div key={author.id} className="bg-white border rounded-lg p-6 flex flex-col items-center text-center shadow-sm border-gray-200">
+            <div key={author.id} className="admin-glass-panel rounded-[22px] p-6 flex flex-col items-center text-center hover:-translate-y-0.5 transition-all">
               <div
                 className="w-24 h-24 rounded-full bg-gray-200 mb-4 bg-cover bg-center border-4 border-white shadow-md flex items-center justify-center text-xl font-bold text-black"
                 style={author.photo_url ? { backgroundImage: `url(${author.photo_url})` } : {}}
@@ -2304,33 +2835,35 @@ function FeaturedAuthorsTab({ books = [], authors = [], onAddAuthor, onRemoveAut
 // ---------------------------------------------------------------------------
 function SubscribersTab({ subscribers }) {
   return (
-    <div>
-      <div className="flex justify-between items-center mb-5">
-        <h3 className="text-lg font-bold text-black">Newsletter Subscribers</h3>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-bold text-[#111214]">Newsletter Subscribers ({subscribers.length})</h3>
       </div>
-      <div className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              {["Email", "Subscribed At"].map((h) => (
-                <th key={h} className="text-left px-4 py-3 font-bold text-black uppercase tracking-wider text-[11px]">{h}</th>
+      <div className="admin-glass-panel rounded-[22px] overflow-hidden">
+        <div tabIndex={0} role="region" aria-label="Newsletter subscribers" className="admin-table-region">
+          <table className="w-full text-sm border-collapse min-w-[460px]">
+            <thead>
+              <tr className="border-b border-black/10 bg-white/40 backdrop-blur-md">
+                {["Email", "Subscribed At"].map((h) => (
+                  <th key={h} scope="col" className="text-left px-4 py-3.5 font-bold text-zinc-600 uppercase tracking-wider text-[10px]">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {subscribers.map((s) => (
+                <tr key={s.id} className="border-t border-black/5 hover:bg-white/65 transition-colors">
+                  <td className="px-4 py-3.5 font-semibold text-[#111214]">{s.email}</td>
+                  <td className="px-4 py-3.5 text-zinc-700 text-xs">{new Date(s.subscribed_at).toLocaleString()}</td>
+                </tr>
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {subscribers.map((s) => (
-              <tr key={s.id} className="border-t border-gray-100 bg-white hover:bg-gray-50 transition-colors">
-                <td className="px-4 py-3 font-semibold">{s.email}</td>
-                <td className="px-4 py-3 text-black">{new Date(s.subscribed_at).toLocaleString()}</td>
-              </tr>
-            ))}
-            {subscribers.length === 0 && (
-              <tr>
-                <td colSpan="2" className="px-4 py-8 text-center text-black">No subscribers yet.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              {subscribers.length === 0 && (
+                <tr>
+                  <td colSpan="2" className="px-4 py-8 text-center text-zinc-600 text-xs font-medium">No subscribers yet.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

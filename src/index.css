@@ -74,3 +74,79 @@ header {
   user-select: none;
   -webkit-user-select: none;
 }
+
+/* ================================================================
+   ADMIN DASHBOARD GLASSMORPHISM THEME (SCOPED)
+   ================================================================ */
+
+.admin-glass-backdrop {
+  background:
+    radial-gradient(62% 55% at 8% 8%, rgba(233, 224, 152, 0.55) 0%, transparent 65%),
+    radial-gradient(58% 54% at 92% 10%, rgba(246, 189, 148, 0.52) 0%, transparent 62%),
+    radial-gradient(65% 60% at 50% 95%, rgba(212, 215, 212, 0.72) 0%, transparent 70%),
+    linear-gradient(145deg, #eceae0 0%, #ede6dc 48%, #e1e2de 100%);
+}
+
+.admin-glass-shell {
+  background: rgba(255, 255, 255, 0.44);
+  backdrop-filter: blur(26px) saturate(145%);
+  -webkit-backdrop-filter: blur(26px) saturate(145%);
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  box-shadow:
+    0 28px 70px -22px rgba(24, 24, 27, 0.14),
+    0 1px 0 inset rgba(255, 255, 255, 0.75);
+}
+
+.admin-glass-panel {
+  background: rgba(255, 255, 255, 0.56);
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+  border: 1px solid rgba(255, 255, 255, 0.76);
+  box-shadow: 0 12px 34px -16px rgba(17, 24, 39, 0.10);
+}
+
+.admin-glass-pill {
+  background: rgba(255, 255, 255, 0.52);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  box-shadow: 0 4px 14px -4px rgba(17, 24, 39, 0.06);
+}
+
+.admin-bento-card {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-bento-card:hover {
+  transform: translateY(-3px);
+}
+
+.admin-tab-scroller {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.admin-tab-scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.admin-table-region {
+  overflow-x: auto;
+  overflow-y: visible;
+  container-type: inline-size;
+}
+
+.admin-table-region thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-bento-card,
+  .admin-glass-motion {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
+}
