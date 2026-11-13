@@ -4,7 +4,7 @@ import { supabase } from "../supabaseClient";
 import { 
   Search, ShieldCheck, ChevronLeft, ChevronRight, ChevronUp, ChevronDown,
   ShoppingCart, BookOpen, Users, Star, Mail, 
-  Library, BookmarkCheck 
+  Library, BookmarkCheck, X
 } from "lucide-react";
 import { fontDisplay, fontBody, getHomepageConfig } from "../theme";
 import AnimatedSweepButton from "../components/AnimatedSweepButton";
@@ -358,10 +358,10 @@ export default function CatalogPage({ books, onNavigate }) {
             </p>
             
             <search className="block mt-6 sm:mt-8 relative max-w-lg w-full z-40" ref={searchContainerRef}>
-              <div className="flex items-center admin-glass-panel rounded-full p-1.5 w-full relative z-20">
+              <div className="flex items-center bg-[#FAF7EE] paper-texture rounded-full p-1.5 w-full relative z-20 shadow-md border-2 border-[#E2D6C0] focus-within:border-[#111214] transition-all">
                 <Search size={18} className="ml-3.5 text-slate-600 flex-shrink-0" />
                 <input
-                  type="search"
+                  type="text"
                   aria-label="Search catalog titles, authors, or subjects"
                   autoCorrect="off"
                   autoCapitalize="none"
@@ -375,6 +375,19 @@ export default function CatalogPage({ books, onNavigate }) {
                   placeholder="Search book here..."
                   className="flex-1 bg-transparent border-none outline-none px-3 py-2 text-[#111214] placeholder:text-slate-500 w-full text-sm font-medium"
                 />
+                {query && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuery("");
+                      setIsSearchOpen(false);
+                    }}
+                    className="p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 mr-2 transition-all cursor-pointer flex-shrink-0"
+                    title="Clear search"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
                 <AnimatedSweepButton 
                   onClick={() => {
                     setIsSearchOpen(false);
@@ -387,11 +400,11 @@ export default function CatalogPage({ books, onNavigate }) {
                 </AnimatedSweepButton>
               </div>
 
-              {/* Live Search Dropdown */}
+              {/* Live Search Dropdown (100% OPAQUE - No bleed-through) */}
               {isSearchOpen && query.trim().length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white/92 backdrop-blur-xl rounded-2xl shadow-2xl z-50 max-h-80 overflow-y-auto border border-white">
+                <div className="absolute top-full left-0 right-0 mt-2.5 bg-[#FAF7EE] paper-texture rounded-2xl shadow-[0_25px_60px_-15px_rgba(15,23,42,0.4)] z-[100] max-h-96 overflow-y-auto border-2 border-[#E2D6C0] divide-y divide-[#EADDC7]">
                   {filtered.length > 0 ? (
-                    <ul className="py-2 divide-y divide-slate-200/70">
+                    <ul className="py-1 divide-y divide-[#EADDC7]">
                       {filtered.slice(0, 10).map((b) => (
                         <li 
                           key={b.id} 
@@ -400,22 +413,24 @@ export default function CatalogPage({ books, onNavigate }) {
                             setQuery("");
                             onNavigate("book-details", b.id);
                           }}
-                          className="px-4 py-3 hover:bg-white cursor-pointer flex items-start gap-4 transition-colors"
+                          className="px-4 py-3 bg-[#FAF7EE] paper-texture hover:bg-[#F2EAE0] cursor-pointer flex items-start gap-4 transition-colors"
                         >
                           <BookCover book={b} className="w-10 h-14 flex-shrink-0 text-[10px] rounded-md shadow-sm" />
-                          <div className="flex-1 min-w-0 pt-1">
-                            <h4 className="text-[#111214] font-bold truncate text-sm">{b.title}</h4>
-                            <p className="text-slate-600 text-xs truncate">{b.author}</p>
-                            <p className="text-slate-500 text-[10px] mt-1 uppercase font-bold">{b.genre}</p>
+                          <div className="flex-1 min-w-0 pt-0.5">
+                            <h4 className="text-[#111214] font-bold truncate text-sm" style={fontDisplay}>{b.title}</h4>
+                            <p className="text-slate-600 text-xs truncate mt-0.5">{b.author}</p>
+                            <span className="inline-block text-slate-600 text-[10px] mt-1 uppercase font-bold tracking-wider bg-black/5 px-2 py-0.5 rounded">
+                              {b.genre}
+                            </span>
                           </div>
-                          <div className="flex-shrink-0 text-[11px] font-bold text-[#111214] bg-[#F5F23B] px-3 py-1 rounded-full shadow-xs">
+                          <div className="flex-shrink-0 text-[11px] font-bold text-[#111214] bg-[#F5F23B] hover:bg-[#eae729] px-3.5 py-1.5 rounded-full shadow-xs transition-colors">
                             View Access
                           </div>
                         </li>
                       ))}
                       {filtered.length > 10 && (
                         <li 
-                          className="px-4 py-3 text-center text-xs font-bold text-[#111214] hover:bg-white cursor-pointer bg-slate-100/70"
+                          className="px-4 py-3 text-center text-xs font-bold text-[#111214] hover:bg-[#F2EAE0] cursor-pointer bg-[#F0E8D9]"
                           onClick={() => {
                             setIsSearchOpen(false);
                             document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth" });
@@ -426,7 +441,7 @@ export default function CatalogPage({ books, onNavigate }) {
                       )}
                     </ul>
                   ) : (
-                    <div className="px-4 py-6 text-center text-slate-500 text-sm">
+                    <div className="px-4 py-6 text-center text-slate-600 bg-[#FAF7EE] paper-texture text-sm font-medium">
                       No books found matching "{query}"
                     </div>
                   )}

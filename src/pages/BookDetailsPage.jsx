@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, BookOpen, Calendar, Tag, Info, Quote, Copy } from "lucide-react";
+import { ChevronLeft, BookOpen, Calendar, Tag, Info, Quote, Copy, Download } from "lucide-react";
 import { fontDisplay, fontBody } from "../theme";
 import BookLoader from "../components/BookLoader";
 import AnimatedSweepButton from "../components/AnimatedSweepButton";
 import { Modal } from "../components/UI";
 import BookCover from "../components/BookCover";
+import { downloadCoverImage } from "../utils/downloadCover";
 
 export default function BookDetailsPage({ book, onNavigate, session }) {
   React.useEffect(() => {
@@ -139,6 +140,18 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
                     Request Free Trial
                   </AnimatedSweepButton>
                 </>
+              )}
+
+              {/* Admin-only Cover Page Download Button */}
+              {session?.role === "admin" && (book.coverUrl || book.cover) && (
+                <button
+                  type="button"
+                  onClick={() => downloadCoverImage(book.coverUrl || book.cover, book.title)}
+                  className="w-full mt-3.5 flex items-center justify-center gap-2 py-2.5 px-4 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-sm transition-all cursor-pointer"
+                  title="Download cover page image from database (Admin Only)"
+                >
+                  <Download size={14} /> Download Cover Page (Admin)
+                </button>
               )}
             </div>
           </div>

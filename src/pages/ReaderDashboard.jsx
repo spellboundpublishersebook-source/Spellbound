@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import { 
   Clock, AlertTriangle, BookOpen, ChevronRight, ChevronLeft, X, 
   User, Mail, Building2, ArrowUpDown, LayoutGrid, List, Check,
-  GraduationCap, Plus, Key, ShieldCheck
+  GraduationCap, Plus, Key, ShieldCheck, Search
 } from "lucide-react";
 import { fontDisplay, fontBody } from "../theme";
 import { daysUntil } from "../data/mockData";
@@ -180,6 +180,7 @@ export default function ReaderDashboard({
   const [selectedGenres, setSelectedGenres] = useState([]);
   const [selectedAuthors, setSelectedAuthors] = useState([]);
   const [selectedYears, setSelectedYears] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showAuthorModal, setShowAuthorModal] = useState(false);
   const [showYearModal, setShowYearModal] = useState(false);
@@ -339,19 +340,29 @@ export default function ReaderDashboard({
 
   // Check if any specific filter is active
   const isFilteredView = useMemo(() => {
-    return selectedGenres.length > 0 || selectedAuthors.length > 0 || selectedYears.length > 0 || tokenFilter || collectionFilter;
-  }, [selectedGenres, selectedAuthors, selectedYears, tokenFilter, collectionFilter]);
+    return selectedGenres.length > 0 || selectedAuthors.length > 0 || selectedYears.length > 0 || tokenFilter || collectionFilter || Boolean(searchQuery.trim());
+  }, [selectedGenres, selectedAuthors, selectedYears, tokenFilter, collectionFilter, searchQuery]);
 
   // Filtered books
   const myBooks = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
     return myBooksRaw.filter((b) => {
+      const matchesSearch = !q || (
+        (b.title && b.title.toLowerCase().includes(q)) ||
+        (b.author && b.author.toLowerCase().includes(q)) ||
+        (b.genre && b.genre.toLowerCase().includes(q)) ||
+        (b.publisher && b.publisher.toLowerCase().includes(q)) ||
+        (b.onlineIsbn && b.onlineIsbn.toLowerCase().includes(q)) ||
+        (b.printIsbn && b.printIsbn.toLowerCase().includes(q)) ||
+        (b.description && b.description.toLowerCase().includes(q))
+      );
       const matchesG = selectedGenres.length === 0 || selectedGenres.includes(b.genre);
       const matchesA = selectedAuthors.length === 0 || selectedAuthors.includes(b.author);
       const bookYear = b.firstPublish ? b.firstPublish.toString().match(/\b(19\d{2}|20\d{2})\b/)?.[0] : null;
       const matchesY = selectedYears.length === 0 || (bookYear && selectedYears.includes(bookYear));
-      return matchesG && matchesA && matchesY;
+      return matchesSearch && matchesG && matchesA && matchesY;
     });
-  }, [myBooksRaw, selectedGenres, selectedAuthors, selectedYears]);
+  }, [myBooksRaw, searchQuery, selectedGenres, selectedAuthors, selectedYears]);
 
   // Sorted books
   const sortedBooks = useMemo(() => {
@@ -501,7 +512,19 @@ export default function ReaderDashboard({
     return result;
   }, [session, myBooksRaw, activeDeptObj, studentKey]);
 
+  const filteredContinueReading = useMemo(() => {
+    if (!searchQuery.trim()) return continueReadingList;
+    const q = searchQuery.trim().toLowerCase();
+    return continueReadingList.filter(({ book }) => (
+      (book.title && book.title.toLowerCase().includes(q)) ||
+      (book.author && book.author.toLowerCase().includes(q)) ||
+      (book.genre && book.genre.toLowerCase().includes(q)) ||
+      (book.onlineIsbn && book.onlineIsbn.toLowerCase().includes(q))
+    ));
+  }, [continueReadingList, searchQuery]);
+
   const handleClearAll = () => {
+    setSearchQuery("");
     setSelectedGenres([]);
     setSelectedAuthors([]);
     setSelectedYears([]);
@@ -633,8 +656,71 @@ export default function ReaderDashboard({
           </div>
         ) : (
           <>
+            {/* Prominent Library Search Bar for Dept & Student Access */}
+            <div className="mb-8">
+              <div className="relative max-w-2xl mx-auto">
+                <div className="flex items-center bg-[#FAF7EE] paper-texture rounded-full p-1.5 sm:p-2 w-full relative z-20 shadow-md border-2 border-[#E2D6C0] focus-within:border-[#111214] transition-all">
+                  <Search size={18} className="ml-3.5 text-slate-600 flex-shrink-0" />
+                  <input
+                    type="text"
+                    aria-label="Search library titles, authors, or subjects"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    placeholder={
+                      session?.type === "student"
+                        ? `Search ${session.name || "student"}'s library by title, author, or subject...`
+                        : `Search department titles by title, author, or subject...`
+                    }
+                    className="flex-1 bg-transparent border-none outline-none px-3 py-1.5 text-[#111214] placeholder:text-slate-500 w-full text-sm font-medium"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setCurrentPage(1);
+                      }}
+                      className="p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 mr-2 transition-all cursor-pointer flex-shrink-0"
+                      title="Clear search"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(1)}
+                    className="bg-[#111214] hover:bg-black text-[#F5F23B] px-5 sm:px-6 py-2 rounded-full text-xs font-bold shadow-sm transition-all shrink-0 cursor-pointer"
+                  >
+                    Search
+                  </button>
+                </div>
+
+                {/* Active search query status / clear button */}
+                {searchQuery.trim() && (
+                  <div className="mt-2.5 flex items-center justify-between text-xs px-4 text-slate-700">
+                    <span>
+                      Found <strong>{myBooks.length}</strong> title{myBooks.length === 1 ? "" : "s"} matching "<strong>{searchQuery}</strong>"
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setCurrentPage(1);
+                      }}
+                      className="font-bold text-[#111214] hover:underline cursor-pointer flex items-center gap-1"
+                    >
+                      <X size={13} /> Clear search
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Continue Reading Section (Shown ONLY when reader is student and has books in progress) */}
-            {session?.type === "student" && !isFilteredView && continueReadingList.length > 0 && (
+            {session?.type === "student" && selectedGenres.length === 0 && selectedAuthors.length === 0 && selectedYears.length === 0 && filteredContinueReading.length > 0 && (
               <div className="admin-glass-panel rounded-[26px] overflow-hidden mb-10 p-6 sm:p-8 relative border-l-4 border-l-[#F5F23B]">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-3 border-b border-black/10">
                   <div>
@@ -652,12 +738,12 @@ export default function ReaderDashboard({
 
                   <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 bg-white/70 px-3.5 py-1.5 rounded-full border border-white shrink-0 shadow-sm">
                     <BookOpen size={13} className="text-slate-600" />
-                    <span>{continueReadingList.length} title{continueReadingList.length > 1 ? "s" : ""} in progress</span>
+                    <span>{filteredContinueReading.length} title{filteredContinueReading.length > 1 ? "s" : ""} in progress</span>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                  {continueReadingList.slice(0, 6).map(({ book, progress }) => (
+                  {filteredContinueReading.slice(0, 6).map(({ book, progress }) => (
                     <div
                       key={book.id}
                       onClick={() => onOpenBook(book.id, progress.page)}
@@ -1016,7 +1102,7 @@ export default function ReaderDashboard({
                                 className="fixed inset-0 z-30"
                                 onClick={() => setShowSortDropdown(false)}
                               />
-                              <div className="absolute right-0 top-full mt-2 w-64 bg-white/92 backdrop-blur-xl border border-white rounded-2xl shadow-2xl z-40 py-1.5 overflow-hidden">
+                              <div className="absolute right-0 top-full mt-2 w-64 bg-[#FAF7EE] paper-texture border-2 border-[#E2D6C0] rounded-2xl shadow-2xl z-40 py-1.5 overflow-hidden">
                                 {sortOptions.map((opt) => (
                                   <button
                                     type="button"
@@ -1068,6 +1154,22 @@ export default function ReaderDashboard({
 
                     {/* Filter Pills / Tags */}
                     <div className="flex flex-wrap items-center gap-2 mb-8">
+                      {searchQuery.trim() && (
+                        <span className="inline-flex items-center gap-1.5 px-3.5 py-1 bg-[#111214] text-[#F5F23B] rounded-full text-xs font-bold shadow-sm">
+                          Search: "{searchQuery.trim()}"
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSearchQuery("");
+                              setCurrentPage(1);
+                            }}
+                            className="hover:opacity-80 cursor-pointer"
+                            title="Clear search"
+                          >
+                            <X size={13} />
+                          </button>
+                        </span>
+                      )}
                       {typeFilter && (
                         <span className="inline-flex items-center gap-1.5 px-3.5 py-1 bg-[#111214] text-[#F5F23B] rounded-full text-xs font-bold">
                           eBook

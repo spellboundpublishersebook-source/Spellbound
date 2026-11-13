@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { Plus, Trash2, UploadCloud, BookOpen, Edit2, ChevronLeft, ChevronRight, Layers, FileText, Sparkles, FolderUp, CheckCircle2, ChevronDown, ChevronUp, FileUp, HelpCircle } from "lucide-react";
+import { Plus, Trash2, UploadCloud, BookOpen, Edit2, ChevronLeft, ChevronRight, Layers, FileText, Sparkles, FolderUp, CheckCircle2, ChevronDown, ChevronUp, FileUp, HelpCircle, Download } from "lucide-react";
 import { palette, fontDisplay, getGenres, getPubTypes, getCustomHeadings, getPublishers } from "../theme";
+import { downloadCoverImage } from "../utils/downloadCover";
 import Button from "../components/Button";
 import { Field, Select, TextArea, Modal } from "../components/UI";
 
@@ -447,6 +448,16 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
                   >
                     <Edit2 size={12} strokeWidth={1.9} /> Edit
                   </button>
+                  {hasCover && (
+                    <button
+                      type="button"
+                      onClick={() => downloadCoverImage(b.coverUrl, b.title)}
+                      title="Download front cover image from database"
+                      className={`flex items-center gap-1.5 text-xs font-semibold transition-all cursor-pointer ${embedded ? 'px-2.5 py-1 rounded-full bg-emerald-100/90 hover:bg-emerald-200 text-emerald-900 border border-emerald-300/60 shadow-xs' : 'text-emerald-700 hover:text-emerald-900'}`}
+                    >
+                      <Download size={12} strokeWidth={2} /> Download Cover
+                    </button>
+                  )}
                   <button
                     onClick={() => {
                       if (window.confirm(`Are you sure you want to remove "${b.title}"? This cannot be undone.`)) {
@@ -668,9 +679,18 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
                       )}
                     </div>
                     {editingId && form.coverUrl ? (
-                      <div className="text-xs px-3.5 py-3 bg-emerald-100/75 text-emerald-900 border border-emerald-200 rounded-2xl flex items-center justify-between gap-2">
+                      <div className="text-xs px-3.5 py-3 bg-emerald-100/75 text-emerald-900 border border-emerald-200 rounded-2xl flex flex-wrap items-center justify-between gap-2">
                         <span className="font-semibold flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-700" /> Current Cover Saved</span>
-                        <span className="text-[11px] text-emerald-800/80">Remove first to replace</span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => downloadCoverImage(form.coverUrl, form.title)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-800 text-white hover:bg-emerald-900 text-[11px] font-bold shadow-xs cursor-pointer"
+                          >
+                            <Download size={12} /> Download Cover
+                          </button>
+                          <span className="text-[11px] text-emerald-800/80">Remove first to replace</span>
+                        </div>
                       </div>
                     ) : (
                       <div className="rounded-2xl border border-dashed border-slate-300/90 bg-white/65 hover:border-[#111214] p-3.5 transition-colors">
@@ -745,9 +765,18 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
                   </div>
                   <p className="text-xs text-slate-600 mb-2">Upload the front cover artwork or cover page document.</p>
                   {editingId && form.coverUrl ? (
-                    <div className="text-xs px-3.5 py-3 bg-emerald-100/75 text-emerald-900 border border-emerald-200 rounded-xl flex items-center justify-between gap-2">
+                    <div className="text-xs px-3.5 py-3 bg-emerald-100/75 text-emerald-900 border border-emerald-200 rounded-xl flex flex-wrap items-center justify-between gap-2">
                       <span className="font-semibold flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-700" /> Current Cover Page Saved</span>
-                      <span className="text-[11px] text-emerald-800/80">Remove first to replace</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => downloadCoverImage(form.coverUrl, form.title)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-800 text-white hover:bg-emerald-900 text-[11px] font-bold shadow-xs cursor-pointer"
+                        >
+                          <Download size={12} /> Download Cover
+                        </button>
+                        <span className="text-[11px] text-emerald-800/80">Remove first to replace</span>
+                      </div>
                     </div>
                   ) : (
                     <div className="rounded-xl border border-dashed border-slate-300 bg-white/70 hover:border-[#111214] p-3 transition-colors">

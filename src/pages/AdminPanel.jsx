@@ -1,7 +1,8 @@
 import { supabase } from "../supabaseClient";
 import React, { useState, useMemo, useRef } from "react";
-import { Plus, Trash2, Check, X, Users, UploadCloud, Gift, Search, BookOpen, Settings, LayoutTemplate, Mail, AlertTriangle, Key, Activity, Eye, EyeOff, Edit3, ArrowUpRight, SlidersHorizontal, PanelLeft, Building2, Copy, CheckCircle2, ChevronDown, ChevronUp, GraduationCap } from "lucide-react";
+import { Plus, Trash2, Check, X, Users, UploadCloud, Gift, Search, BookOpen, Settings, LayoutTemplate, Mail, AlertTriangle, Key, Activity, Eye, EyeOff, Edit3, ArrowUpRight, SlidersHorizontal, PanelLeft, Building2, Copy, CheckCircle2, ChevronDown, ChevronUp, GraduationCap, Download } from "lucide-react";
 import { palette, fontDisplay, getGenres, setGenres as saveGenres, getPubTypes, setPubTypes as savePubTypes, getPublishers, setPublishers as savePublishers, getCustomHeadings, setCustomHeadings as saveCustomHeadings, getHomepageConfig, setHomepageConfig, getPages, setPages } from "../theme";
+import { downloadCoverImage } from "../utils/downloadCover";
 import { addMonths, today, daysUntil, genCredentialId, genPassword } from "../data/mockData";
 import { renderEmailHtml, COMPANY_LOGO_URL } from "../email";
 import Button from "../components/Button";
@@ -454,7 +455,17 @@ export default function AdminPanel({
                         </div>
                       </div>
 
-                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {currentSpotlight.coverUrl && currentSpotlight.coverUrl !== "null" && (
+                          <button
+                            type="button"
+                            onClick={() => downloadCoverImage(currentSpotlight.coverUrl, currentSpotlight.title)}
+                            title="Download cover page from database"
+                            className="w-10 h-10 rounded-xl bg-white/20 hover:bg-white/35 text-white flex items-center justify-center shadow-md hover:scale-105 transition-transform cursor-pointer border border-white/20"
+                          >
+                            <Download size={16} strokeWidth={2.3} />
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => onNavigate && onNavigate("reading", currentSpotlight.id)}
