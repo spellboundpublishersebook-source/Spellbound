@@ -26,6 +26,17 @@ const SECTION_ZOOM_STEP = 0.25;
 
 // Reading Themes Palette
 const READING_THEMES = {
+  cleanLight: {
+    id: "cleanLight",
+    name: "Modern Paper (Image 2 Style)",
+    pageBg: "#FFFFFF",
+    textColor: "#111827",
+    headerBg: "#0F172A",
+    outerBg: "#ECEEF2",
+    toolbarBg: "#1E293B",
+    accent: "#0284C7",
+    canvasFilter: "none",
+  },
   cream: {
     id: "cream",
     name: "Classic Cream",
@@ -82,6 +93,17 @@ const READING_THEMES = {
     canvasFilter: "invert(90%) hue-rotate(190deg) contrast(95%)",
   },
 };
+
+// EPUB Color Mode Options
+const EPUB_COLOR_MODES = [
+  { id: "auto", name: "Auto (Match Theme)", desc: "Adapts to reader theme automatically" },
+  { id: "publisher", name: "Publisher Original", desc: "Authentic publisher colors (Image 2)" },
+  { id: "cleanLight", name: "Modern Paper (Pure White)", desc: "Clean white page with deep black text" },
+  { id: "cream", name: "Classic Cream", desc: "Warm relaxing cream palette" },
+  { id: "sepia", name: "Warm Sepia", desc: "Vintage book paper tone" },
+  { id: "mint", name: "Eye-Care Mint", desc: "Soothing mint green reading palette" },
+  { id: "dark", name: "Night Mode (Dark)", desc: "High contrast dark canvas" },
+];
 
 // Academic Highlighter Swatches
 const HIGHLIGHT_COLORS = {
@@ -269,8 +291,25 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const [epubError, setEpubError] = useState(null);
   const epubDocCacheRef = useRef({});
 
+  // EPUB custom color palette state
+  const [epubColorMode, setEpubColorMode] = useState(() => {
+    try {
+      return localStorage.getItem(`epub_color_mode_${studentKey || "default"}`) || "auto";
+    } catch (_) {
+      return "auto";
+    }
+  });
+  const [showEpubColorMenu, setShowEpubColorMenu] = useState(false);
+  const epubColorMenuRef = useRef(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`epub_color_mode_${studentKey || "default"}`, epubColorMode);
+    } catch (_) {}
+  }, [epubColorMode, studentKey]);
+
   // Active reading theme object
-  const currentTheme = READING_THEMES[themeKey] || READING_THEMES.cream;
+  const currentTheme = READING_THEMES[themeKey] || READING_THEMES.cleanLight || READING_THEMES.cream;
 
   // Active document URL
   const activeDocumentUrl = isEpub
@@ -307,7 +346,10 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         setNumPdfPages(doc.totalPages);
 
         const pNum = Math.min(Math.max(1, pdfPageNumber || 1), doc.totalPages);
-        const pageResult = await doc.getPageHtml(pNum);
+        const pageResult = await doc.getPageHtml(pNum, {
+          colorMode: epubColorMode,
+          theme: currentTheme
+        });
 
         if (isCancelled) return;
 
@@ -336,14 +378,17 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     };
   }, [isEpub, currentEpubSection?.id, currentEpubSection?.url, currentEpubSection?.type]);
 
-  // Update HTML whenever page changes within the unpacked EPUB chapter
+  // Update HTML whenever page, color mode, or theme changes within the unpacked EPUB chapter
   useEffect(() => {
     if (!activeEpubDoc || currentEpubSection?.type !== "epub") return;
     let isCancelled = false;
 
     async function updatePage() {
       try {
-        const pageResult = await activeEpubDoc.getPageHtml(pdfPageNumber);
+        const pageResult = await activeEpubDoc.getPageHtml(pdfPageNumber, {
+          colorMode: epubColorMode,
+          theme: currentTheme
+        });
         if (isCancelled) return;
         if (typeof pageResult === "object" && pageResult.html) {
           setActiveEpubPageHtml(pageResult.html);
@@ -362,7 +407,29 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     return () => {
       isCancelled = true;
     };
-  }, [activeEpubDoc, currentEpubSection?.type, pdfPageNumber]);
+  }, [activeEpubDoc, currentEpubSection?.type, pdfPageNumber, epubColorMode, themeKey]);
+
+  // Listen for forwarded pointer moves from EPUB iframe for silky-smooth line focus tracking
+  useEffect(() => {
+    if (!lineFocus) return;
+
+    const handleIframePointer = (e) => {
+      if (e.data?.type === "EPUB_POINTER_MOVE" && pageBoxRef.current) {
+        const iframe = pageBoxRef.current.querySelector("iframe");
+        if (iframe) {
+          const iframeRect = iframe.getBoundingClientRect();
+          const pageRect = pageBoxRef.current.getBoundingClientRect();
+          const relY = (iframeRect.top - pageRect.top) + e.data.clientY;
+          setLineFocusY(Math.max(20, Math.min(pageRect.height - 20, relY)));
+        }
+      }
+    };
+
+    window.addEventListener("message", handleIframePointer);
+    return () => {
+      window.removeEventListener("message", handleIframePointer);
+    };
+  }, [lineFocus]);
 
   // Clean up cached blob URLs on unmount
   useEffect(() => {
@@ -1131,7 +1198,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     };
   }, [next, prev, sectionCrop, handleCloseSectionZoom, sectionSelectActive, activeTool, lineFocus, showNotebook, showLightControls, showThemeControls, handleUndo, handleRedo]);
 
-  // Click outside to dismiss dropdowns (Theme, Page Lights)
+  // Click outside to dismiss dropdowns (Theme, Page Lights, EPUB Colors)
   useEffect(() => {
     const handleOutsideClick = (e) => {
       if (showThemeControls && themeDropdownRef.current && !themeDropdownRef.current.contains(e.target)) {
@@ -1140,10 +1207,13 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       if (showLightControls && lightDropdownRef.current && !lightDropdownRef.current.contains(e.target)) {
         setShowLightControls(false);
       }
+      if (showEpubColorMenu && epubColorMenuRef.current && !epubColorMenuRef.current.contains(e.target)) {
+        setShowEpubColorMenu(false);
+      }
     };
     document.addEventListener("pointerdown", handleOutsideClick);
     return () => document.removeEventListener("pointerdown", handleOutsideClick);
-  }, [showThemeControls, showLightControls]);
+  }, [showThemeControls, showLightControls, showEpubColorMenu]);
 
   // Window-level smooth pointer tracking for Line Focus reading ruler
   useEffect(() => {
@@ -1621,7 +1691,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             </button>
 
             {showThemeControls && (
-              <div className="absolute left-0 top-full mt-2 z-[100] w-56 rounded-2xl bg-[#0f151c]/98 backdrop-blur-2xl border border-white/20 shadow-2xl p-2.5 space-y-1 text-xs">
+              <div className="absolute left-0 top-full mt-2 z-[100] w-64 rounded-2xl bg-[#0f151c]/98 backdrop-blur-2xl border border-white/20 shadow-2xl p-2.5 space-y-1 text-xs">
                 <div className="text-[10px] uppercase font-bold text-zinc-400 px-2 py-1 tracking-wider">Reading Themes</div>
                 {Object.values(READING_THEMES).map((t) => (
                   <button
@@ -1631,7 +1701,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                       setThemeKey(t.id);
                       setShowThemeControls(false);
                     }}
-                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left font-semibold transition-colors cursor-pointer ${
+                    className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left font-semibold transition-colors cursor-pointer ${
                       themeKey === t.id ? "bg-white/20 text-amber-300 font-bold" : "hover:bg-white/10 text-white"
                     }`}
                   >
@@ -1645,6 +1715,67 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
               </div>
             )}
           </div>
+
+          {/* EPUB CUSTOM PALETTE / STYLE SELECTOR (FOR E-BOOKS) */}
+          {isEpub && (
+            <div ref={epubColorMenuRef} className={`relative ${showEpubColorMenu ? 'z-50' : ''}`}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEpubColorMenu(!showEpubColorMenu);
+                  setShowThemeControls(false);
+                  setShowLightControls(false);
+                }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all cursor-pointer shadow-xs ${
+                  epubColorMode !== "auto"
+                    ? "bg-amber-400 text-black border-amber-300 font-bold"
+                    : "bg-white/8 hover:bg-white/15 active:scale-95 border-white/15 text-white/90 hover:text-white"
+                }`}
+                title="Change e-Book color theme or auto-match background"
+              >
+                <Sparkles size={13} className={epubColorMode !== "auto" ? "text-black" : "text-amber-300"} />
+                <span>e-Book Style:</span>
+                <span className="font-extrabold capitalize text-amber-300">
+                  {EPUB_COLOR_MODES.find(m => m.id === epubColorMode)?.name.split(" ")[0] || "Auto"}
+                </span>
+                <ChevronDown size={12} className="opacity-70" />
+              </button>
+
+              {showEpubColorMenu && (
+                <div className="absolute left-0 top-full mt-2 z-[100] w-64 rounded-2xl bg-[#0f151c]/98 backdrop-blur-2xl border border-white/20 shadow-2xl p-2.5 space-y-1 text-xs">
+                  <div className="text-[10px] uppercase font-bold text-zinc-400 px-2 py-1 tracking-wider border-b border-white/10 flex items-center justify-between">
+                    <span>e-Book Style</span>
+                    <span className="text-[9px] text-amber-300 font-normal">Auto / Custom</span>
+                  </div>
+                  {EPUB_COLOR_MODES.map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      onClick={() => {
+                        setEpubColorMode(mode.id);
+                        setShowEpubColorMenu(false);
+                      }}
+                      className={`w-full flex items-start gap-2.5 px-2.5 py-2 rounded-xl text-left transition-colors cursor-pointer ${
+                        epubColorMode === mode.id
+                          ? "bg-amber-400 text-black font-bold shadow-md"
+                          : "hover:bg-white/10 text-white"
+                      }`}
+                    >
+                      <div className="mt-0.5">
+                        <Check size={13} className={epubColorMode === mode.id ? "opacity-100" : "opacity-0"} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-xs">{mode.name}</div>
+                        <div className={`text-[10px] leading-tight mt-0.5 ${epubColorMode === mode.id ? "text-black/75" : "text-white/60"}`}>
+                          {mode.desc}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* PAGE LIGHTS & EYE-CARE WARM LIGHT BUTTON */}
           <div ref={lightDropdownRef} className={`relative ${showLightControls ? 'z-50' : ''}`}>
@@ -1982,9 +2113,35 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       <div
         ref={readingDeskRef}
         onPointerDown={handleDeskPointerDown}
-        className="flex-1 flex items-center justify-center p-4 sm:p-8 md:px-36 overflow-x-auto overflow-y-auto relative z-0 min-h-[600px]"
+        className="flex-1 flex items-center justify-center p-4 sm:p-8 md:px-24 lg:px-36 overflow-x-auto overflow-y-auto relative z-0 min-h-[600px]"
         style={{ backgroundColor: currentTheme.outerBg }}
       >
+        {/* Floating Left Page Turn Button (Image 2 style) */}
+        {!sectionCrop && (
+          <button
+            type="button"
+            onClick={prev}
+            disabled={isPrevDisabled}
+            aria-label="Previous Page"
+            className="hidden lg:flex fixed left-5 top-1/2 -translate-y-1/2 z-30 w-12 h-12 items-center justify-center rounded-full bg-black/40 hover:bg-black/80 text-white border border-white/20 shadow-2xl backdrop-blur-md transition-all active:scale-90 disabled:opacity-0 disabled:pointer-events-none cursor-pointer group hover:border-amber-400/60"
+          >
+            <ChevronLeft size={28} className="group-hover:-translate-x-0.5 transition-transform" />
+          </button>
+        )}
+
+        {/* Floating Right Page Turn Button (Image 2 style) */}
+        {!sectionCrop && (
+          <button
+            type="button"
+            onClick={next}
+            disabled={isNextDisabled}
+            aria-label="Next Page"
+            className="hidden lg:flex fixed right-5 top-1/2 -translate-y-1/2 z-30 w-12 h-12 items-center justify-center rounded-full bg-black/40 hover:bg-black/80 text-white border border-white/20 shadow-2xl backdrop-blur-md transition-all active:scale-90 disabled:opacity-0 disabled:pointer-events-none cursor-pointer group hover:border-amber-400/60"
+          >
+            <ChevronRight size={28} className="group-hover:translate-x-0.5 transition-transform" />
+          </button>
+        )}
+
         <div
           ref={pageBoxRef}
           onPointerDown={handlePagePointerDown}
@@ -1992,7 +2149,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           onPointerUp={handlePagePointerUp}
           onPointerCancel={handlePagePointerUp}
           onDragStart={(e) => e.preventDefault()}
-          className={`no-select select-none relative rounded-2xl flex flex-col items-center ${
+          className={`no-select select-none relative rounded-2xl flex flex-col items-center transition-all ${
             sectionSelectActive ? "cursor-crosshair" : activeTool === "highlight" ? "cursor-text" : activeTool === "sticky" ? "cursor-copy" : ""
           }`}
           style={{
@@ -2004,7 +2161,9 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             ...fontBody,
             color: currentTheme.textColor,
             filter: `brightness(${brightness}%)`,
-            boxShadow: "0 25px 65px -12px rgba(0,0,0,0.58), 0 0 0 1px rgba(255,255,255,0.08)",
+            boxShadow: currentTheme.id === "cleanLight"
+              ? "0 20px 45px -10px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.08)"
+              : "0 25px 65px -12px rgba(0,0,0,0.58), 0 0 0 1px rgba(255,255,255,0.08)",
           }}
           onContextMenu={(e) => e.preventDefault()}
         >
@@ -2020,7 +2179,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           ) : isEpub && currentEpubSection?.type === "epub" ? (
             <div
               className="w-full h-full flex flex-col items-center justify-center relative z-0 py-4"
-              style={{ filter: currentTheme.canvasFilter }}
+              style={{ filter: "none" }}
             >
               {isEpubLoading ? (
                 <div className="py-20 px-8 flex items-center justify-center">
@@ -2041,7 +2200,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   <iframe
                     title={currentEpubSection?.title || "e-Book page"}
                     srcDoc={activeEpubPageHtml || "<p></p>"}
-                    className={`border-0 shadow-lg rounded-md overflow-hidden ${activeTool ? "pointer-events-none" : "pointer-events-auto"}`}
+                    className={`border-0 shadow-lg rounded-md overflow-hidden ${activeTool || lineFocus ? "pointer-events-none" : "pointer-events-auto"}`}
                     style={{
                       width: "100%",
                       maxWidth: `${Math.min(BASE_PDF_WIDTH, epubPageDimensions.width || 640)}px`,
@@ -2052,8 +2211,8 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                     }}
                     sandbox="allow-same-origin"
                   />
-                  {activeTool && (
-                    <div className="absolute inset-0 z-10 cursor-crosshair" />
+                  {(activeTool || lineFocus) && (
+                    <div className="absolute inset-0 z-10" />
                   )}
                 </div>
               )}
@@ -2163,9 +2322,17 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             </div>
           </div>
 
-          {/* LINE FOCUS / READING RULER (RENDERED ON TOP OF PDF CANVAS) */}
+          {/* LINE FOCUS / READING RULER (RENDERED ON TOP OF PDF & EPUB CANVAS) */}
           {lineFocus && (
-            <div className="pointer-events-none absolute inset-0 z-40 overflow-hidden rounded-xl">
+            <div
+              className="absolute inset-0 z-40 overflow-hidden rounded-xl cursor-ns-resize"
+              onPointerMove={(e) => {
+                if (!pageBoxRef.current) return;
+                const rect = pageBoxRef.current.getBoundingClientRect();
+                const relY = e.clientY - rect.top;
+                setLineFocusY(Math.max(20, Math.min(rect.height - 20, relY)));
+              }}
+            >
               <div
                 style={{
                   position: "absolute",
@@ -2662,64 +2829,95 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         </>
       )}
 
-      {/* FOOTER CONTROLS: PREVIOUS / NEXT / PAGE JUMP */}
+      {/* FOOTER CONTROLS: PREVIOUS / NEXT / SLIDER SCRUBBER (Image 2 style) */}
       <div
-        className="flex items-center justify-center gap-3 sm:gap-4 py-3 border-t border-white/10 z-20 backdrop-blur-xl shadow-lg flex-wrap px-3"
+        className="flex items-center justify-between gap-3 sm:gap-6 py-3 px-4 sm:px-8 border-t border-white/10 z-20 backdrop-blur-xl shadow-lg shrink-0"
         style={{ backgroundColor: currentTheme.headerBg }}
       >
-        <button
-          type="button"
-          onClick={prev}
-          disabled={
-            isEpub && epubSections.length > 0
-              ? (currentSectionIdx === 0 && (currentEpubSection?.type === "image" || pdfPageNumber <= 1))
-              : (activeDocumentUrl ? pdfPageNumber === 1 : page === 0)
-          }
-          className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl border border-white/15 bg-white/10 hover:bg-white/20 disabled:opacity-35 disabled:cursor-not-allowed text-xs font-bold text-white transition-all cursor-pointer shadow-xs active:scale-95"
-        >
-          <ChevronLeft size={15} strokeWidth={2.2} /> Previous
-        </button>
+        {/* Left: Previous Button & Section Title */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={prev}
+            disabled={
+              isEpub && epubSections.length > 0
+                ? (currentSectionIdx === 0 && (currentEpubSection?.type === "image" || pdfPageNumber <= 1))
+                : (activeDocumentUrl ? pdfPageNumber === 1 : page === 0)
+            }
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-white/15 bg-white/10 hover:bg-white/20 disabled:opacity-35 disabled:cursor-not-allowed text-xs font-bold text-white transition-all cursor-pointer shadow-xs active:scale-95"
+          >
+            <ChevronLeft size={15} strokeWidth={2.2} /> <span className="hidden sm:inline">Previous</span>
+          </button>
 
-        {/* EPUB Section Indicator Badge in Bottom Bar */}
-        {isEpub && currentEpubSection && (
-          <div className="hidden sm:inline-flex items-center gap-1.5 bg-black/50 border border-amber-400/30 px-3 py-1 rounded-xl text-xs font-bold text-amber-300 shadow-inner max-w-[220px] truncate">
-            <Layers size={13} className="text-amber-400 shrink-0" />
-            <span className="truncate">{currentEpubSection.title}</span>
-            <span className="text-white/50 text-[10px] shrink-0 font-normal">
-              ({currentSectionIdx + 1}/{epubSections.length})
+          <span className="text-xs font-bold text-white/70 hidden md:inline-flex items-center gap-1.5">
+            <span className="text-white/40">Section:</span>
+            <span className="text-amber-300 font-extrabold max-w-[150px] truncate">
+              {currentEpubSection ? currentEpubSection.title : "Document"}
             </span>
-          </div>
-        )}
-
-        <div className="inline-flex items-center gap-2 bg-black/40 border border-white/15 px-3.5 py-1 rounded-xl shadow-inner">
-          <span className="text-xs text-white/60 font-semibold">Page</span>
-          <input
-            type="number"
-            className="w-12 px-1.5 py-0.5 text-center text-xs font-bold rounded-lg bg-white/15 text-white outline-none border border-white/20 focus:border-amber-400 focus:bg-white focus:text-black transition-all"
-            value={jumpInput}
-            onChange={(e) => setJumpInput(e.target.value)}
-            onBlur={handleJump}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleJump();
-            }}
-          />
-          <span className="text-xs font-semibold text-white/60">
-            of {totalPages || 1}
+            {isEpub && epubSections.length > 0 && (
+              <span className="text-white/40 text-[10px] font-normal">
+                ({currentSectionIdx + 1}/{epubSections.length})
+              </span>
+            )}
           </span>
         </div>
 
-        <button
-          type="button"
-          onClick={next}
-          disabled={
-            isEpub && epubSections.length > 0
-              ? (currentSectionIdx === epubSections.length - 1 && (currentEpubSection?.type === "image" || pdfPageNumber >= (numPdfPages || (activeEpubDoc ? activeEpubDoc.totalPages : 1))))
-              : (activeDocumentUrl ? pdfPageNumber === totalPages : page === totalPages - 1)
-          }
-          className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 disabled:opacity-35 disabled:cursor-not-allowed text-xs font-bold text-black transition-all cursor-pointer shadow-md active:scale-95"
-        >
-          Next <ChevronRight size={15} strokeWidth={2.2} />
-        </button>
+        {/* Center: Continuous Progress Scrubber / Slider (Image 2 style) */}
+        <div className="flex-1 max-w-xs sm:max-w-md mx-2 sm:mx-6 flex items-center gap-2.5">
+          <span className="text-[11px] font-bold text-white/50 uppercase tracking-wider hidden lg:inline whitespace-nowrap">
+            Section:
+          </span>
+          <div className="relative flex-1 flex items-center">
+            <input
+              type="range"
+              min="1"
+              max={totalPages || 1}
+              value={currentPageDisplay}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                if (!isNaN(val) && val >= 1 && val <= (totalPages || 1)) {
+                  if (activeDocumentUrl || isEpub) setPdfPageNumber(val);
+                  else setPage(val - 1);
+                }
+              }}
+              className="w-full h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-amber-400 hover:accent-yellow-300 transition-all focus:outline-none"
+              title={`Drag to scrub page within ${currentEpubSection?.title || "section"}`}
+            />
+          </div>
+          <span className="text-xs font-bold text-amber-300 whitespace-nowrap shrink-0">
+            {currentPageDisplay} <span className="text-white/50 font-normal">of</span> {totalPages || 1}
+          </span>
+        </div>
+
+        {/* Right: Direct Page Input Jump & Next Button */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="hidden sm:inline-flex items-center gap-1.5 bg-black/40 border border-white/15 px-2.5 py-1 rounded-xl shadow-inner">
+            <span className="text-[11px] text-white/60 font-semibold">Page</span>
+            <input
+              type="number"
+              className="w-11 px-1 py-0.5 text-center text-xs font-bold rounded-lg bg-white/15 text-white outline-none border border-white/20 focus:border-amber-400 focus:bg-white focus:text-black transition-all"
+              value={jumpInput}
+              onChange={(e) => setJumpInput(e.target.value)}
+              onBlur={handleJump}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleJump();
+              }}
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={next}
+            disabled={
+              isEpub && epubSections.length > 0
+                ? (currentSectionIdx === epubSections.length - 1 && (currentEpubSection?.type === "image" || pdfPageNumber >= (numPdfPages || (activeEpubDoc ? activeEpubDoc.totalPages : 1))))
+                : (activeDocumentUrl ? pdfPageNumber === totalPages : page === totalPages - 1)
+            }
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 disabled:opacity-35 disabled:cursor-not-allowed text-xs font-bold text-black transition-all cursor-pointer shadow-md active:scale-95"
+          >
+            <span className="hidden sm:inline">Next</span> <ChevronRight size={15} strokeWidth={2.2} />
+          </button>
+        </div>
       </div>
     </div>
   );

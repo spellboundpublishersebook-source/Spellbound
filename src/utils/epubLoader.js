@@ -1,7 +1,7 @@
 /**
  * Lightweight, zero-dependency browser-native EPUB parser & extractor.
  * Uses native Web APIs (DataView, TextDecoder, DecompressionStream, Blob, URL.createObjectURL)
- * to parse and extract EPUB 2/3 archives.
+ * to parse and extract EPUB 2/3 archives with clean typography and custom color palettes.
  */
 
 export async function parseEpubArchive(arrayBuffer) {
@@ -96,6 +96,109 @@ export async function parseEpubArchive(arrayBuffer) {
 }
 
 /**
+ * Builds scoped CSS overrides for EPUB color palettes to guarantee high contrast
+ * without applying destructive global invert() filters.
+ */
+function getEpubPaletteCss(colorMode, theme) {
+  if (colorMode === "publisher") {
+    // Keep author & publisher styling intact (Image 2 style)
+    return `
+      html, body {
+        background-color: #FFFFFF !important;
+      }
+    `;
+  }
+
+  if (colorMode === "cleanLight" || (colorMode === "auto" && theme?.id === "cleanLight")) {
+    return `
+      html, body {
+        background-color: #FFFFFF !important;
+        color: #111827 !important;
+      }
+      p, span, li, td, th {
+        color: #111827 !important;
+      }
+      h1, h2, h3, h4, h5, h6 {
+        color: #0284C7 !important;
+      }
+    `;
+  }
+
+  if (colorMode === "cream" || (colorMode === "auto" && theme?.id === "cream")) {
+    return `
+      html, body {
+        background-color: #FAF6EB !important;
+        color: #1A222A !important;
+      }
+      p, span, li, td, th {
+        color: #1A222A !important;
+      }
+      h1, h2, h3, h4, h5, h6 {
+        color: #92400E !important;
+      }
+    `;
+  }
+
+  if (colorMode === "sepia" || (colorMode === "auto" && theme?.id === "sepia")) {
+    return `
+      html, body {
+        background-color: #F5ECD7 !important;
+        color: #2C1E14 !important;
+      }
+      p, span, li, td, th {
+        color: #2C1E14 !important;
+      }
+      h1, h2, h3, h4, h5, h6 {
+        color: #78350F !important;
+      }
+    `;
+  }
+
+  if (colorMode === "mint" || (colorMode === "auto" && theme?.id === "forest")) {
+    return `
+      html, body {
+        background-color: #EDF6EE !important;
+        color: #143224 !important;
+      }
+      p, span, li, td, th {
+        color: #143224 !important;
+      }
+      h1, h2, h3, h4, h5, h6 {
+        color: #065F46 !important;
+      }
+    `;
+  }
+
+  if (colorMode === "dark" || (colorMode === "auto" && (theme?.id === "midnight" || theme?.id === "slate"))) {
+    return `
+      html, body {
+        background-color: #12151A !important;
+        color: #E2E8F0 !important;
+      }
+      p, span, li, td, th, div.Basic-Text-Frame {
+        color: #E2E8F0 !important;
+      }
+      h1, h2, h3, h4, h5, h6, strong, b {
+        color: #38BDF8 !important;
+      }
+      a {
+        color: #7DD3FC !important;
+      }
+    `;
+  }
+
+  // Fallback: apply theme page background and text color cleanly
+  const bg = theme?.pageBg || "#FFFFFF";
+  const text = theme?.textColor || "#111827";
+  return `
+    html, body {
+      background-color: ${bg} !important;
+      color: ${text} !important;
+    }
+  `;
+}
+
+/**
  * Loads an EPUB file from a URL, extracts manifest, spine, CSS, fonts, and images,
  * and returns helper methods for rendering individual pages.
  */
@@ -170,7 +273,7 @@ export async function loadEpubDocument(url) {
     }
   }
 
-  // 5. Extract Images and create Object URLs
+  // 5. Extract Images and Fonts, and create Object URLs
   const createdObjectUrls = [];
   const assetUrlMap = {}; // mapping relative paths to blob URLs
 
@@ -217,8 +320,9 @@ export async function loadEpubDocument(url) {
     }
   }
 
-  // 6. Page HTML generator
-  async function getPageHtml(pageNumber) {
+  // 6. Page HTML generator with dynamic color mode and line-focus event forwarding
+  async function getPageHtml(pageNumber, options = {}) {
+    const { colorMode = "auto", theme = null } = options;
     const pageIdx = Math.max(0, Math.min(pageNumber - 1, spine.length - 1));
     const targetFile = spine[pageIdx];
     if (!targetFile) return "<p>Page not found</p>";
@@ -229,24 +333,46 @@ export async function loadEpubDocument(url) {
     // Remove existing link stylesheet tags
     html = html.replace(/<link\s+[^>]*rel=[\"']stylesheet[\"'][^>]*\/?>/gi, "");
 
-    // Inject combined CSS into <head>
+    // Get color overrides for this mode/theme
+    const paletteOverrides = getEpubPaletteCss(colorMode, theme);
+
+    // Injected styles + interactive line focus bridge
     const injectedStyles = `
       <style>
         ${combinedCss}
         html, body {
           margin: 0 !important;
           padding: 0 !important;
-          background: transparent !important;
           user-select: text !important;
           -webkit-user-select: text !important;
           overflow: auto !important;
         }
+        ${paletteOverrides}
       </style>
       <script>
+        // Prevent link navigations inside preview iframe
         document.addEventListener('click', (e) => {
           const a = e.target.closest('a');
           if (a) e.preventDefault();
         });
+
+        // Forward pointer moves to parent reader for seamless Line Focus tracking
+        const forwardMove = (e) => {
+          try {
+            window.parent.postMessage({
+              type: 'EPUB_POINTER_MOVE',
+              clientY: e.clientY,
+              clientX: e.clientX
+            }, '*');
+          } catch (_) {}
+        };
+        window.addEventListener('mousemove', forwardMove, { passive: true });
+        window.addEventListener('pointermove', forwardMove, { passive: true });
+        window.addEventListener('touchmove', (e) => {
+          if (e.touches && e.touches[0]) {
+            forwardMove({ clientY: e.touches[0].clientY, clientX: e.touches[0].clientX });
+          }
+        }, { passive: true });
       </script>
     `;
 
