@@ -727,7 +727,7 @@ function InstitutionsTab({
     setSelected([]);
   }
 
-  function handleCreate(e) {
+  async function handleCreate(e) {
     e.preventDefault();
     const id = customId.trim() || genCredentialId(name.slice(0, 3).toUpperCase() || "COL");
     const pass = customPassword.trim() || genPassword();
@@ -742,13 +742,16 @@ function InstitutionsTab({
       actualEnd = addMonths(startDate, duration);
     }
     
-    onCreateLicense({
+    const ok = await onCreateLicense({
       id, password: pass, name, email, type: "license",
       bookIds: selected, seats: Number(seats), price: Number(price) || 0,
       startDate: actualStart, endDate: actualEnd, createdAt: new Date().toISOString(),
+      departments: []
     });
-    setIssuedCreds({ id, password: pass, endDate: actualEnd });
-    setName(""); setEmail(""); setSeats(100); setPrice(""); setSelected([]); setStartDate(today()); setDuration(12); setIsTest(false); setCustomId(""); setCustomPassword("");
+    if (ok !== false) {
+      setIssuedCreds({ id, password: pass, endDate: actualEnd });
+      setName(""); setEmail(""); setSeats(100); setPrice(""); setSelected([]); setStartDate(today()); setDuration(12); setIsTest(false); setCustomId(""); setCustomPassword("");
+    }
   }
 
   const [tableSearch, setTableSearch] = useState("");

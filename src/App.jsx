@@ -770,24 +770,34 @@ export default function App() {
 
   async function handleCreateLicense(license) {
     try {
-      const { bookIds, startDate, endDate, createdAt, email, ...dbLicense } = license;
+      const { bookIds, startDate, endDate, createdAt, email, departments, ...dbLicense } = license;
       const { error } = await supabase.from('licenses').insert([{ 
         ...dbLicense, 
         bookids: bookIds, 
         startdate: startDate, 
         enddate: endDate,
         createdat: createdAt,
-        email: email || null
+        email: email || null,
+        departments: Array.isArray(departments) ? departments : (Array.isArray(license.departments) ? license.departments : [])
       }]);
-      if (error) { console.error(error); alert("Database error: " + error.message); return; }
+      if (error) { 
+        console.error("Error creating institution license:", error); 
+        alert("Database error: " + error.message); 
+        return false; 
+      }
       
       if (email) {
         import('./email').then(({ sendInstitutionLicenseEmail }) => {
           sendInstitutionLicenseEmail(emailTemplates, email, license.name, license.id, license.password, startDate, endDate);
         });
       }
-    } catch(e) { console.error(e); }
-    setLicenses((prev) => [...prev, license]);
+      setLicenses((prev) => [...prev, { ...license, departments: Array.isArray(departments) ? departments : [] }]);
+      return true;
+    } catch(e) { 
+      console.error("Error in handleCreateLicense:", e); 
+      alert("Error: " + e.message);
+      return false;
+    }
   }
 
   async function handleResendTrialEmail(id, type) {
@@ -1122,17 +1132,22 @@ export default function App() {
         pages: finalPages,
         pdfurl,
         coverurl,
-        uploaded_by: session.id,
+        uploaded_by: session?.id || "admin",
         status: "published"
       };
       
       const { error } = await supabase.from('books').insert([dbBook]);
-      if (error) throw error;
+      if (error) {
+        console.error("Error adding book to Supabase:", error);
+        alert("Database error adding book: " + error.message);
+        return false;
+      }
       setBooks((prev) => [{...book, pdfUrl: pdfurl, coverUrl: coverurl, epubData}, ...prev]);
+      return true;
     } catch (err) {
       console.error("Error adding book to Supabase:", err);
-      // Optimistic update fallback
-      setBooks((prev) => [book, ...prev]);
+      alert("Error adding book: " + err.message);
+      return false;
     }
   }
   
@@ -1253,12 +1268,17 @@ export default function App() {
   async function handleDeleteBook(id) {
     try {
       const { error } = await supabase.from('books').delete().eq('id', id);
-      if (error) throw error;
+      if (error) {
+        console.error("Error deleting book from Supabase:", error);
+        alert("Database error deleting book: " + error.message);
+        return false;
+      }
       setBooks((prev) => prev.filter((b) => b.id !== id));
+      return true;
     } catch (err) {
       console.error("Error deleting book from Supabase:", err);
-      // Optimistic update fallback
-      setBooks((prev) => prev.filter((b) => b.id !== id));
+      alert("Error deleting book: " + err.message);
+      return false;
     }
   }
 

@@ -448,7 +448,11 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
                     <Edit2 size={12} strokeWidth={1.9} /> Edit
                   </button>
                   <button
-                    onClick={() => onDeleteBook(b.id)}
+                    onClick={() => {
+                      if (window.confirm(`Are you sure you want to remove "${b.title}"? This cannot be undone.`)) {
+                        onDeleteBook(b.id);
+                      }
+                    }}
                     className={`flex items-center gap-1.5 text-xs font-semibold transition-all cursor-pointer ${embedded ? 'px-2.5 py-1 rounded-full bg-red-100/85 hover:bg-red-200/90 text-red-700' : 'text-red-500 hover:text-red-700'}`}
                   >
                     <Trash2 size={12} strokeWidth={1.9} /> Remove
