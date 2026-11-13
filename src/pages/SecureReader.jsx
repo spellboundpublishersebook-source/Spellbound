@@ -4,7 +4,8 @@ import {
   ZoomIn, ZoomOut, RotateCcw, ScanSearch, X, Sun, Moon, Highlighter, 
   StickyNote, Bookmark, BookMarked, Maximize, Minimize, Clock, Sliders, 
   Palette, Trash2, Check, Copy, ChevronDown, Sparkles, Code, FileText, 
-  Download, Eye, List, BookOpen, Layers, Building2, GripVertical
+  Download, Eye, List, BookOpen, Layers, Building2, GripVertical,
+  Undo2, Redo2, GraduationCap
 } from "lucide-react";
 import { palette, fontDisplay, fontBody } from "../theme";
 import { supabase } from "../supabaseClient";
@@ -160,6 +161,13 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const [copiedToast, setCopiedToast] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Annotation Undo / Redo History
+  const [history, setHistory] = useState([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const historyIndexRef = useRef(-1);
+  const isHistoryActionRef = useRef(false);
+  const hasSeededHistoryRef = useRef(false);
+
   // Dragging & Dropdown refs
   const themeDropdownRef = useRef(null);
   const lightDropdownRef = useRef(null);
@@ -219,6 +227,70 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       }
     } catch (_) {}
   }, [studentKey, book.id]);
+
+  // Initialize annotation undo/redo history once initial load completes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!hasSeededHistoryRef.current) {
+        hasSeededHistoryRef.current = true;
+        setHistory([{ highlights, stickyNotes }]);
+        setHistoryIndex(0);
+        historyIndexRef.current = 0;
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [highlights, stickyNotes]);
+
+  // Push new annotation state to Undo/Redo history stack
+  const pushToHistory = useCallback((nextHighlights, nextStickyNotes) => {
+    if (isHistoryActionRef.current) return;
+    setHistory((prev) => {
+      const curIdx = historyIndexRef.current;
+      const baseStack = curIdx >= 0 ? prev.slice(0, curIdx + 1) : prev;
+      const nextStack = [...baseStack, { highlights: nextHighlights, stickyNotes: nextStickyNotes }];
+      const capped = nextStack.slice(-40);
+      const newIdx = capped.length - 1;
+      historyIndexRef.current = newIdx;
+      setHistoryIndex(newIdx);
+      return capped;
+    });
+  }, []);
+
+  // Undo last highlight or sticky note change
+  const handleUndo = useCallback(() => {
+    const curIdx = historyIndexRef.current;
+    if (curIdx <= 0 || history.length === 0) return;
+    const targetIdx = curIdx - 1;
+    const targetState = history[targetIdx];
+    if (targetState) {
+      isHistoryActionRef.current = true;
+      historyIndexRef.current = targetIdx;
+      setHistoryIndex(targetIdx);
+      setHighlights(targetState.highlights || []);
+      setStickyNotes(targetState.stickyNotes || []);
+      setTimeout(() => {
+        isHistoryActionRef.current = false;
+      }, 80);
+    }
+  }, [history]);
+
+  // Redo reverted highlight or sticky note change
+  const handleRedo = useCallback(() => {
+    const curIdx = historyIndexRef.current;
+    if (curIdx < 0 || curIdx >= history.length - 1) return;
+    const targetIdx = curIdx + 1;
+    const targetState = history[targetIdx];
+    if (targetState) {
+      isHistoryActionRef.current = true;
+      historyIndexRef.current = targetIdx;
+      setHistoryIndex(targetIdx);
+      setHighlights(targetState.highlights || []);
+      setStickyNotes(targetState.stickyNotes || []);
+      setTimeout(() => {
+        isHistoryActionRef.current = false;
+      }, 80);
+    }
+  }, [history]);
 
   const totalPages = activeDocumentUrl ? (numPdfPages || book.totalPages || 0) : (book.totalPages || (Array.isArray(book.pages) ? book.pages.length : 1));
   const currentPageDisplay = activeDocumentUrl ? pdfPageNumber : (page + 1);
@@ -453,7 +525,9 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
 
-    setStickyNotes((prev) => [...prev, newSticky]);
+    const updatedNotes = [...stickyNotes, newSticky];
+    setStickyNotes(updatedNotes);
+    pushToHistory(highlights, updatedNotes);
     setActiveTool(null);
   };
 
@@ -480,7 +554,9 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         author: session?.studentName || session?.name || "Student",
         createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
-      setStickyNotes((prev) => [...prev, newSticky]);
+      const updatedNotes = [...stickyNotes, newSticky];
+      setStickyNotes(updatedNotes);
+      pushToHistory(highlights, updatedNotes);
       setActiveTool(null);
       return;
     }
@@ -551,7 +627,9 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         color: highlightColor,
         createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
-      setHighlights((prev) => [...prev, newHl]);
+      const updatedHls = [...highlights, newHl];
+      setHighlights(updatedHls);
+      pushToHistory(updatedHls, stickyNotes);
       // Note: activeTool remains "highlight" so student can continue highlighting until they toggle off or press Esc!
       return;
     }
@@ -764,6 +842,22 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
       const isTyping = document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA";
       if (e.type === "keydown" && !isTyping) {
+        // Annotation Undo (Ctrl+Z / Cmd+Z) & Redo (Ctrl+Y / Cmd+Shift+Z)
+        if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z")) {
+          e.preventDefault();
+          if (e.shiftKey) {
+            handleRedo();
+          } else {
+            handleUndo();
+          }
+          return;
+        }
+        if ((e.ctrlKey || e.metaKey) && (e.key === "y" || e.key === "Y")) {
+          e.preventDefault();
+          handleRedo();
+          return;
+        }
+
         if (e.key === "Escape") {
           if (sectionCrop) handleCloseSectionZoom();
           else if (sectionSelectActive) setSectionSelectActive(false);
@@ -793,7 +887,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       window.removeEventListener("focus", handleFocus);
       window.removeEventListener("blur", handleBlur);
     };
-  }, [next, prev, sectionCrop, handleCloseSectionZoom, sectionSelectActive, activeTool, lineFocus, showNotebook, showLightControls, showThemeControls]);
+  }, [next, prev, sectionCrop, handleCloseSectionZoom, sectionSelectActive, activeTool, lineFocus, showNotebook, showLightControls, showThemeControls, handleUndo, handleRedo]);
 
   // Click outside to dismiss dropdowns (Theme, Page Lights)
   useEffect(() => {
@@ -1016,11 +1110,15 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   };
 
   const deleteHighlight = (id) => {
-    setHighlights((prev) => prev.filter((h) => h.id !== id));
+    const updated = highlights.filter((h) => h.id !== id);
+    setHighlights(updated);
+    pushToHistory(updated, stickyNotes);
   };
 
   const deleteSticky = (id) => {
-    setStickyNotes((prev) => prev.filter((n) => n.id !== id));
+    const updated = stickyNotes.filter((n) => n.id !== id);
+    setStickyNotes(updated);
+    pushToHistory(highlights, updated);
   };
 
   const toggleCollapseSticky = (id) => {
@@ -1090,10 +1188,21 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     }
   };
 
-  // Watermark text
-  const collegeName = session?.institution || session?.name || "Licensed Institution";
+  // Watermark / Copyright text
+  // Format: [Licensed Name] • [Dept Name] • [Date] • [Student Name (Student ID)]
+  const licensedName = (session?.institution || session?.name || "LICENSED INSTITUTION").trim().toUpperCase();
+  const deptName = (session?.department || session?.deptName || "").trim().toUpperCase();
   const accessDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase();
-  const watermarkText = `${collegeName.toUpperCase()} • LICENSED ACCESS • ${accessDate}`;
+  const studentPart = (isStudentProfile && (session?.studentName || session?.name))
+    ? `${(session.studentName || session.name).trim().toUpperCase()}${session?.studentId ? ` (${session.studentId})` : ""}`
+    : "";
+
+  const watermarkParts = [licensedName];
+  if (deptName) watermarkParts.push(deptName);
+  watermarkParts.push(accessDate);
+  if (studentPart) watermarkParts.push(studentPart);
+
+  const watermarkText = watermarkParts.join(" • ");
 
   const isBookmarked = bookmarks.includes(currentPageDisplay);
   const totalNotesCount = stickyNotes.length + highlights.length;
@@ -1177,6 +1286,16 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                 <>
                   <span>•</span>
                   <span className="text-amber-300 font-semibold">{session.department}</span>
+                </>
+              )}
+              {isStudentProfile && (session?.studentName || session?.name) && (
+                <>
+                  <span>•</span>
+                  <span className="inline-flex items-center gap-1 text-emerald-300 font-semibold bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full text-[10px]">
+                    <GraduationCap size={11} className="text-emerald-400" />
+                    <span>{session.studentName || session.name}</span>
+                    {session?.studentId && <span className="text-emerald-400/80 font-mono text-[9px]">({session.studentId})</span>}
+                  </span>
                 </>
               )}
             </div>
@@ -1430,6 +1549,38 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   <option value="Exam">Exam Note</option>
                 </select>
               </div>
+
+              {/* UNDO / REDO CONTROLS */}
+              <div className="inline-flex items-center gap-1 bg-white/10 p-1 rounded-full border border-white/15">
+                <button
+                  type="button"
+                  onClick={handleUndo}
+                  disabled={historyIndex <= 0}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
+                    historyIndex > 0
+                      ? "text-white hover:bg-white/15 cursor-pointer"
+                      : "text-white/40 cursor-not-allowed opacity-50"
+                  }`}
+                  title="Undo last annotation (Ctrl+Z / Cmd+Z)"
+                >
+                  <Undo2 size={13} />
+                  <span>Undo</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRedo}
+                  disabled={historyIndex < 0 || historyIndex >= history.length - 1}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
+                    historyIndex >= 0 && historyIndex < history.length - 1
+                      ? "text-white hover:bg-white/15 cursor-pointer"
+                      : "text-white/40 cursor-not-allowed opacity-50"
+                  }`}
+                  title="Redo annotation (Ctrl+Y / Cmd+Shift+Z)"
+                >
+                  <Redo2 size={13} />
+                  <span>Redo</span>
+                </button>
+              </div>
             </>
           )}
 
@@ -1478,8 +1629,18 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
       {/* HELPER BANNER FOR ACTIVE TOOLS */}
       {activeTool === "highlight" && (
-        <div className="py-1 px-4 text-center text-xs font-bold bg-amber-400 text-black flex items-center justify-center gap-2">
-          <Highlighter size={13} /> Drag or click to highlight multiple passages in {HIGHLIGHT_COLORS[highlightColor].name}. Click Highlighter or press Esc to stop.
+        <div className="py-1.5 px-4 text-center text-xs font-bold bg-amber-400 text-black flex items-center justify-center gap-3 shadow-inner">
+          <span className="flex items-center gap-1.5">
+            <Highlighter size={14} className="animate-pulse" />
+            <span>Highlighter is <strong>ACTIVE (Multi-Use)</strong>: Click or drag text to highlight continuously in {HIGHLIGHT_COLORS[highlightColor].name}.</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setActiveTool(null)}
+            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-black text-white hover:bg-neutral-800 text-[11px] font-bold transition-all cursor-pointer shadow-sm"
+          >
+            <X size={12} strokeWidth={2.5} /> Done Highlighting
+          </button>
         </div>
       )}
       {activeTool === "sticky" && (
@@ -1541,8 +1702,95 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           }}
           onContextMenu={(e) => e.preventDefault()}
         >
+          {/* DOCUMENT CONTENT (BASE LAYER IN NORMAL FLOW) */}
+          {isEpub && currentEpubSection?.type === "image" ? (
+            <div className="w-full flex items-center justify-center p-6 relative z-0">
+              <img
+                src={currentEpubSection.url}
+                alt={currentEpubSection.title}
+                className="max-w-full max-h-[70vh] rounded-lg shadow-md object-contain"
+              />
+            </div>
+          ) : activeDocumentUrl ? (
+            <div
+              className="w-full h-full flex items-center justify-center pointer-events-none relative z-0"
+              style={{ filter: currentTheme.canvasFilter }}
+            >
+              <Document
+                file={activeDocumentUrl}
+                onLoadSuccess={({ numPages }) => setNumPdfPages(numPages)}
+                loading={
+                  <div className="py-20 px-8 flex items-center justify-center">
+                    <BookLoader
+                      book={book}
+                      message={isLoadingPdfUrl ? "Establishing secure CDN edge connection..." : "Loading secure document..."}
+                      size="md"
+                    />
+                  </div>
+                }
+                error={
+                  <div className="p-16 text-center flex flex-col items-center">
+                    <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-3 font-bold text-lg">!</div>
+                    <p className="text-red-600 font-semibold mb-1">Unable to load document</p>
+                    <p className="text-xs text-gray-500 max-w-sm">Please verify your internet connection or check storage bucket configuration.</p>
+                  </div>
+                }
+              >
+                <Page
+                  pageNumber={pdfPageNumber}
+                  renderTextLayer={false}
+                  renderAnnotationLayer={false}
+                  width={BASE_PDF_WIDTH}
+                  loading={
+                    <div className="flex items-center justify-center min-h-[480px] w-full">
+                      <BookLoader size="sm" message={`Rendering page ${pdfPageNumber}...`} />
+                    </div>
+                  }
+                />
+              </Document>
+            </div>
+          ) : (
+            <div className="relative z-0 whitespace-pre-line leading-relaxed text-[1rem] p-10 w-full max-w-2xl">
+              {Array.isArray(book.pages) ? book.pages[page] : "This book has no content pages yet."}
+            </div>
+          )}
+
+          {/* RENDER HIGHLIGHTS ON THIS PAGE (STUDENT PROFILES ONLY) */}
+          {isStudentProfile && highlights
+            .filter((h) => h.pageNumber === currentPageDisplay)
+            .map((h) => (
+              <div
+                key={h.id}
+                className={`absolute z-20 transition-all rounded-xs ${
+                  activeTool === "highlight" ? "pointer-events-none" : "pointer-events-auto group/hl"
+                }`}
+                style={{
+                  left: `${h.x}%`,
+                  top: `${h.y}%`,
+                  width: `${h.w}%`,
+                  height: `${h.h}%`,
+                  backgroundColor: HIGHLIGHT_COLORS[h.color]?.bg || "rgba(254, 240, 138, 0.48)",
+                  borderBottom: `2.5px solid ${HIGHLIGHT_COLORS[h.color]?.border || "#EAB308"}`,
+                }}
+              >
+                {activeTool !== "highlight" && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteHighlight(h.id);
+                    }}
+                    className="opacity-0 group-hover/hl:opacity-100 absolute -top-3 -right-3 p-1 rounded-full bg-rose-600 text-white shadow-md hover:scale-110 transition-all cursor-pointer z-30"
+                    title="Remove highlight"
+                  >
+                    <X size={10} strokeWidth={2.5} />
+                  </button>
+                )}
+              </div>
+            ))}
+
           {/* INNER CLIPPED CONTAINER FOR WATERMARK & NIGHT LIGHT TO PRESERVE ROUNDED CORNERS */}
-          <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none z-10">
+          <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none z-30">
             {/* WARM NIGHT EYE-CARE LIGHT FILTER */}
             {warmLight > 0 && (
               <div
@@ -1568,24 +1816,9 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             </div>
           </div>
 
-          {/* ACTIVE DRAG SELECTION RECTANGLE */}
-          {selectionRect && (
-            <div
-              className="pointer-events-none absolute z-40 border-2 border-dashed rounded-xs"
-              style={{
-                left: selectionRect.left,
-                top: selectionRect.top,
-                width: selectionRect.width,
-                height: selectionRect.height,
-                borderColor: activeTool === "highlight" ? HIGHLIGHT_COLORS[highlightColor].border : "#D97706",
-                backgroundColor: activeTool === "highlight" ? HIGHLIGHT_COLORS[highlightColor].bg : "rgba(253, 209, 50, 0.25)",
-              }}
-            />
-          )}
-
-          {/* LINE FOCUS / READING RULER */}
+          {/* LINE FOCUS / READING RULER (RENDERED ON TOP OF PDF CANVAS) */}
           {lineFocus && (
-            <div className="pointer-events-none absolute inset-0 z-35 overflow-hidden rounded-xl">
+            <div className="pointer-events-none absolute inset-0 z-40 overflow-hidden rounded-xl">
               <div
                 style={{
                   position: "absolute",
@@ -1624,39 +1857,20 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             </div>
           )}
 
-          {/* RENDER HIGHLIGHTS ON THIS PAGE (STUDENT PROFILES ONLY) */}
-          {isStudentProfile && highlights
-            .filter((h) => h.pageNumber === currentPageDisplay)
-            .map((h) => (
-              <div
-                key={h.id}
-                className={`absolute z-20 transition-all rounded-xs ${
-                  activeTool === "highlight" ? "pointer-events-none" : "pointer-events-auto group/hl"
-                }`}
-                style={{
-                  left: `${h.x}%`,
-                  top: `${h.y}%`,
-                  width: `${h.w}%`,
-                  height: `${h.h}%`,
-                  backgroundColor: HIGHLIGHT_COLORS[h.color]?.bg || "rgba(254, 240, 138, 0.48)",
-                  borderBottom: `2.5px solid ${HIGHLIGHT_COLORS[h.color]?.border || "#EAB308"}`,
-                }}
-              >
-                {activeTool !== "highlight" && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteHighlight(h.id);
-                    }}
-                    className="opacity-0 group-hover/hl:opacity-100 absolute -top-3 -right-3 p-1 rounded-full bg-rose-600 text-white shadow-md hover:scale-110 transition-all cursor-pointer z-30"
-                    title="Remove highlight"
-                  >
-                    <X size={10} strokeWidth={2.5} />
-                  </button>
-                )}
-              </div>
-            ))}
+          {/* ACTIVE DRAG SELECTION RECTANGLE */}
+          {selectionRect && (
+            <div
+              className="pointer-events-none absolute z-45 border-2 border-dashed rounded-xs"
+              style={{
+                left: selectionRect.left,
+                top: selectionRect.top,
+                width: selectionRect.width,
+                height: selectionRect.height,
+                borderColor: activeTool === "highlight" ? HIGHLIGHT_COLORS[highlightColor].border : "#D97706",
+                backgroundColor: activeTool === "highlight" ? HIGHLIGHT_COLORS[highlightColor].bg : "rgba(253, 209, 50, 0.25)",
+              }}
+            />
+          )}
 
           {/* RENDER STICKY NOTES ON THIS PAGE (STUDENT PROFILES ONLY) */}
           {isStudentProfile && stickyNotes
@@ -1786,59 +2000,6 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                 </div>
               );
             })}
-
-          {/* DOCUMENT CONTENT */}
-          {isEpub && currentEpubSection?.type === "image" ? (
-            <div className="w-full flex items-center justify-center p-6">
-              <img
-                src={currentEpubSection.url}
-                alt={currentEpubSection.title}
-                className="max-w-full max-h-[70vh] rounded-lg shadow-md object-contain"
-              />
-            </div>
-          ) : activeDocumentUrl ? (
-            <div
-              className="w-full h-full flex items-center justify-center pointer-events-none"
-              style={{ filter: currentTheme.canvasFilter }}
-            >
-              <Document
-                file={activeDocumentUrl}
-                onLoadSuccess={({ numPages }) => setNumPdfPages(numPages)}
-                loading={
-                  <div className="py-20 px-8 flex items-center justify-center">
-                    <BookLoader
-                      book={book}
-                      message={isLoadingPdfUrl ? "Establishing secure CDN edge connection..." : "Loading secure document..."}
-                      size="md"
-                    />
-                  </div>
-                }
-                error={
-                  <div className="p-16 text-center flex flex-col items-center">
-                    <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-3 font-bold text-lg">!</div>
-                    <p className="text-red-600 font-semibold mb-1">Unable to load document</p>
-                    <p className="text-xs text-gray-500 max-w-sm">Please verify your internet connection or check storage bucket configuration.</p>
-                  </div>
-                }
-              >
-                <Page
-                  pageNumber={pdfPageNumber}
-                  renderTextLayer={false}
-                  renderAnnotationLayer={false}
-                  width={BASE_PDF_WIDTH}
-                  loading={
-                    <div className="flex items-center justify-center min-h-[480px] w-full">
-                      <BookLoader size="sm" message={`Rendering page ${pdfPageNumber}...`} />
-                    </div>
-                  }
-                />
-              </Document>
-            </div>
-          ) : (
-            <div className="relative whitespace-pre-line leading-relaxed text-[1rem] p-10 w-full max-w-2xl">
-              {Array.isArray(book.pages) ? book.pages[page] : "This book has no content pages yet."}
-            </div>
-          )}
         </div>
       </div>
 
