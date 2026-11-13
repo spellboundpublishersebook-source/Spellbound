@@ -296,10 +296,9 @@ export default function ReaderDashboard({
   ];
 
   const myBooksRaw = useMemo(() => {
-    return session.bookIds === "all"
-      ? books
-      : books.filter((b) => (Array.isArray(session.bookIds) ? session.bookIds : []).includes(b.id));
-  }, [books, session.bookIds]);
+    // books passed from App is availableBooks (authoritative list of accessible titles)
+    return Array.isArray(books) ? books : [];
+  }, [books]);
 
   const yearCounts = useMemo(() => {
     const counts = {};
@@ -432,13 +431,19 @@ export default function ReaderDashboard({
     if (session?.type !== "student" || !studentKey) return [];
     const map = new Map();
 
-    // 1. Check local continue reading list FOR THIS SPECIFIC STUDENT ONLY
+    const validIds = new Set(myBooksRaw.map((b) => b.id));
+
+    // 1. Check local continue reading list FOR THIS SPECIFIC STUDENT ONLY (pruning revoked books)
     try {
       const localSaved = localStorage.getItem(`continue_reading_${studentKey}`);
       if (localSaved) {
         const parsed = JSON.parse(localSaved);
         if (Array.isArray(parsed)) {
-          parsed.forEach((item) => {
+          const pruned = parsed.filter((item) => item && item.bookId && validIds.has(item.bookId));
+          if (pruned.length !== parsed.length) {
+            localStorage.setItem(`continue_reading_${studentKey}`, JSON.stringify(pruned));
+          }
+          pruned.forEach((item) => {
             if (item && item.bookId) {
               map.set(item.bookId, item);
             }
@@ -447,10 +452,11 @@ export default function ReaderDashboard({
       }
     } catch (_) {}
 
-    // 2. Check DB reading progress from THIS STUDENT'S profile ONLY (never shared dept progress)
+    // 2. Check DB reading progress from THIS STUDENT'S profile ONLY (never shared dept progress, skip revoked books)
     const dbProgress = session?.currentStudent?.customizations?.readingProgress || {};
 
     Object.keys(dbProgress).forEach((bookId) => {
+      if (!validIds.has(bookId)) return;
       const p = dbProgress[bookId];
       if (p && (p.page || p.lastPage)) {
         const existing = map.get(bookId);

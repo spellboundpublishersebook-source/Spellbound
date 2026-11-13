@@ -263,17 +263,28 @@ export default function App() {
             type: payload.new.type || 'individual'
           }]);
         } else if (payload.eventType === 'UPDATE') {
+          const updatedBookIds = payload.new.bookids || [];
           setReaders(prev => prev.map(r => r.id === payload.new.id ? {
             ...payload.new,
             loginId: payload.new.login_id,
             accountType: payload.new.account_type,
-            bookIds: payload.new.bookids || [],
+            bookIds: updatedBookIds,
             startDate: payload.new.startdate,
             endDate: payload.new.enddate,
             status: payload.new.status || (daysUntil(payload.new.enddate) < 0 ? 'expired' : 'active'),
             price: Number(payload.new.price || 0),
             type: payload.new.type || 'individual'
           } : r));
+          setSession(prev => {
+            if (!prev || prev.role !== "reader") return prev;
+            if (prev.id === payload.new.id || prev.id === payload.new.login_id || prev.loginId === payload.new.login_id || (prev.email && prev.email === payload.new.login_id)) {
+              return {
+                ...prev,
+                bookIds: updatedBookIds.length ? updatedBookIds : "all"
+              };
+            }
+            return prev;
+          });
         } else if (payload.eventType === 'DELETE') {
           setReaders(prev => prev.filter(r => r.id !== payload.old.id));
         }
@@ -298,13 +309,26 @@ export default function App() {
             departments: Array.isArray(payload.new.departments) ? payload.new.departments : []
           }]);
         } else if (payload.eventType === 'UPDATE') {
+          const updatedBookIds = payload.new.bookids || [];
+          const updatedDepts = Array.isArray(payload.new.departments) ? payload.new.departments : [];
           setLicenses(prev => prev.map(l => l.id === payload.new.id ? {
             ...payload.new,
-            bookIds: payload.new.bookids || [],
+            bookIds: updatedBookIds,
             startDate: payload.new.startdate,
             endDate: payload.new.enddate,
-            departments: Array.isArray(payload.new.departments) ? payload.new.departments : []
+            departments: updatedDepts
           } : l));
+          setSession(prev => {
+            if (!prev || prev.role !== "reader") return prev;
+            if (prev.id === payload.new.id || prev.institutionId === payload.new.id) {
+              return {
+                ...prev,
+                bookIds: updatedBookIds,
+                departments: updatedDepts
+              };
+            }
+            return prev;
+          });
         } else if (payload.eventType === 'DELETE') {
           setLicenses(prev => prev.filter(l => l.id !== payload.old.id));
         }
@@ -319,6 +343,39 @@ export default function App() {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  // Auto-sync session book access with the latest licenses and readers in database
+  useEffect(() => {
+    if (!session || session.role !== "reader") return;
+
+    // Institution / Department / Student profile
+    const licId = session.institutionId || (session.type === "license" ? session.id : null);
+    if (licId && licenses.length > 0) {
+      const lic = licenses.find(l => l.id === licId);
+      if (lic) {
+        const latestBookIds = Array.isArray(lic.bookIds) ? lic.bookIds : [];
+        const currentBookIds = Array.isArray(session.bookIds) ? session.bookIds : [];
+        const isDifferent = latestBookIds.length !== currentBookIds.length ||
+                            latestBookIds.some(id => !currentBookIds.includes(id)) ||
+                            currentBookIds.some(id => !latestBookIds.includes(id));
+        if (isDifferent) {
+          setSession(prev => prev ? ({ ...prev, bookIds: latestBookIds, departments: lic.departments || prev.departments }) : null);
+        }
+      }
+      return;
+    }
+
+    // Individual reader profile
+    if (readers.length > 0) {
+      const r = readers.find(x => x.id === session.id || x.loginId === session.id || (session.email && x.email === session.email));
+      if (r) {
+        const latestBookIds = r.bookIds?.length ? r.bookIds : "all";
+        if (JSON.stringify(session.bookIds) !== JSON.stringify(latestBookIds)) {
+          setSession(prev => prev ? ({ ...prev, bookIds: latestBookIds }) : null);
+        }
+      }
+    }
+  }, [licenses, readers, session?.id, session?.institutionId, session?.type, session?.bookIds]);
 
 
   function handleLogin(tab, id, password) {
@@ -524,9 +581,13 @@ export default function App() {
       return;
     }
     setLicenses((prev) => prev.map(l => l.id === id ? { ...l, bookIds } : l));
-    if (session && session.id === id) {
-      setSession(prev => ({ ...prev, bookIds }));
-    }
+    setSession(prev => {
+      if (!prev || prev.role !== "reader") return prev;
+      if (prev.id === id || prev.institutionId === id) {
+        return { ...prev, bookIds };
+      }
+      return prev;
+    });
   }
 
   async function handleRotateSemesterPassword(id, newPassword) {
@@ -1016,6 +1077,14 @@ export default function App() {
       const { error } = await supabase.from('readers').update({ bookids: bookIds }).eq('id', readerId);
       if (error) { console.error(error); alert("Database error: " + error.message); return; }
       setReaders(prev => prev.map(r => r.id === readerId ? { ...r, bookIds } : r));
+      const targetReader = readers.find(r => r.id === readerId);
+      setSession(prev => {
+        if (!prev || prev.role !== "reader") return prev;
+        if (prev.id === readerId || (targetReader && (prev.id === targetReader.loginId || prev.email === targetReader.email || prev.loginId === targetReader.loginId))) {
+          return { ...prev, bookIds: bookIds?.length ? bookIds : "all" };
+        }
+        return prev;
+      });
       alert("Reader access updated successfully!");
     } catch (e) {
       console.error("Error updating reader access:", e);
@@ -1389,14 +1458,42 @@ export default function App() {
 
   const availableBooks = useMemo(() => {
     const safeBooks = books || [];
-    if (session?.role === "reader" && session.bookIds !== "all") {
-      const ids = Array.isArray(session.bookIds) ? session.bookIds : [];
+    if (session?.role === "reader") {
+      let allowedIds = session.bookIds;
+      // Authoritatively resolve allowed IDs from licenses or readers
+      const licId = session.institutionId || (session.type === "license" ? session.id : null);
+      if (licId) {
+        const lic = licenses.find(l => l.id === licId);
+        if (lic && Array.isArray(lic.bookIds)) {
+          allowedIds = lic.bookIds;
+        }
+      } else {
+        const r = readers.find(x => x.id === session.id || x.loginId === session.id || (session.email && x.email === session.email));
+        if (r && r.bookIds) {
+          allowedIds = r.bookIds?.length ? r.bookIds : "all";
+        }
+      }
+
+      if (allowedIds === "all") return safeBooks;
+      const ids = Array.isArray(allowedIds) ? allowedIds : [];
       return safeBooks.filter(b => ids.includes(b.id));
     }
     return safeBooks;
-  }, [books, session]);
+  }, [books, session, licenses, readers]);
 
   const openBook = openBookId ? availableBooks.find((b) => b.id === openBookId) : null;
+
+  // If access to open book is revoked, safely redirect back to reader-dashboard
+  useEffect(() => {
+    if (session?.role === "reader" && openBookId && !openBook) {
+      if (view === "reading" || view === "book-details") {
+        alert("You no longer have access to this title. Returning to your library.");
+        setInitialReaderPage(null);
+        setOpenBookId(null);
+        navigate("reader-dashboard");
+      }
+    }
+  }, [session?.role, openBookId, openBook, view]);
 
   return (
     <div className="min-h-screen w-full max-w-full admin-glass-backdrop relative">
