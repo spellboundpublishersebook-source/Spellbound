@@ -416,11 +416,13 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     const handleIframePointer = (e) => {
       if (e.data?.type === "EPUB_POINTER_MOVE" && pageBoxRef.current) {
         const iframe = pageBoxRef.current.querySelector("iframe");
-        if (iframe) {
+        if (iframe && typeof e.data?.clientY === "number") {
           const iframeRect = iframe.getBoundingClientRect();
           const pageRect = pageBoxRef.current.getBoundingClientRect();
           const relY = (iframeRect.top - pageRect.top) + e.data.clientY;
-          setLineFocusY(Math.max(20, Math.min(pageRect.height - 20, relY)));
+          if (!isNaN(relY)) {
+            setLineFocusY(Math.max(20, Math.min(pageRect.height - 20, relY)));
+          }
         }
       }
     };
@@ -567,6 +569,15 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       // 1. Direct explicit initialPage prop from "Continue Reading" button
       if (initialPage && Number(initialPage) >= 1) {
         targetPage = Number(initialPage);
+        try {
+          const raw = localStorage.getItem(`reader_progress_${studentKey}_${book.id}`);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && parsed.sectionId) {
+              targetSection = parsed.sectionId;
+            }
+          }
+        } catch (_) {}
       } else {
         // 2. Check this student's DB profile reading progress
         const dbProgress = session?.currentStudent?.customizations?.readingProgress?.[book.id];
@@ -1735,7 +1746,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
               >
                 <Sparkles size={13} className={epubColorMode !== "auto" ? "text-black" : "text-amber-300"} />
                 <span>e-Book Style:</span>
-                <span className="font-extrabold capitalize text-amber-300">
+                <span className={`font-extrabold capitalize ${epubColorMode !== "auto" ? "text-black" : "text-amber-300"}`}>
                   {EPUB_COLOR_MODES.find(m => m.id === epubColorMode)?.name.split(" ")[0] || "Auto"}
                 </span>
                 <ChevronDown size={12} className="opacity-70" />
@@ -2181,7 +2192,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
               className="w-full h-full flex flex-col items-center justify-center relative z-0 py-4"
               style={{ filter: "none" }}
             >
-              {isEpubLoading ? (
+              {isEpubLoading || !activeEpubPageHtml ? (
                 <div className="py-20 px-8 flex items-center justify-center">
                   <BookLoader
                     book={book}
@@ -2199,7 +2210,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                 <div className="relative w-full flex justify-center items-center">
                   <iframe
                     title={currentEpubSection?.title || "e-Book page"}
-                    srcDoc={activeEpubPageHtml || "<p></p>"}
+                    srcDoc={activeEpubPageHtml}
                     className={`border-0 shadow-lg rounded-md overflow-hidden ${activeTool || lineFocus ? "pointer-events-none" : "pointer-events-auto"}`}
                     style={{
                       width: "100%",
@@ -2209,7 +2220,6 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                         : "800px",
                       backgroundColor: currentTheme.pageBg || "#ffffff"
                     }}
-                    sandbox="allow-same-origin"
                   />
                   {(activeTool || lineFocus) && (
                     <div className="absolute inset-0 z-10" />

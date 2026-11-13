@@ -1674,9 +1674,9 @@ export default function App() {
 
   const openBook = openBookId ? availableBooks.find((b) => b.id === openBookId) : null;
 
-  // If access to open book is revoked, safely redirect back to reader-dashboard
+  // If access to open book is revoked, safely redirect back to reader-dashboard (only after DB has finished initial load)
   useEffect(() => {
-    if (session?.role === "reader" && openBookId && !openBook) {
+    if (dbStatus !== "checking" && session?.role === "reader" && openBookId && !openBook) {
       if (view === "reading" || view === "book-details") {
         alert("You no longer have access to this title. Returning to your library.");
         setInitialReaderPage(null);
@@ -1684,7 +1684,7 @@ export default function App() {
         navigate("reader-dashboard");
       }
     }
-  }, [session?.role, openBookId, openBook, view]);
+  }, [session?.role, openBookId, openBook, view, dbStatus]);
 
   return (
     <div className="min-h-screen w-full max-w-full admin-glass-backdrop relative">

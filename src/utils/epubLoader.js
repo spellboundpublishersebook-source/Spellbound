@@ -330,15 +330,18 @@ export async function loadEpubDocument(url) {
     let html = await archive.getFileText(targetFile);
     if (!html) return "<p>Empty page</p>";
 
+    // Remove XML prolog to avoid strict XML parser halting on HTML entities or unescaped characters
+    html = html.replace(/<\?xml[^>]*\?>/gi, "");
+
     // Remove existing link stylesheet tags
     html = html.replace(/<link\s+[^>]*rel=[\"']stylesheet[\"'][^>]*\/?>/gi, "");
 
     // Get color overrides for this mode/theme
     const paletteOverrides = getEpubPaletteCss(colorMode, theme);
 
-    // Injected styles + interactive line focus bridge
+    // Injected styles + interactive line focus bridge (XML-safe & HTML5 compatible)
     const injectedStyles = `
-      <style>
+      <style>/*<![CDATA[*/
         ${combinedCss}
         html, body {
           margin: 0 !important;
@@ -348,16 +351,16 @@ export async function loadEpubDocument(url) {
           overflow: auto !important;
         }
         ${paletteOverrides}
-      </style>
-      <script>
+      /*]]>*/</style>
+      <script>/*<![CDATA[*/
         // Prevent link navigations inside preview iframe
-        document.addEventListener('click', (e) => {
-          const a = e.target.closest('a');
+        document.addEventListener('click', function(e) {
+          var a = e.target.closest('a');
           if (a) e.preventDefault();
         });
 
         // Forward pointer moves to parent reader for seamless Line Focus tracking
-        const forwardMove = (e) => {
+        function forwardMove(e) {
           try {
             window.parent.postMessage({
               type: 'EPUB_POINTER_MOVE',
@@ -365,15 +368,17 @@ export async function loadEpubDocument(url) {
               clientX: e.clientX
             }, '*');
           } catch (_) {}
-        };
+        }
         window.addEventListener('mousemove', forwardMove, { passive: true });
         window.addEventListener('pointermove', forwardMove, { passive: true });
-        window.addEventListener('touchmove', (e) => {
-          if (e.touches && e.touches[0]) {
-            forwardMove({ clientY: e.touches[0].clientY, clientX: e.touches[0].clientX });
+        window.addEventListener('touchmove', function(e) {
+          if (e.touches) {
+            if (e.touches[0]) {
+              forwardMove({ clientY: e.touches[0].clientY, clientX: e.touches[0].clientX });
+            }
           }
         }, { passive: true });
-      </script>
+      /*]]>*/</script>
     `;
 
     if (html.includes("</head>")) {
