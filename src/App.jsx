@@ -129,7 +129,7 @@ export default function App() {
   }, [session]);
 
   const [books, setBooks] = useState(initialBooks);
-  const [licenses, setLicenses] = useState(initialLicenses);
+  const [licenses, setLicenses] = useState([]);
   const [uploaders, setUploaders] = useState(initialUploaders);
   const [trialRequests, setTrialRequests] = useState(initialTrialRequests);
   const [admins, setAdmins] = useState([superAdmin]);
@@ -145,7 +145,6 @@ export default function App() {
       await fetchSettingsFromDB();
       const { data: booksData, error: booksError } = await supabase.from('books').select('*');
       if (booksError) throw booksError;
-      setDbStatus("connected");
       
       if (booksData && booksData.length > 0) {
         setBooks(booksData.map(dbBook => {
@@ -228,9 +227,15 @@ export default function App() {
       const fifteenMinsAgo = new Date(Date.now() - 15 * 60000).toISOString();
       const { data: sessData } = await supabase.from('reading_sessions').select('*').gte('last_active', fifteenMinsAgo);
       if (sessData) setActiveReadingSessions(sessData);
+
+      setDbStatus("connected");
     } catch (err) {
       console.error("Error fetching data from Supabase. Falling back to mock data.", err);
       setDbStatus("error");
+      setLicenses(initialLicenses);
+      setBooks(initialBooks);
+      setUploaders(initialUploaders);
+      setTrialRequests(initialTrialRequests);
     }
   }
 
@@ -460,25 +465,40 @@ export default function App() {
   }, []);
 
   // Auto-sync session book access, validity, and departments with latest database state
+  const hasAlertedSessionNoticeRef = useRef(false);
+
   useEffect(() => {
+    // CRITICAL: Never validate session during initial loading or if database is not connected
+    if (dbStatus !== "connected") return;
     if (!session || session.role !== "reader") return;
 
     // Institution / Department / Student profile under license
     const licId = session.institutionId || (session.type === "license" ? session.id : null);
-    if (licId && licenses.length > 0) {
+    if (licId) {
+      if (licenses.length === 0) return; // Wait until licenses array has loaded from DB
+
       const lic = licenses.find(l => l.id === licId);
       if (!lic) {
-        alert("Your institution license is no longer available.");
+        if (!hasAlertedSessionNoticeRef.current) {
+          hasAlertedSessionNoticeRef.current = true;
+          alert("Your institution license is no longer available.");
+        }
         handleLogout();
         return;
       }
       if (lic.type === "offline") {
-        alert("Your institution's access has been temporarily suspended.");
+        if (!hasAlertedSessionNoticeRef.current) {
+          hasAlertedSessionNoticeRef.current = true;
+          alert("Your institution's access has been temporarily suspended.");
+        }
         handleLogout();
         return;
       }
       if (daysUntil(lic.endDate) < 0) {
-        alert("Your institution license has expired.");
+        if (!hasAlertedSessionNoticeRef.current) {
+          hasAlertedSessionNoticeRef.current = true;
+          alert("Your institution license has expired.");
+        }
         handleLogout();
         return;
       }
@@ -487,7 +507,10 @@ export default function App() {
       if (session.type === "department") {
         const deptExists = depts.some(d => d.id === session.deptId || d.loginId === session.id);
         if (!deptExists) {
-          alert("This department is no longer available.");
+          if (!hasAlertedSessionNoticeRef.current) {
+            hasAlertedSessionNoticeRef.current = true;
+            alert("This department is no longer available.");
+          }
           handleLogout();
           return;
         }
@@ -497,7 +520,10 @@ export default function App() {
         const dept = depts.find(d => d.id === session.deptId);
         const stuExists = dept && Array.isArray(dept.students) && dept.students.some(s => s.studentId === session.studentId || s.id === session.studentId);
         if (!stuExists) {
-          alert("Your student profile has been removed.");
+          if (!hasAlertedSessionNoticeRef.current) {
+            hasAlertedSessionNoticeRef.current = true;
+            alert("Your student profile has been removed.");
+          }
           handleLogout();
           return;
         }
@@ -520,17 +546,26 @@ export default function App() {
     if (readers.length > 0) {
       const r = readers.find(x => x.id === session.id || x.loginId === session.id || (session.email && x.email === session.email));
       if (!r) {
-        alert("Your reader account is no longer available.");
+        if (!hasAlertedSessionNoticeRef.current) {
+          hasAlertedSessionNoticeRef.current = true;
+          alert("Your reader account is no longer available.");
+        }
         handleLogout();
         return;
       }
       if (r.status === "offline") {
-        alert("Your account has been temporarily suspended.");
+        if (!hasAlertedSessionNoticeRef.current) {
+          hasAlertedSessionNoticeRef.current = true;
+          alert("Your account has been temporarily suspended.");
+        }
         handleLogout();
         return;
       }
       if (r.status === "revoked" || daysUntil(r.endDate) < 0) {
-        alert("Your access period has expired.");
+        if (!hasAlertedSessionNoticeRef.current) {
+          hasAlertedSessionNoticeRef.current = true;
+          alert("Your access period has expired.");
+        }
         handleLogout();
         return;
       }
@@ -540,10 +575,11 @@ export default function App() {
         setSession(prev => prev ? ({ ...prev, bookIds: latestBookIds }) : null);
       }
     }
-  }, [licenses, readers, session?.id, session?.institutionId, session?.type, session?.deptId, session?.studentId, session?.bookIds, session?.departments]);
+  }, [dbStatus, licenses, readers, session?.id, session?.institutionId, session?.type, session?.deptId, session?.studentId, session?.bookIds, session?.departments]);
 
 
   function handleLogin(tab, id, password) {
+    hasAlertedSessionNoticeRef.current = false;
     if (tab === "admin") {
       const a = admins.find((x) => x.id === id && x.password === password);
       if (a) {
@@ -1676,7 +1712,7 @@ export default function App() {
 
   // If access to open book is revoked, safely redirect back to reader-dashboard (only after DB has finished initial load)
   useEffect(() => {
-    if (dbStatus !== "checking" && session?.role === "reader" && openBookId && !openBook) {
+    if (dbStatus === "connected" && session?.role === "reader" && openBookId && !openBook) {
       if (view === "reading" || view === "book-details") {
         alert("You no longer have access to this title. Returning to your library.");
         setInitialReaderPage(null);
