@@ -1267,7 +1267,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
       {/* TOP BAR: Book details + Quick Actions */}
       <div
-        className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-2.5 border-b border-white/10 backdrop-blur-xl shadow-xs"
+        className="relative z-30 flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-2.5 border-b border-white/10 backdrop-blur-xl shadow-xs"
         style={{ backgroundColor: currentTheme.headerBg, color: palette.cream }}
       >
         <div className="flex items-center gap-3 min-w-0">
@@ -1360,12 +1360,12 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
       {/* SECOND ROW: CUSTOMIZATION TOOLBAR (Modern Glass grouped layout) */}
       <div
-        className="flex flex-wrap items-center justify-between gap-2.5 px-4 sm:px-6 py-2 border-b border-white/10 text-xs font-semibold backdrop-blur-xl shadow-xs"
+        className="relative z-40 flex flex-wrap items-center justify-between gap-2.5 px-4 sm:px-6 py-2 border-b border-white/10 text-xs font-semibold backdrop-blur-xl shadow-xs"
         style={{ backgroundColor: currentTheme.toolbarBg, color: palette.cream }}
       >
         <div className="flex items-center gap-2 flex-wrap">
           {/* THEME SELECTOR BUTTON */}
-          <div ref={themeDropdownRef} className="relative">
+          <div ref={themeDropdownRef} className={`relative ${showThemeControls ? 'z-50' : ''}`}>
             <button
               type="button"
               onClick={toggleThemeControls}
@@ -1378,7 +1378,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             </button>
 
             {showThemeControls && (
-              <div className="absolute left-0 top-full mt-2 z-50 w-56 rounded-2xl bg-[#0f151c]/95 backdrop-blur-2xl border border-white/20 shadow-2xl p-2.5 space-y-1 text-xs">
+              <div className="absolute left-0 top-full mt-2 z-[100] w-56 rounded-2xl bg-[#0f151c]/98 backdrop-blur-2xl border border-white/20 shadow-2xl p-2.5 space-y-1 text-xs">
                 <div className="text-[10px] uppercase font-bold text-zinc-400 px-2 py-1 tracking-wider">Reading Themes</div>
                 {Object.values(READING_THEMES).map((t) => (
                   <button
@@ -1404,7 +1404,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           </div>
 
           {/* PAGE LIGHTS & EYE-CARE WARM LIGHT BUTTON */}
-          <div ref={lightDropdownRef} className="relative">
+          <div ref={lightDropdownRef} className={`relative ${showLightControls ? 'z-50' : ''}`}>
             <button
               type="button"
               onClick={toggleLightControls}
@@ -1420,7 +1420,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             </button>
 
             {showLightControls && (
-              <div className="absolute left-0 top-full mt-2 z-50 w-64 rounded-2xl bg-[#0f151c]/95 backdrop-blur-2xl border border-white/20 shadow-2xl p-4 space-y-3.5 text-xs text-white">
+              <div className="absolute left-0 top-full mt-2 z-[100] w-64 rounded-2xl bg-[#0f151c]/98 backdrop-blur-2xl border border-white/20 shadow-2xl p-4 space-y-3.5 text-xs text-white">
                 <div className="flex items-center justify-between pb-1 border-b border-white/10 font-bold">
                   <span>Page Light Controls</span>
                   <button
@@ -1739,7 +1739,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       <div
         ref={readingDeskRef}
         onPointerDown={handleDeskPointerDown}
-        className="flex-1 flex items-center justify-center p-4 sm:p-8 md:px-36 overflow-x-auto overflow-y-auto relative min-h-[600px]"
+        className="flex-1 flex items-center justify-center p-4 sm:p-8 md:px-36 overflow-x-auto overflow-y-auto relative z-0 min-h-[600px]"
         style={{ backgroundColor: currentTheme.outerBg }}
       >
         <div
