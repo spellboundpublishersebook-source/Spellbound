@@ -212,7 +212,8 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const lightDropdownRef = useRef(null);
   const readingDeskRef = useRef(null);
   const [draggingStickyId, setDraggingStickyId] = useState(null);
-  const dragStartPosRef = useRef({ mouseX: 0, mouseY: 0, startX: 0, startY: 0, pageWidth: 640, pageHeight: 800 });
+  const [dragPosition, setDragPosition] = useState(null);
+  const dragStartPosRef = useRef({});
 
   // Live session reading timer
   const [readingSeconds, setReadingSeconds] = useState(0);
@@ -1423,39 +1424,63 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     if (!draggingStickyId) return;
 
     const handlePointerMove = (e) => {
-      const { mouseX, mouseY, startX, startY, pageWidth, pageHeight } = dragStartPosRef.current;
+      const { noteId, offsetX, offsetY, pageLeft, pageTop } = dragStartPosRef.current;
+      if (!noteId) return;
       const clientX = e.clientX ?? e.touches?.[0]?.clientX;
       const clientY = e.clientY ?? e.touches?.[0]?.clientY;
       if (typeof clientX !== "number" || typeof clientY !== "number") return;
 
-      const deltaX = ((clientX - mouseX) / pageWidth) * 100;
-      const deltaY = ((clientY - mouseY) / pageHeight) * 100;
+      const pixelX = clientX - pageLeft - offsetX;
+      const pixelY = clientY - pageTop - offsetY;
 
-      const newX = startX + deltaX;
-      const newY = Math.max(1, Math.min(88, startY + deltaY));
-
-      let placement = "page";
-      if (newX < 0) placement = "margin-left";
-      else if (newX > 88) placement = "margin-right";
-      else placement = "page";
-
-      setStickyNotes((prev) =>
-        prev.map((n) =>
-          n.id === draggingStickyId
-            ? { ...n, x: newX, y: newY, placement }
-            : n
-        )
-      );
+      dragStartPosRef.current.pixelX = pixelX;
+      dragStartPosRef.current.pixelY = pixelY;
+      setDragPosition({ id: noteId, x: pixelX, y: pixelY });
     };
 
     const handlePointerUp = () => {
-      setDraggingStickyId(null);
+      const { noteId, pixelX, pixelY, pageWidth, pageHeight } = dragStartPosRef.current;
+      if (!noteId) {
+        setDraggingStickyId(null);
+        setDragPosition(null);
+        return;
+      }
+
+      const note = stickyNotes.find((n) => n.id === noteId);
+      const isCollapsed = Boolean(note?.isCollapsed);
+      const noteWidth = isCollapsed ? 140 : 240;
+
+      let placement = "page";
+      let finalX = 25;
+      const finalY = Math.max(1, Math.min(84, (pixelY / Math.max(pageHeight, 1)) * 100));
+
+      if (pixelX > pageWidth - 80) {
+        // Dropped into right margin
+        placement = "margin-right";
+        finalX = 102;
+      } else if (pixelX < -noteWidth + 80) {
+        // Dropped into left margin
+        placement = "margin-left";
+        finalX = -32;
+      } else {
+        // Dropped onto book page - clamp cleanly inside margins so note never straddles the edge
+        placement = "page";
+        const xPct = (pixelX / Math.max(pageWidth, 1)) * 100;
+        finalX = Math.max(2, Math.min(isCollapsed ? 82 : 66, xPct));
+      }
+
       setStickyNotes((prev) => {
+        const updated = prev.map((n) =>
+          n.id === noteId
+            ? { ...n, x: finalX, y: finalY, placement }
+            : n
+        );
+        pushToHistory(highlights, updated);
         if (isStudentProfile && studentKey) {
           try {
             const payload = {
               highlights,
-              stickyNotes: prev,
+              stickyNotes: updated,
               bookmarks,
               theme: themeKey,
               brightness,
@@ -1465,8 +1490,12 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             localStorage.setItem(`reader_notes_${studentKey}_${book.id}`, JSON.stringify(payload));
           } catch (_) {}
         }
-        return prev;
+        return updated;
       });
+
+      dragStartPosRef.current = {};
+      setDraggingStickyId(null);
+      setDragPosition(null);
     };
 
     window.addEventListener("pointermove", handlePointerMove);
@@ -1477,22 +1506,37 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("touchend", handlePointerUp);
     };
-  }, [draggingStickyId, highlights, bookmarks, themeKey, brightness, warmLight, lineFocus, isStudentProfile, studentKey, book.id]);
+  }, [draggingStickyId, highlights, bookmarks, themeKey, brightness, warmLight, lineFocus, isStudentProfile, studentKey, book.id, stickyNotes, pushToHistory]);
 
   const startDragSticky = (e, id) => {
     e.stopPropagation();
     if (e.button !== undefined && e.button !== 0) return;
-    const note = stickyNotes.find((n) => n.id === id);
-    if (!note || !pageBoxRef.current) return;
+    const noteEl = e.currentTarget.closest('.sticky-note-wrapper');
+    if (!noteEl || !pageBoxRef.current) return;
+    const noteRect = noteEl.getBoundingClientRect();
     const pageRect = pageBoxRef.current.getBoundingClientRect();
+
+    const clientX = e.clientX ?? e.touches?.[0]?.clientX;
+    const clientY = e.clientY ?? e.touches?.[0]?.clientY;
+    if (typeof clientX !== "number" || typeof clientY !== "number") return;
+
+    const offsetX = clientX - noteRect.left;
+    const offsetY = clientY - noteRect.top;
+    const initX = noteRect.left - pageRect.left;
+    const initY = noteRect.top - pageRect.top;
+
     dragStartPosRef.current = {
-      mouseX: e.clientX ?? e.touches?.[0]?.clientX,
-      mouseY: e.clientY ?? e.touches?.[0]?.clientY,
-      startX: note.x,
-      startY: note.y,
+      noteId: id,
+      offsetX,
+      offsetY,
+      pageLeft: pageRect.left,
+      pageTop: pageRect.top,
       pageWidth: pageRect.width || 640,
       pageHeight: pageRect.height || 800,
+      pixelX: initX,
+      pixelY: initY,
     };
+    setDragPosition({ id, x: initX, y: initY });
     setDraggingStickyId(id);
   };
 
@@ -2738,24 +2782,29 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
               const isMarginRight = n.placement === "margin-right" || n.x >= 92;
               const isMarginLeft = n.placement === "margin-left" || n.x < 0;
               const isOutsideMargin = isMarginRight || isMarginLeft;
-              const isBeingDragged = draggingStickyId === n.id;
+              const isBeingDragged = draggingStickyId === n.id && dragPosition?.id === n.id;
 
               let styleLeft;
               let styleRight;
+              let styleTop;
 
               if (isBeingDragged) {
-                // Free floating while dragging across margins and page
-                styleLeft = `${n.x}%`;
+                // Free floating while dragging using exact grab offset
+                styleLeft = `${dragPosition.x}px`;
                 styleRight = undefined;
+                styleTop = `${dragPosition.y}px`;
               } else if (isMarginRight) {
                 styleLeft = "calc(100% + 14px)";
                 styleRight = undefined;
+                styleTop = `${Math.max(1, Math.min(88, n.y))}%`;
               } else if (isMarginLeft) {
                 styleLeft = undefined;
                 styleRight = "calc(100% + 14px)";
+                styleTop = `${Math.max(1, Math.min(88, n.y))}%`;
               } else {
-                styleLeft = `${Math.max(2, Math.min(n.isCollapsed ? 85 : 70, n.x))}%`;
+                styleLeft = `${Math.max(2, Math.min(n.isCollapsed ? 82 : 66, n.x))}%`;
                 styleRight = undefined;
+                styleTop = `${Math.max(1, Math.min(88, n.y))}%`;
               }
 
               return (
@@ -2763,13 +2812,13 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   key={n.id}
                   className={`sticky-note-wrapper absolute z-50 pointer-events-auto rounded-xl select-none ${
                     isBeingDragged
-                      ? "cursor-grabbing shadow-2xl scale-102 transition-none"
+                      ? "cursor-grabbing shadow-2xl scale-102 rotate-1 opacity-95 transition-none ring-2 ring-amber-400"
                       : "shadow-xl transition-[border-color,box-shadow]"
-                  } ${isOutsideMargin ? "ring-2 ring-amber-400/80" : ""}`}
+                  } ${isOutsideMargin && !isBeingDragged ? "ring-2 ring-amber-400/80" : ""}`}
                   style={{
                     left: styleLeft,
                     right: styleRight,
-                    top: `${Math.max(1, Math.min(88, n.y))}%`,
+                    top: styleTop,
                     width: n.isCollapsed ? "auto" : "240px",
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
