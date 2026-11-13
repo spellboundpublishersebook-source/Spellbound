@@ -15,15 +15,14 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
   const [openingReader, setOpeningReader] = useState(false);
   const [targetPage, setTargetPage] = useState(null);
 
-  const studentKey = session?.studentId || session?.deptCode || session?.deptId || session?.id || "anon";
+  const studentKey = session?.studentId;
   useEffect(() => {
-    if (session?.type !== "student") {
+    if (session?.type !== "student" || !studentKey) {
       setTargetPage(null);
       return;
     }
     try {
-      const dbProg = session?.currentStudent?.customizations?.readingProgress?.[book?.id]?.page ||
-                     session?.readingProgress?.[book?.id]?.page;
+      const dbProg = session?.currentStudent?.customizations?.readingProgress?.[book?.id]?.page;
       if (dbProg && Number(dbProg) > 1) {
         setTargetPage(Number(dbProg));
         return;
@@ -36,11 +35,10 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
           return;
         }
       }
-      const legacy = localStorage.getItem(`resume_${book?.id}`);
-      if (legacy && Number(legacy) > 1) {
-        setTargetPage(Number(legacy));
-      }
-    } catch (_) {}
+      setTargetPage(null);
+    } catch (_) {
+      setTargetPage(null);
+    }
   }, [book?.id, session, studentKey]);
   
   if (!book) return null;

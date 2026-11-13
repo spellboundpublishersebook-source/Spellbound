@@ -426,13 +426,13 @@ export default function ReaderDashboard({
     }
   }
 
-  // Student Continue Reading List (Strictly reserved ONLY for Student profile mode)
-  const studentKey = session?.studentId || "anon";
+  // Student Continue Reading List (Strictly reserved ONLY for Student profile mode and isolated per student)
+  const studentKey = session?.studentId;
   const continueReadingList = useMemo(() => {
-    if (session?.type !== "student") return [];
+    if (session?.type !== "student" || !studentKey) return [];
     const map = new Map();
 
-    // 1. Check local continue reading list
+    // 1. Check local continue reading list FOR THIS SPECIFIC STUDENT ONLY
     try {
       const localSaved = localStorage.getItem(`continue_reading_${studentKey}`);
       if (localSaved) {
@@ -447,11 +447,8 @@ export default function ReaderDashboard({
       }
     } catch (_) {}
 
-    // 2. Check DB reading progress from student profile / session / department
-    const dbProgress = session?.currentStudent?.customizations?.readingProgress ||
-                       session?.readingProgress ||
-                       activeDeptObj?.readingProgress ||
-                       {};
+    // 2. Check DB reading progress from THIS STUDENT'S profile ONLY (never shared dept progress)
+    const dbProgress = session?.currentStudent?.customizations?.readingProgress || {};
 
     Object.keys(dbProgress).forEach((bookId) => {
       const p = dbProgress[bookId];
@@ -463,7 +460,7 @@ export default function ReaderDashboard({
       }
     });
 
-    // 3. Check individual book storage keys
+    // 3. Check individual book storage keys FOR THIS SPECIFIC STUDENT ONLY
     myBooksRaw.forEach((b) => {
       if (!map.has(b.id)) {
         try {
@@ -472,14 +469,6 @@ export default function ReaderDashboard({
             const parsed = JSON.parse(raw);
             if (parsed && (parsed.page || parsed.lastPage)) {
               map.set(b.id, { bookId: b.id, ...parsed });
-            }
-          } else {
-            const legacy = localStorage.getItem(`resume_${b.id}`);
-            if (legacy) {
-              const p = parseInt(legacy, 10);
-              if (!isNaN(p) && p > 1) {
-                map.set(b.id, { bookId: b.id, page: p, totalPages: b.totalPages || 100 });
-              }
             }
           }
         } catch (_) {}
@@ -510,7 +499,7 @@ export default function ReaderDashboard({
     // Sort: most recently read first
     result.sort((a, b) => new Date(b.progress.lastReadAt || 0) - new Date(a.progress.lastReadAt || 0));
     return result;
-  }, [session, myBooksRaw, activeDeptObj, studentKey]);
+  }, [session?.type, studentKey, session?.currentStudent?.customizations?.readingProgress, myBooksRaw]);
 
   const filteredContinueReading = useMemo(() => {
     if (!searchQuery.trim()) return continueReadingList;

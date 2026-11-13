@@ -650,6 +650,7 @@ export default function App() {
       institutionId: targetLic.id,
       department: dept.name,
       currentStudent: stu,
+      readingProgress: undefined,
       departments: targetLic.departments || []
     }));
     return { ok: true };
@@ -671,6 +672,7 @@ export default function App() {
       studentId: null,
       studentName: null,
       currentStudent: null,
+      readingProgress: undefined,
       deptId: dept?.id || prev?.deptId,
       deptCode: dept?.code || prev?.deptCode,
       department: deptName,
@@ -685,16 +687,17 @@ export default function App() {
 
   async function handleSaveStudentCustomizations(licenseId, deptId, studentId, bookId, customizations) {
     try {
-      // 1. Instant local persistence for annotations & preferences
-      const userKey = studentId || deptId || 'anon';
-      const storageKey = `reader_custom_${userKey}_${bookId}`;
+      if (!studentId) return;
+
+      // 1. Instant local persistence for annotations & preferences per student
+      const storageKey = `reader_custom_${studentId}_${bookId}`;
       localStorage.setItem(storageKey, JSON.stringify(customizations));
 
-      // 2. Instant local persistence for reading progress
+      // 2. Instant local persistence for reading progress per student
       if (customizations.progress) {
-        localStorage.setItem(`reader_progress_${userKey}_${bookId}`, JSON.stringify(customizations.progress));
+        localStorage.setItem(`reader_progress_${studentId}_${bookId}`, JSON.stringify(customizations.progress));
         try {
-          const recentKey = `continue_reading_${userKey}`;
+          const recentKey = `continue_reading_${studentId}`;
           const currentList = JSON.parse(localStorage.getItem(recentKey) || "[]");
           const filtered = currentList.filter(item => item.bookId !== bookId);
           filtered.unshift({ bookId, ...customizations.progress });
@@ -714,14 +717,7 @@ export default function App() {
       // Increment readsCount tracking if opening or reading
       dept.readsCount = (dept.readsCount || 0) + 1;
 
-      if (customizations.progress) {
-        dept.readingProgress = {
-          ...(dept.readingProgress || {}),
-          [bookId]: customizations.progress
-        };
-      }
-
-      if (studentId && Array.isArray(dept.students)) {
+      if (Array.isArray(dept.students)) {
         dept.students = dept.students.map(s => {
           if (s.studentId === studentId || s.id === studentId) {
             const stuCustom = s.customizations || {};
@@ -752,20 +748,30 @@ export default function App() {
       setLicenses(prev => prev.map(l => l.id === licenseId ? { ...l, departments: depts } : l));
 
       // Realtime session sync so ReaderDashboard updates instantly without reload
-      if (session && (session.studentId === studentId || session.id === studentId) && customizations.progress) {
-        setSession(prev => ({
-          ...prev,
-          currentStudent: {
-            ...prev.currentStudent,
-            customizations: {
-              ...(prev.currentStudent?.customizations || {}),
-              readingProgress: {
-                ...(prev.currentStudent?.customizations?.readingProgress || {}),
-                [bookId]: customizations.progress
+      if (session && (session.studentId === studentId || session.id === studentId)) {
+        setSession(prev => {
+          const prevCustom = prev.currentStudent?.customizations || {};
+          const prevBooks = prevCustom.books || {};
+          const prevProgress = prevCustom.readingProgress || {};
+          return {
+            ...prev,
+            currentStudent: {
+              ...prev.currentStudent,
+              customizations: {
+                ...prevCustom,
+                ...customizations.global,
+                books: {
+                  ...prevBooks,
+                  [bookId]: customizations.book
+                },
+                readingProgress: customizations.progress ? {
+                  ...prevProgress,
+                  [bookId]: customizations.progress
+                } : prevProgress
               }
             }
-          }
-        }));
+          };
+        });
       }
     } catch (err) {
       console.warn("Non-blocking student customization sync notice:", err);

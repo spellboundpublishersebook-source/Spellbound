@@ -137,7 +137,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   // STUDENT CUSTOMIZATION STATES
   // ==========================================
   const isStudentProfile = session?.type === "student";
-  const studentKey = session?.studentId || session?.deptId || session?.id || "anon";
+  const studentKey = isStudentProfile ? (session?.studentId || null) : null;
   const [themeKey, setThemeKey] = useState("cream");
   const [brightness, setBrightness] = useState(100); // 50% to 150%
   const [warmLight, setWarmLight] = useState(0); // 0% to 75% eye-care filter
@@ -211,22 +211,43 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   // Active document URL
   const activeDocumentUrl = isEpub && currentEpubSection?.url ? currentEpubSection.url : (cdnPdfUrl || book.pdfUrl);
 
-  // Load customizations on mount
+  // Load customizations on mount or when studentKey changes
   useEffect(() => {
+    if (!isStudentProfile || !studentKey) {
+      setHighlights([]);
+      setStickyNotes([]);
+      setBookmarks([]);
+      return;
+    }
     try {
       const saved = localStorage.getItem(`reader_notes_${studentKey}_${book.id}`);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed.highlights)) setHighlights(parsed.highlights);
-        if (Array.isArray(parsed.stickyNotes)) setStickyNotes(parsed.stickyNotes);
-        if (Array.isArray(parsed.bookmarks)) setBookmarks(parsed.bookmarks);
+        setHighlights(Array.isArray(parsed.highlights) ? parsed.highlights : []);
+        setStickyNotes(Array.isArray(parsed.stickyNotes) ? parsed.stickyNotes : []);
+        setBookmarks(Array.isArray(parsed.bookmarks) ? parsed.bookmarks : []);
         if (parsed.theme && READING_THEMES[parsed.theme]) setThemeKey(parsed.theme);
         if (typeof parsed.brightness === "number") setBrightness(parsed.brightness);
         if (typeof parsed.warmLight === "number") setWarmLight(parsed.warmLight);
         if (typeof parsed.lineFocus === "boolean") setLineFocus(parsed.lineFocus);
+      } else {
+        const dbBookCustom = session?.currentStudent?.customizations?.books?.[book.id];
+        if (dbBookCustom) {
+          setHighlights(Array.isArray(dbBookCustom.highlights) ? dbBookCustom.highlights : []);
+          setStickyNotes(Array.isArray(dbBookCustom.stickyNotes) ? dbBookCustom.stickyNotes : []);
+          setBookmarks(Array.isArray(dbBookCustom.bookmarks) ? dbBookCustom.bookmarks : []);
+        } else {
+          setHighlights([]);
+          setStickyNotes([]);
+          setBookmarks([]);
+        }
       }
-    } catch (_) {}
-  }, [studentKey, book.id]);
+    } catch (_) {
+      setHighlights([]);
+      setStickyNotes([]);
+      setBookmarks([]);
+    }
+  }, [studentKey, book.id, isStudentProfile, session?.currentStudent?.customizations?.books]);
 
   // Initialize annotation undo/redo history once initial load completes
   useEffect(() => {
@@ -295,7 +316,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const totalPages = activeDocumentUrl ? (numPdfPages || book.totalPages || 0) : (book.totalPages || (Array.isArray(book.pages) ? book.pages.length : 1));
   const currentPageDisplay = activeDocumentUrl ? pdfPageNumber : (page + 1);
 
-  // Resume page on mount (ONLY ONCE per book load, and ONLY for Student accounts)
+  // Resume page on mount (ONLY ONCE per book load, and ONLY for Student accounts with personal progress)
   useEffect(() => {
     if (hasInitializedRef.current) return;
     hasInitializedRef.current = true;
@@ -303,19 +324,18 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     let targetPage = null;
     let targetSection = null;
 
-    if (session?.type === "student") {
+    if (session?.type === "student" && studentKey) {
       // 1. Direct explicit initialPage prop from "Continue Reading" button
       if (initialPage && Number(initialPage) >= 1) {
         targetPage = Number(initialPage);
       } else {
-        // 2. Check student's DB profile reading progress
-        const dbProgress = session?.currentStudent?.customizations?.readingProgress?.[book.id] ||
-                           session?.readingProgress?.[book.id];
+        // 2. Check this student's DB profile reading progress
+        const dbProgress = session?.currentStudent?.customizations?.readingProgress?.[book.id];
         if (dbProgress && Number(dbProgress.page) >= 1) {
           targetPage = Number(dbProgress.page);
           targetSection = dbProgress.sectionId;
         } else {
-          // 3. Check student local storage progress
+          // 3. Check this student's local storage progress
           try {
             const raw = localStorage.getItem(`reader_progress_${studentKey}_${book.id}`);
             if (raw) {
@@ -326,15 +346,6 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
               }
             }
           } catch (_) {}
-
-          // 4. Fallback legacy resume key
-          if (!targetPage) {
-            const legacy = localStorage.getItem(`resume_${book.id}`);
-            if (legacy) {
-              const p = parseInt(legacy, 10);
-              if (!isNaN(p) && p >= 1) targetPage = p;
-            }
-          }
         }
       }
     }
@@ -351,7 +362,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         setResumedToast({ page: targetPage });
       }
     }
-  }, [book.id, Boolean(activeDocumentUrl), session?.type]);
+  }, [book.id, Boolean(activeDocumentUrl), session?.type, studentKey]);
 
   // Auto-dismiss resumed toast after 5 seconds
   useEffect(() => {
@@ -362,13 +373,10 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     return () => clearTimeout(timer);
   }, [resumedToast]);
 
-  // Save on page turn (ONLY for Student mode)
+  // Save on page turn (ONLY for Student mode with isolated student key)
   useEffect(() => {
     if (!currentPageDisplay) return;
-    if (session?.type !== "student") return;
-
-    // Save to legacy key for backward compatibility
-    localStorage.setItem(`resume_${book.id}`, currentPageDisplay.toString());
+    if (session?.type !== "student" || !studentKey) return;
 
     // Save student-specific progress
     const pct = Math.min(100, Math.max(1, Math.round((currentPageDisplay / Math.max(totalPages || 1, 1)) * 100)));
@@ -392,8 +400,9 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     } catch (_) {}
   }, [currentPageDisplay, activeEpubSectionId, totalPages, book.id, studentKey, session?.type]);
 
-  // Save customizations & reading progress (debounced)
+  // Save customizations & reading progress (debounced, strictly isolated to active student)
   useEffect(() => {
+    if (!isStudentProfile || !studentKey) return;
     const timer = setTimeout(() => {
       try {
         const payload = {
@@ -411,7 +420,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           onSaveStudentCustomizations(
             session?.institutionId || session?.id,
             session?.deptId,
-            session?.studentId,
+            studentKey,
             book.id,
             {
               global: { theme: themeKey, brightness, warmLight, lineFocus },
@@ -429,7 +438,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       } catch (_) {}
     }, 500);
     return () => clearTimeout(timer);
-  }, [highlights, stickyNotes, bookmarks, themeKey, brightness, warmLight, lineFocus, studentKey, book.id, onSaveStudentCustomizations, session, currentPageDisplay, totalPages, activeEpubSectionId]);
+  }, [highlights, stickyNotes, bookmarks, themeKey, brightness, warmLight, lineFocus, studentKey, book.id, onSaveStudentCustomizations, session, currentPageDisplay, totalPages, activeEpubSectionId, isStudentProfile]);
 
   // Reset section zoom state when changing page or book
   useEffect(() => {
