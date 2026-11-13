@@ -1439,6 +1439,12 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     };
 
     const handlePointerUp = () => {
+      try {
+        if (dragStartPosRef.current.capturedEl && dragStartPosRef.current.pointerId !== undefined) {
+          dragStartPosRef.current.capturedEl.releasePointerCapture(dragStartPosRef.current.pointerId);
+        }
+      } catch (_) {}
+
       const { noteId, pixelX, pixelY, pageWidth, pageHeight } = dragStartPosRef.current;
       if (!noteId) {
         setDraggingStickyId(null);
@@ -1454,11 +1460,14 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       let finalX = 25;
       const finalY = Math.max(1, Math.min(84, (pixelY / Math.max(pageHeight, 1)) * 100));
 
-      if (pixelX > pageWidth - 80) {
+      const rightMarginThreshold = pageWidth - (noteWidth * 0.45);
+      const leftMarginThreshold = -(noteWidth * 0.55);
+
+      if (pixelX > rightMarginThreshold) {
         // Dropped into right margin
         placement = "margin-right";
         finalX = 102;
-      } else if (pixelX < -noteWidth + 80) {
+      } else if (pixelX < leftMarginThreshold) {
         // Dropped into left margin
         placement = "margin-left";
         finalX = -32;
@@ -1466,7 +1475,8 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         // Dropped onto book page - clamp cleanly inside margins so note never straddles the edge
         placement = "page";
         const xPct = (pixelX / Math.max(pageWidth, 1)) * 100;
-        finalX = Math.max(2, Math.min(isCollapsed ? 82 : 66, xPct));
+        const maxSafeXPct = Math.max(10, ((pageWidth - noteWidth - 16) / Math.max(pageWidth, 1)) * 100);
+        finalX = Math.max(2, Math.min(maxSafeXPct, xPct));
       }
 
       setStickyNotes((prev) => {
@@ -1498,13 +1508,21 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       setDragPosition(null);
     };
 
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
-    window.addEventListener("touchend", handlePointerUp);
+    window.addEventListener("pointermove", handlePointerMove, { passive: true });
+    window.addEventListener("touchmove", handlePointerMove, { passive: true });
+    window.addEventListener("pointerup", handlePointerUp, { capture: true });
+    window.addEventListener("pointercancel", handlePointerUp, { capture: true });
+    window.addEventListener("mouseup", handlePointerUp, { capture: true });
+    window.addEventListener("touchend", handlePointerUp, { capture: true });
+    window.addEventListener("touchcancel", handlePointerUp, { capture: true });
     return () => {
       window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
-      window.removeEventListener("touchend", handlePointerUp);
+      window.removeEventListener("touchmove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp, { capture: true });
+      window.removeEventListener("pointercancel", handlePointerUp, { capture: true });
+      window.removeEventListener("mouseup", handlePointerUp, { capture: true });
+      window.removeEventListener("touchend", handlePointerUp, { capture: true });
+      window.removeEventListener("touchcancel", handlePointerUp, { capture: true });
     };
   }, [draggingStickyId, highlights, bookmarks, themeKey, brightness, warmLight, lineFocus, isStudentProfile, studentKey, book.id, stickyNotes, pushToHistory]);
 
@@ -1525,6 +1543,14 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     const initX = noteRect.left - pageRect.left;
     const initY = noteRect.top - pageRect.top;
 
+    let pointerId;
+    if (e.pointerId !== undefined && e.currentTarget.setPointerCapture) {
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        pointerId = e.pointerId;
+      } catch (_) {}
+    }
+
     dragStartPosRef.current = {
       noteId: id,
       offsetX,
@@ -1535,6 +1561,8 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       pageHeight: pageRect.height || 800,
       pixelX: initX,
       pixelY: initY,
+      capturedEl: e.currentTarget,
+      pointerId,
     };
     setDragPosition({ id, x: initX, y: initY });
     setDraggingStickyId(id);
@@ -2589,7 +2617,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   <iframe
                     title={currentEpubSection?.title || "e-Book page"}
                     srcDoc={activeEpubPageHtml}
-                    className={`border-0 shadow-lg rounded-md overflow-hidden ${activeTool || lineFocus ? "pointer-events-none" : "pointer-events-auto"}`}
+                    className={`border-0 shadow-lg rounded-md overflow-hidden ${activeTool || lineFocus || draggingStickyId ? "pointer-events-none" : "pointer-events-auto"}`}
                     style={{
                       width: "100%",
                       maxWidth: `${Math.min(BASE_PDF_WIDTH, epubPageDimensions.width || 640)}px`,
@@ -2599,7 +2627,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                       backgroundColor: currentTheme.pageBg || "#ffffff"
                     }}
                   />
-                  {(activeTool || lineFocus) && (
+                  {(activeTool || lineFocus || draggingStickyId) && (
                     <div className="absolute inset-0 z-10" />
                   )}
                 </div>
@@ -2802,7 +2830,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                 styleRight = "calc(100% + 14px)";
                 styleTop = `${Math.max(1, Math.min(88, n.y))}%`;
               } else {
-                styleLeft = `${Math.max(2, Math.min(n.isCollapsed ? 82 : 66, n.x))}%`;
+                styleLeft = `clamp(2%, ${n.x}%, calc(100% - ${n.isCollapsed ? 150 : 256}px))`;
                 styleRight = undefined;
                 styleTop = `${Math.max(1, Math.min(88, n.y))}%`;
               }
@@ -2822,7 +2850,6 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                     width: n.isCollapsed ? "auto" : "240px",
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
-                  onPointerUp={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
                 >
                   {n.isCollapsed ? (
@@ -2836,7 +2863,6 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                         maxWidth: "240px",
                       }}
                       onPointerDown={(e) => e.stopPropagation()}
-                      onPointerUp={(e) => e.stopPropagation()}
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleCollapseSticky(n.id);
@@ -2875,7 +2901,6 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                       <button
                         type="button"
                         onPointerDown={(e) => e.stopPropagation()}
-                        onPointerUp={(e) => e.stopPropagation()}
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleCollapseSticky(n.id);
@@ -2890,7 +2915,6 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                       <button
                         type="button"
                         onPointerDown={(e) => e.stopPropagation()}
-                        onPointerUp={(e) => e.stopPropagation()}
                         onClick={(e) => {
                           e.stopPropagation();
                           deleteSticky(n.id);
@@ -2911,11 +2935,16 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                         width: "240px",
                       }}
                       onPointerDown={(e) => e.stopPropagation()}
-                      onPointerUp={(e) => e.stopPropagation()}
                       onClick={(e) => e.stopPropagation()}
                     >
                       {/* Header */}
-                      <div className="flex items-center justify-between gap-1 pb-1.5 border-b border-black/15">
+                      <div
+                        className="flex items-center justify-between gap-1 pb-1.5 border-b border-black/15 cursor-grab active:cursor-grabbing"
+                        onPointerDown={(e) => {
+                          if (e.target.closest("button") || e.target.closest("select")) return;
+                          startDragSticky(e, n.id);
+                        }}
+                      >
                         <div className="flex items-center gap-1.5">
                           <span
                             onPointerDown={(e) => startDragSticky(e, n.id)}
@@ -2942,7 +2971,6 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                           <button
                             type="button"
                             onPointerDown={(e) => e.stopPropagation()}
-                            onPointerUp={(e) => e.stopPropagation()}
                             onClick={(e) => {
                               e.stopPropagation();
                               toggleStickyPlacement(n.id);
@@ -2957,7 +2985,6 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                           <button
                             type="button"
                             onPointerDown={(e) => e.stopPropagation()}
-                            onPointerUp={(e) => e.stopPropagation()}
                             onClick={(e) => {
                               e.stopPropagation();
                               toggleCollapseSticky(n.id);
@@ -2972,7 +2999,6 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                           <button
                             type="button"
                             onPointerDown={(e) => e.stopPropagation()}
-                            onPointerUp={(e) => e.stopPropagation()}
                             onClick={(e) => {
                               e.stopPropagation();
                               deleteSticky(n.id);
@@ -2992,7 +3018,6 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                             key={cKey}
                             type="button"
                             onPointerDown={(e) => e.stopPropagation()}
-                            onPointerUp={(e) => e.stopPropagation()}
                             onClick={(e) => {
                               e.stopPropagation();
                               updateStickyColor(n.id, cKey);
