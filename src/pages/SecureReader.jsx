@@ -1742,10 +1742,10 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   setJumpInput("1");
                 }
               }}
-              className="px-3 py-1.5 rounded-xl bg-black/60 border border-amber-400/30 text-xs font-bold text-amber-300 outline-none cursor-pointer max-w-[170px] sm:max-w-xs truncate shadow-sm hover:border-amber-400/60 transition-all"
+              className="px-3 py-1.5 rounded-xl reader-dropdown-noisy border border-amber-400/40 text-xs font-bold text-amber-300 outline-none cursor-pointer max-w-[170px] sm:max-w-xs truncate shadow-md hover:border-amber-400/80 transition-all"
             >
               {epubSections.map((s, idx) => (
-                <option key={s.id} value={s.id} className="text-black bg-white">
+                <option key={s.id} value={s.id} className="text-white bg-[#0f131a]">
                   {idx + 1}. {s.title}
                 </option>
               ))}
@@ -1784,12 +1784,14 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
       {/* SECOND ROW: CUSTOMIZATION TOOLBAR (Modern Glass grouped layout) */}
       <div
-        className="relative z-40 flex flex-wrap items-center justify-between gap-2.5 px-4 sm:px-6 py-2 border-b border-white/10 text-xs font-semibold backdrop-blur-xl shadow-xs"
+        className={`relative flex flex-wrap items-center justify-between gap-2.5 px-4 sm:px-6 py-2 border-b border-white/10 text-xs font-semibold backdrop-blur-xl shadow-xs ${
+          showThemeControls || showEpubColorMenu || showLightControls ? 'z-[160]' : 'z-40'
+        }`}
         style={{ backgroundColor: currentTheme.toolbarBg, color: palette.cream }}
       >
         <div className="flex items-center gap-2 flex-wrap">
           {/* THEME SELECTOR BUTTON */}
-          <div ref={themeDropdownRef} className={`relative ${showThemeControls ? 'z-50' : ''}`}>
+          <div ref={themeDropdownRef} className={`relative ${showThemeControls ? 'z-[180]' : ''}`}>
             <button
               type="button"
               onClick={toggleThemeControls}
@@ -1802,34 +1804,40 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             </button>
 
             {showThemeControls && (
-              <div className="absolute left-0 top-full mt-2 z-[100] w-64 rounded-2xl bg-[#0f151c]/98 backdrop-blur-2xl border border-white/20 shadow-2xl p-2.5 space-y-1 text-xs">
-                <div className="text-[10px] uppercase font-bold text-zinc-400 px-2 py-1 tracking-wider">Reading Themes</div>
-                {Object.values(READING_THEMES).map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => {
-                      setThemeKey(t.id);
-                      setShowThemeControls(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left font-semibold transition-colors cursor-pointer ${
-                      themeKey === t.id ? "bg-white/20 text-amber-300 font-bold" : "hover:bg-white/10 text-white"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="w-3.5 h-3.5 rounded-full border border-white/30 shadow-xs" style={{ backgroundColor: t.pageBg }} />
-                      <span>{t.name}</span>
-                    </div>
-                    {themeKey === t.id && <Check size={13} />}
-                  </button>
-                ))}
-              </div>
+              <>
+                <div
+                  className="fixed inset-0 z-[190]"
+                  onClick={() => setShowThemeControls(false)}
+                />
+                <div className="absolute left-0 top-full mt-2 z-[200] w-64 rounded-2xl reader-dropdown-noisy p-2.5 space-y-1 text-xs">
+                  <div className="text-[10px] uppercase font-bold text-zinc-400 px-2 py-1 tracking-wider border-b border-white/10 mb-1">Reading Themes</div>
+                  {Object.values(READING_THEMES).map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => {
+                        setThemeKey(t.id);
+                        setShowThemeControls(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left font-semibold transition-colors cursor-pointer ${
+                        themeKey === t.id ? "bg-amber-400 text-black font-bold shadow-md" : "hover:bg-white/15 text-white"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="w-3.5 h-3.5 rounded-full border border-white/30 shadow-xs" style={{ backgroundColor: t.pageBg }} />
+                        <span>{t.name}</span>
+                      </div>
+                      {themeKey === t.id && <Check size={13} className="text-black stroke-[2.5]" />}
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </div>
 
           {/* EPUB CUSTOM PALETTE / STYLE SELECTOR (FOR E-BOOKS) */}
           {isEpub && (
-            <div ref={epubColorMenuRef} className={`relative ${showEpubColorMenu ? 'z-50' : ''}`}>
+            <div ref={epubColorMenuRef} className={`relative ${showEpubColorMenu ? 'z-[180]' : ''}`}>
               <button
                 type="button"
                 onClick={() => {
@@ -1853,43 +1861,49 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
               </button>
 
               {showEpubColorMenu && (
-                <div className="absolute left-0 top-full mt-2 z-[100] w-64 rounded-2xl bg-[#0f151c]/98 backdrop-blur-2xl border border-white/20 shadow-2xl p-2.5 space-y-1 text-xs">
-                  <div className="text-[10px] uppercase font-bold text-zinc-400 px-2 py-1 tracking-wider border-b border-white/10 flex items-center justify-between">
-                    <span>e-Book Style</span>
-                    <span className="text-[9px] text-amber-300 font-normal">Auto / Custom</span>
-                  </div>
-                  {EPUB_COLOR_MODES.map((mode) => (
-                    <button
-                      key={mode.id}
-                      type="button"
-                      onClick={() => {
-                        setEpubColorMode(mode.id);
-                        setShowEpubColorMenu(false);
-                      }}
-                      className={`w-full flex items-start gap-2.5 px-2.5 py-2 rounded-xl text-left transition-colors cursor-pointer ${
-                        epubColorMode === mode.id
-                          ? "bg-amber-400 text-black font-bold shadow-md"
-                          : "hover:bg-white/10 text-white"
-                      }`}
-                    >
-                      <div className="mt-0.5">
-                        <Check size={13} className={epubColorMode === mode.id ? "opacity-100" : "opacity-0"} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-bold text-xs">{mode.name}</div>
-                        <div className={`text-[10px] leading-tight mt-0.5 ${epubColorMode === mode.id ? "text-black/75" : "text-white/60"}`}>
-                          {mode.desc}
+                <>
+                  <div
+                    className="fixed inset-0 z-[190]"
+                    onClick={() => setShowEpubColorMenu(false)}
+                  />
+                  <div className="absolute left-0 top-full mt-2 z-[200] w-64 rounded-2xl reader-dropdown-noisy p-2.5 space-y-1 text-xs">
+                    <div className="text-[10px] uppercase font-bold text-zinc-400 px-2 py-1 tracking-wider border-b border-white/10 flex items-center justify-between mb-1">
+                      <span>e-Book Style</span>
+                      <span className="text-[9px] text-amber-300 font-normal">Auto / Custom</span>
+                    </div>
+                    {EPUB_COLOR_MODES.map((mode) => (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        onClick={() => {
+                          setEpubColorMode(mode.id);
+                          setShowEpubColorMenu(false);
+                        }}
+                        className={`w-full flex items-start gap-2.5 px-2.5 py-2 rounded-xl text-left transition-colors cursor-pointer ${
+                          epubColorMode === mode.id
+                            ? "bg-amber-400 text-black font-bold shadow-md"
+                            : "hover:bg-white/15 text-white"
+                        }`}
+                      >
+                        <div className="mt-0.5">
+                          <Check size={13} className={epubColorMode === mode.id ? "opacity-100 text-black stroke-[2.5]" : "opacity-0"} />
                         </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-xs">{mode.name}</div>
+                          <div className={`text-[10px] leading-tight mt-0.5 ${epubColorMode === mode.id ? "text-black/80 font-medium" : "text-white/70"}`}>
+                            {mode.desc}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           )}
 
           {/* PAGE LIGHTS & EYE-CARE WARM LIGHT BUTTON */}
-          <div ref={lightDropdownRef} className={`relative ${showLightControls ? 'z-50' : ''}`}>
+          <div ref={lightDropdownRef} className={`relative ${showLightControls ? 'z-[180]' : ''}`}>
             <button
               type="button"
               onClick={toggleLightControls}
@@ -1905,56 +1919,62 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             </button>
 
             {showLightControls && (
-              <div className="absolute left-0 top-full mt-2 z-[100] w-64 rounded-2xl bg-[#0f151c]/98 backdrop-blur-2xl border border-white/20 shadow-2xl p-4 space-y-3.5 text-xs text-white">
-                <div className="flex items-center justify-between pb-1 border-b border-white/10 font-bold">
-                  <span>Page Light Controls</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setBrightness(100);
-                      setWarmLight(0);
-                    }}
-                    className="text-[10px] text-amber-300 hover:underline cursor-pointer"
-                  >
-                    Reset
-                  </button>
-                </div>
+              <>
+                <div
+                  className="fixed inset-0 z-[190]"
+                  onClick={() => setShowLightControls(false)}
+                />
+                <div className="absolute left-0 top-full mt-2 z-[200] w-64 rounded-2xl reader-dropdown-noisy p-4 space-y-3.5 text-xs text-white">
+                  <div className="flex items-center justify-between pb-1 border-b border-white/10 font-bold">
+                    <span>Page Light Controls</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBrightness(100);
+                        setWarmLight(0);
+                      }}
+                      className="text-[10px] text-amber-300 hover:underline cursor-pointer"
+                    >
+                      Reset
+                    </button>
+                  </div>
 
-                {/* Brightness slider */}
-                <div>
-                  <div className="flex items-center justify-between text-[11px] mb-1">
-                    <span className="flex items-center gap-1"><Sun size={12} /> Brightness</span>
-                    <span className="font-bold">{brightness}%</span>
+                  {/* Brightness slider */}
+                  <div>
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <span className="flex items-center gap-1"><Sun size={12} /> Brightness</span>
+                      <span className="font-bold">{brightness}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="50"
+                      max="140"
+                      value={brightness}
+                      onChange={(e) => setBrightness(Number(e.target.value))}
+                      className="w-full accent-amber-400 cursor-pointer"
+                    />
                   </div>
-                  <input
-                    type="range"
-                    min="50"
-                    max="140"
-                    value={brightness}
-                    onChange={(e) => setBrightness(Number(e.target.value))}
-                    className="w-full accent-amber-400 cursor-pointer"
-                  />
-                </div>
 
-                {/* Warm Eye-Care night light */}
-                <div>
-                  <div className="flex items-center justify-between text-[11px] mb-1">
-                    <span className="flex items-center gap-1 text-amber-300"><Moon size={12} /> Warm Night Light</span>
-                    <span className="font-bold">{warmLight}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="70"
-                    value={warmLight}
-                    onChange={(e) => setWarmLight(Number(e.target.value))}
-                    className="w-full accent-amber-500 cursor-pointer"
-                  />
-                  <div className="text-[10px] text-zinc-400 mt-1">
-                    Soft amber eye-protection filter for fatigue-free night study.
+                  {/* Warm Eye-Care night light */}
+                  <div>
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <span className="flex items-center gap-1 text-amber-300"><Moon size={12} /> Warm Night Light</span>
+                      <span className="font-bold">{warmLight}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="70"
+                      value={warmLight}
+                      onChange={(e) => setWarmLight(Number(e.target.value))}
+                      className="w-full accent-amber-500 cursor-pointer"
+                    />
+                    <div className="text-[10px] text-zinc-400 mt-1">
+                      Soft amber eye-protection filter for fatigue-free night study.
+                    </div>
                   </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
 
@@ -2726,7 +2746,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             className="fixed inset-0 z-[125] bg-black/60 backdrop-blur-xs"
             onClick={() => setShowNotebook(false)}
           />
-          <div className="fixed inset-y-0 right-0 z-[130] w-full max-w-md bg-[#16181f]/95 backdrop-blur-xl border-l border-white/20 shadow-2xl flex flex-col text-white">
+          <div className="fixed inset-y-0 right-0 z-[130] w-full max-w-md reader-dropdown-noisy border-l border-white/20 shadow-2xl flex flex-col text-white">
           <div className="p-4 border-b border-white/10 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <BookOpen size={16} className="text-[#F5F23B]" />

@@ -128,6 +128,16 @@ header {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.038'/%3E%3C/svg%3E") !important;
 }
 
+/* ── Tactile dark noise texture for 100% solid, non-transparent reader dropdowns & popups ── */
+.reader-dropdown-noisy {
+  background-color: #0f131a !important;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E") !important;
+  background-repeat: repeat !important;
+  opacity: 1 !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.95), 0 10px 25px -5px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+}
+
 
 .glass-header-bar {
   background: linear-gradient(135deg, rgba(244, 247, 250, 0.56) 0%, rgba(226, 232, 239, 0.42) 52%, rgba(241, 245, 249, 0.52) 100%);
