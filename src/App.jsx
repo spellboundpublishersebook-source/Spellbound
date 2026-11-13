@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import Header from "./components/Header";
 import CatalogPage from "./pages/CatalogPage";
 import AuthorsPage from "./pages/AuthorsPage";
@@ -1735,21 +1735,25 @@ export default function App() {
       {view === "login-reader" && <LoginPage onLogin={handleLogin} mode="reader" />}
       {view === "trial" && <TrialPage onRequestTrial={handleRequestTrial} onNavigate={navigate} />}
 
-      {view === "reader-dashboard" && session?.role === "reader" && (
-        <ReaderDashboard
-          session={session}
-          books={availableBooks}
-          onOpenBook={(id, pageNum) => {
-            if (pageNum) {
-              navigate("reading", id, pageNum);
-            } else {
-              navigate("book-details", id);
-            }
-          }}
-          onCreateStudentProfile={handleCreateStudentProfile}
-          onSwitchStudentProfile={handleSwitchStudentProfile}
-          onSwitchToDeptLogin={handleSwitchToDeptLogin}
-        />
+      {view === "reader-dashboard" && (
+        session?.role === "reader" ? (
+          <ReaderDashboard
+            session={session}
+            books={availableBooks}
+            onOpenBook={(id, pageNum) => {
+              if (pageNum) {
+                navigate("reading", id, pageNum);
+              } else {
+                navigate("book-details", id);
+              }
+            }}
+            onCreateStudentProfile={handleCreateStudentProfile}
+            onSwitchStudentProfile={handleSwitchStudentProfile}
+            onSwitchToDeptLogin={handleSwitchToDeptLogin}
+          />
+        ) : (
+          <LoginPage onLogin={handleLogin} mode="reader" />
+        )
       )}
       {view === "reading" && session && openBook && (
         <SecureReader
@@ -1764,28 +1768,36 @@ export default function App() {
         />
       )}
 
-      {view === "uploader" && session?.role === "uploader" && (
-        <UploaderPanel books={books} onAddBook={handleAddBook} onEditBook={handleEditBook} onDeleteBook={handleDeleteBook} dbStatus={dbStatus} onNavigate={navigate} />
+      {view === "uploader" && (
+        session?.role === "uploader" ? (
+          <UploaderPanel books={books} onAddBook={handleAddBook} onEditBook={handleEditBook} onDeleteBook={handleDeleteBook} dbStatus={dbStatus} onNavigate={navigate} />
+        ) : (
+          <LoginPage onLogin={handleLogin} mode="uploader" />
+        )
       )}
 
-      {view === "admin" && session?.role === "admin" && (
-        <AdminPanel
-          books={books} licenses={licenses} uploaders={uploaders} trialRequests={trialRequests} readers={readers} subscribers={subscribers} emailTemplates={emailTemplates}
-          featuredAuthors={featuredAuthors} activeReadingSessions={activeReadingSessions}
-          onCreateLicense={handleCreateLicense} onRevokeLicense={handleRevokeLicense} onDeleteLicense={handleDeleteLicense} onToggleLicenseStatus={handleToggleLicenseStatus}
-          onEditInstitutionAccess={handleEditInstitutionAccess} onRotateSemesterPassword={handleRotateSemesterPassword}
-          onUpdateInstitutionDepartments={handleUpdateInstitutionDepartments}
-          onCreateReader={handleCreateReader} onRevokeReader={handleRevokeReader} onDeleteReader={handleDeleteReader} onToggleReaderStatus={handleToggleReaderStatus}
-          onEditReaderAccess={handleEditReaderAccess} onResendReaderEmail={handleResendReaderEmail}
-          onAddUploader={handleAddUploader} onRemoveUploader={handleRemoveUploader}
-          onApproveTrial={handleApproveTrial} onRejectTrial={handleRejectTrial} onDeleteTrial={handleDeleteTrial} onDeleteRejectedTrials={handleDeleteRejectedTrials} onEditTrialAccess={handleEditTrialAccess}
-          onResendTrialEmail={handleResendTrialEmail} onResendInstitutionEmail={handleResendInstitutionEmail}
-          onUpdateEmailTemplate={handleUpdateEmailTemplate}
-          onAddFeaturedAuthor={handleAddFeaturedAuthor} onRemoveFeaturedAuthor={handleRemoveFeaturedAuthor}
-          onAddBook={handleAddBook} onEditBook={handleEditBook} onDeleteBook={handleDeleteBook}
-          onRenameBookMetadata={handleRenameBookMetadata} dbStatus={dbStatus}
-          onNavigate={navigate}
-        />
+      {view === "admin" && (
+        session?.role === "admin" ? (
+          <AdminPanel
+            books={books} licenses={licenses} uploaders={uploaders} trialRequests={trialRequests} readers={readers} subscribers={subscribers} emailTemplates={emailTemplates}
+            featuredAuthors={featuredAuthors} activeReadingSessions={activeReadingSessions}
+            onCreateLicense={handleCreateLicense} onRevokeLicense={handleRevokeLicense} onDeleteLicense={handleDeleteLicense} onToggleLicenseStatus={handleToggleLicenseStatus}
+            onEditInstitutionAccess={handleEditInstitutionAccess} onRotateSemesterPassword={handleRotateSemesterPassword}
+            onUpdateInstitutionDepartments={handleUpdateInstitutionDepartments}
+            onCreateReader={handleCreateReader} onRevokeReader={handleRevokeReader} onDeleteReader={handleDeleteReader} onToggleReaderStatus={handleToggleReaderStatus}
+            onEditReaderAccess={handleEditReaderAccess} onResendReaderEmail={handleResendReaderEmail}
+            onAddUploader={handleAddUploader} onRemoveUploader={handleRemoveUploader}
+            onApproveTrial={handleApproveTrial} onRejectTrial={handleRejectTrial} onDeleteTrial={handleDeleteTrial} onDeleteRejectedTrials={handleDeleteRejectedTrials} onEditTrialAccess={handleEditTrialAccess}
+            onResendTrialEmail={handleResendTrialEmail} onResendInstitutionEmail={handleResendInstitutionEmail}
+            onUpdateEmailTemplate={handleUpdateEmailTemplate}
+            onAddFeaturedAuthor={handleAddFeaturedAuthor} onRemoveFeaturedAuthor={handleRemoveFeaturedAuthor}
+            onAddBook={handleAddBook} onEditBook={handleEditBook} onDeleteBook={handleDeleteBook}
+            onRenameBookMetadata={handleRenameBookMetadata} dbStatus={dbStatus}
+            onNavigate={navigate}
+          />
+        ) : (
+          <LoginPage onLogin={handleLogin} mode="admin" />
+        )
       )}
     </div>
   );
