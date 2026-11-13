@@ -581,6 +581,7 @@ function InstitutionsTab({
   const [newDeptLoginId, setNewDeptLoginId] = useState("");
   const [newDeptPassword, setNewDeptPassword] = useState("");
   const [showDeptPw, setShowDeptPw] = useState({});
+  const [showStudentPw, setShowStudentPw] = useState({});
   const [copiedKey, setCopiedKey] = useState(null);
   const [viewingStudentsDeptId, setViewingStudentsDeptId] = useState(null);
   const [isSavingDept, setIsSavingDept] = useState(false);
@@ -645,6 +646,28 @@ function InstitutionsTab({
     if (ok !== false) {
       setManagingDeptLicense(prev => ({ ...prev, departments: updated }));
       if (viewingStudentsDeptId === deptId) setViewingStudentsDeptId(null);
+    }
+  }
+
+  async function handleDeleteStudent(deptId, studentId) {
+    if (!managingDeptLicense) return;
+    if (!window.confirm("Are you sure you want to remove this student profile?")) return;
+
+    const currentDepts = Array.isArray(managingDeptLicense.departments) ? [...managingDeptLicense.departments] : [];
+    const deptIdx = currentDepts.findIndex(d => d.id === deptId);
+    if (deptIdx === -1) return;
+
+    const currentStudents = Array.isArray(currentDepts[deptIdx].students) ? currentDepts[deptIdx].students : [];
+    const updatedStudents = currentStudents.filter(s => (s.id !== studentId && s.studentId !== studentId));
+
+    currentDepts[deptIdx] = {
+      ...currentDepts[deptIdx],
+      students: updatedStudents
+    };
+
+    const ok = await onUpdateInstitutionDepartments(managingDeptLicense.id, currentDepts);
+    if (ok !== false) {
+      setManagingDeptLicense(prev => ({ ...prev, departments: currentDepts }));
     }
   }
 
@@ -1396,18 +1419,96 @@ function InstitutionsTab({
 
                         {/* Expanded Student Profiles View */}
                         {isViewingStudents && (
-                          <div className="p-3 rounded-xl bg-white border border-blue-100 space-y-2">
-                            <div className="text-[11px] font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1">
-                              <GraduationCap size={13} /> Registered Students ({studentList.length})
+                          <div className="p-3.5 rounded-xl bg-white border border-blue-200 shadow-xs space-y-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-black/5">
+                              <div className="text-[11px] font-extrabold uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
+                                <GraduationCap size={14} className="text-blue-700" />
+                                <span>Registered Students ({studentList.length})</span>
+                              </div>
+                              <span className="text-[10px] text-zinc-500 font-medium">
+                                Student ID & password access for this department
+                              </span>
                             </div>
-                            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-2">
-                              {studentList.map((stu) => (
-                                <div key={stu.id || stu.studentId} className="p-2 rounded-lg bg-slate-50 border border-black/5 text-xs">
-                                  <div className="font-bold text-zinc-900">{stu.name}</div>
-                                  <div className="text-zinc-600 font-mono text-[11px]">ID: {stu.studentId}</div>
-                                  <div className="text-[10px] text-zinc-600 mt-0.5">Joined {new Date(stu.createdAt).toLocaleDateString()}</div>
-                                </div>
-                              ))}
+
+                            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                              {studentList.map((stu) => {
+                                const stuKey = stu.id || stu.studentId;
+                                const isStuPwVisible = showStudentPw[stuKey];
+                                const isCopiedStuId = copiedKey === `stuid_${stuKey}`;
+                                const isCopiedStuPw = copiedKey === `stupw_${stuKey}`;
+
+                                return (
+                                  <div
+                                    key={stuKey}
+                                    className="p-3 rounded-xl bg-slate-50 hover:bg-white border border-black/10 transition-colors shadow-xs space-y-2 relative group/stu"
+                                  >
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="font-bold text-xs text-[#111214] truncate">
+                                        {stu.name || "Student"}
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteStudent(dept.id, stuKey)}
+                                        className="opacity-0 group-hover/stu:opacity-100 p-1 rounded hover:bg-rose-100 text-rose-600 transition-opacity cursor-pointer shrink-0"
+                                        title="Delete student profile"
+                                      >
+                                        <Trash2 size={11} />
+                                      </button>
+                                    </div>
+
+                                    {/* Student ID */}
+                                    <div className="flex items-center justify-between text-[11px] bg-white px-2 py-1 rounded-md border border-black/5">
+                                      <span className="text-zinc-500 font-semibold">Student ID:</span>
+                                      <div className="flex items-center gap-1">
+                                        <code className="font-mono font-bold text-zinc-900">{stu.studentId}</code>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleCopyText(stu.studentId, `stuid_${stuKey}`)}
+                                          className="p-0.5 rounded hover:bg-slate-100 text-zinc-500 hover:text-black cursor-pointer"
+                                          title="Copy Student ID"
+                                        >
+                                          {isCopiedStuId ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {/* Student Password */}
+                                    <div className="flex items-center justify-between text-[11px] bg-white px-2 py-1 rounded-md border border-black/5">
+                                      <span className="text-zinc-500 font-semibold">Password:</span>
+                                      <div className="flex items-center gap-1">
+                                        <code className="font-mono font-bold text-zinc-900">
+                                          {isStuPwVisible ? (stu.password || "—") : "••••••••"}
+                                        </code>
+                                        <button
+                                          type="button"
+                                          onClick={() => setShowStudentPw(prev => ({ ...prev, [stuKey]: !prev[stuKey] }))}
+                                          className="p-0.5 rounded hover:bg-slate-100 text-zinc-500 hover:text-black cursor-pointer"
+                                          title={isStuPwVisible ? "Hide password" : "Show password"}
+                                        >
+                                          {isStuPwVisible ? <EyeOff size={11} /> : <Eye size={11} />}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleCopyText(stu.password || "", `stupw_${stuKey}`)}
+                                          className="p-0.5 rounded hover:bg-slate-100 text-zinc-500 hover:text-black cursor-pointer"
+                                          title="Copy Password"
+                                        >
+                                          {isCopiedStuPw ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    <div className="text-[10px] text-zinc-600 pt-0.5 border-t border-black/5 flex items-center justify-between">
+                                      <span>Joined {stu.createdAt ? new Date(stu.createdAt).toLocaleDateString() : "Recently"}</span>
+                                      {stu.customizations?.readingProgress && Object.keys(stu.customizations.readingProgress).length > 0 && (
+                                        <span className="text-emerald-700 font-semibold">
+                                          {Object.keys(stu.customizations.readingProgress).length} active read{Object.keys(stu.customizations.readingProgress).length > 1 ? "s" : ""}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
                         )}
