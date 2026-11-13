@@ -28,55 +28,55 @@ const READING_THEMES = {
   cream: {
     id: "cream",
     name: "Classic Cream",
-    pageBg: "#FBF8EE",
-    textColor: "#1E293B",
-    headerBg: "#132B23",
-    outerBg: "#0C1F18",
-    toolbarBg: "#16332A",
+    pageBg: "#FAF6EB",
+    textColor: "#1A222A",
+    headerBg: "#0B1511",
+    outerBg: "#0E1814",
+    toolbarBg: "#10201A",
     accent: "#D97706",
     canvasFilter: "none",
   },
   sepia: {
     id: "sepia",
     name: "Warm Sepia",
-    pageBg: "#F4ECD8",
-    textColor: "#43302B",
-    headerBg: "#2B2118",
-    outerBg: "#1C140E",
-    toolbarBg: "#33261C",
+    pageBg: "#F5ECD7",
+    textColor: "#3A2B20",
+    headerBg: "#1A120B",
+    outerBg: "#140E08",
+    toolbarBg: "#22170E",
     accent: "#B45309",
     canvasFilter: "sepia(25%) brightness(98%)",
   },
   midnight: {
     id: "midnight",
     name: "OLED Midnight",
-    pageBg: "#111317",
+    pageBg: "#0E1116",
     textColor: "#F1F5F9",
-    headerBg: "#090A0D",
-    outerBg: "#050608",
-    toolbarBg: "#14171E",
-    accent: "#F5F23B",
+    headerBg: "#080A0E",
+    outerBg: "#040507",
+    toolbarBg: "#0D1016",
+    accent: "#FBBF24",
     canvasFilter: "invert(92%) hue-rotate(180deg) contrast(95%)",
   },
   forest: {
     id: "forest",
     name: "Forest Emerald",
-    pageBg: "#0E231B",
+    pageBg: "#0B1D16",
     textColor: "#ECFDF5",
-    headerBg: "#081611",
-    outerBg: "#040D0A",
-    toolbarBg: "#0D221A",
+    headerBg: "#06130E",
+    outerBg: "#030A08",
+    toolbarBg: "#0A1B14",
     accent: "#34D399",
     canvasFilter: "invert(90%) sepia(25%) hue-rotate(95deg) contrast(95%)",
   },
   slate: {
     id: "slate",
     name: "Slate Frosted",
-    pageBg: "#1E293B",
+    pageBg: "#182232",
     textColor: "#F8FAFC",
-    headerBg: "#0F172A",
-    outerBg: "#090D16",
-    toolbarBg: "#1A2234",
+    headerBg: "#0A1018",
+    outerBg: "#070B11",
+    toolbarBg: "#0F1824",
     accent: "#38BDF8",
     canvasFilter: "invert(90%) hue-rotate(190deg) contrast(95%)",
   },
@@ -630,7 +630,8 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       const updatedHls = [...highlights, newHl];
       setHighlights(updatedHls);
       pushToHistory(updatedHls, stickyNotes);
-      // Note: activeTool remains "highlight" so student can continue highlighting until they toggle off or press Esc!
+      // Single-use: after highlighting one time, turn highlighter off automatically
+      setActiveTool(null);
       return;
     }
 
@@ -1266,33 +1267,35 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
       {/* TOP BAR: Book details + Quick Actions */}
       <div
-        className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-2.5 border-b border-white/10"
+        className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-2.5 border-b border-white/10 backdrop-blur-xl shadow-xs"
         style={{ backgroundColor: currentTheme.headerBg, color: palette.cream }}
       >
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={onBack}
-            className="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-all cursor-pointer shrink-0"
+            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 transition-all cursor-pointer shrink-0 shadow-xs"
           >
             <ArrowLeft size={14} /> Library
           </button>
           <div className="min-w-0">
-            <div className="text-xs sm:text-sm font-bold truncate max-w-[200px] sm:max-w-md" style={fontDisplay}>
+            <div className="text-xs sm:text-sm font-extrabold truncate max-w-[220px] sm:max-w-md tracking-tight" style={fontDisplay}>
               {book.title}
             </div>
-            <div className="text-[11px] text-white/60 truncate flex items-center gap-2">
+            <div className="text-[11px] text-white/70 truncate flex items-center gap-2 mt-0.5">
               <span>{book.author}</span>
               {session?.department && (
                 <>
-                  <span>•</span>
-                  <span className="text-amber-300 font-semibold">{session.department}</span>
+                  <span className="text-white/40">•</span>
+                  <span className="text-amber-300 font-semibold bg-amber-400/10 px-2 py-0.2 rounded border border-amber-400/20 text-[10px]">
+                    {session.department}
+                  </span>
                 </>
               )}
               {isStudentProfile && (session?.studentName || session?.name) && (
                 <>
-                  <span>•</span>
-                  <span className="inline-flex items-center gap-1 text-emerald-300 font-semibold bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full text-[10px]">
-                    <GraduationCap size={11} className="text-emerald-400" />
+                  <span className="text-white/40">•</span>
+                  <span className="inline-flex items-center gap-1.5 text-emerald-300 font-semibold bg-emerald-950/70 border border-emerald-500/35 px-2.5 py-0.5 rounded-full text-[10px] shadow-xs">
+                    <GraduationCap size={12} className="text-emerald-400" />
                     <span>{session.studentName || session.name}</span>
                     {session?.studentId && <span className="text-emerald-400/80 font-mono text-[9px]">({session.studentId})</span>}
                   </span>
@@ -1315,7 +1318,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                 setPdfPageNumber(1);
                 setPage(0);
               }}
-              className="px-2.5 py-1 rounded-lg bg-black/40 border border-white/20 text-xs font-bold text-white outline-none cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-black/40 border border-white/20 text-xs font-bold text-white outline-none cursor-pointer"
             >
               {epubSections.map((s) => (
                 <option key={s.id} value={s.id} className="text-black bg-white">
@@ -1328,15 +1331,15 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
         {/* Reading Timer & Audio & Fullscreen */}
         <div className="flex items-center gap-2">
-          <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/30 border border-white/10 text-xs font-bold text-amber-300">
-            <Clock size={12} /> {readingMinutes}m read
+          <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/25 text-xs font-bold text-amber-300 shadow-xs">
+            <Clock size={12} className="text-amber-400" /> {readingMinutes}m read
           </div>
 
           {!book.pdfUrl && !isEpub && (
             <button
               onClick={toggleReadAloud}
-              className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full transition-colors cursor-pointer ${
-                isPlaying ? "bg-amber-400 text-black font-bold" : "bg-white/10 text-white hover:bg-white/20"
+              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs ${
+                isPlaying ? "bg-amber-400 text-black font-bold" : "bg-white/10 text-white hover:bg-white/20 active:scale-95 border border-white/15"
               }`}
             >
               {isPlaying ? <VolumeX size={13} /> : <Volume2 size={13} />}
@@ -1347,7 +1350,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           <button
             type="button"
             onClick={() => setIsFullscreen((f) => !f)}
-            className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+            className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white border border-white/15 transition-all cursor-pointer shadow-xs"
             title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
           >
             {isFullscreen ? <Minimize size={14} /> : <Maximize size={14} />}
@@ -1355,9 +1358,9 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         </div>
       </div>
 
-      {/* SECOND ROW: CUSTOMIZATION TOOLBAR (Lights, Line Highlights, Sticky Notes, Themes, Study Notebook) */}
+      {/* SECOND ROW: CUSTOMIZATION TOOLBAR (Modern Glass grouped layout) */}
       <div
-        className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-2 border-b border-black/20 text-xs font-semibold"
+        className="flex flex-wrap items-center justify-between gap-2.5 px-4 sm:px-6 py-2 border-b border-white/10 text-xs font-semibold backdrop-blur-xl shadow-xs"
         style={{ backgroundColor: currentTheme.toolbarBg, color: palette.cream }}
       >
         <div className="flex items-center gap-2 flex-wrap">
@@ -1366,16 +1369,17 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             <button
               type="button"
               onClick={toggleThemeControls}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/8 hover:bg-white/15 active:scale-95 border border-white/15 text-white/90 hover:text-white transition-all cursor-pointer shadow-xs"
             >
-              <Palette size={13} />
+              <Palette size={13} className="text-amber-300" />
+              <span className="w-2.5 h-2.5 rounded-full border border-white/40 shadow-xs" style={{ backgroundColor: currentTheme.pageBg }} />
               <span>Theme: {currentTheme.name}</span>
-              <ChevronDown size={12} />
+              <ChevronDown size={12} className="text-white/60" />
             </button>
 
             {showThemeControls && (
-              <div className="absolute left-0 top-full mt-2 z-50 w-56 rounded-2xl bg-[#181a20] border border-white/20 shadow-2xl p-2.5 space-y-1 text-xs">
-                <div className="text-[10px] uppercase font-bold text-zinc-400 px-2 py-1">Background Themes</div>
+              <div className="absolute left-0 top-full mt-2 z-50 w-56 rounded-2xl bg-[#0f151c]/95 backdrop-blur-2xl border border-white/20 shadow-2xl p-2.5 space-y-1 text-xs">
+                <div className="text-[10px] uppercase font-bold text-zinc-400 px-2 py-1 tracking-wider">Reading Themes</div>
                 {Object.values(READING_THEMES).map((t) => (
                   <button
                     key={t.id}
@@ -1389,7 +1393,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="w-3.5 h-3.5 rounded-full border border-white/30" style={{ backgroundColor: t.pageBg }} />
+                      <span className="w-3.5 h-3.5 rounded-full border border-white/30 shadow-xs" style={{ backgroundColor: t.pageBg }} />
                       <span>{t.name}</span>
                     </div>
                     {themeKey === t.id && <Check size={13} />}
@@ -1404,17 +1408,19 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             <button
               type="button"
               onClick={toggleLightControls}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/15 transition-all cursor-pointer ${
-                brightness !== 100 || warmLight > 0 ? "bg-amber-400 text-black font-bold" : "bg-white/10 hover:bg-white/20 text-white"
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all cursor-pointer shadow-xs ${
+                brightness !== 100 || warmLight > 0
+                  ? "bg-amber-400 text-black border-amber-300 font-bold shadow-amber-400/20"
+                  : "bg-white/8 hover:bg-white/15 active:scale-95 border-white/15 text-white/90 hover:text-white"
               }`}
             >
-              <Sun size={13} />
+              <Sun size={13} className={brightness !== 100 || warmLight > 0 ? "text-black" : "text-amber-300"} />
               <span>Page Lights</span>
-              <ChevronDown size={12} />
+              <ChevronDown size={12} className="opacity-70" />
             </button>
 
             {showLightControls && (
-              <div className="absolute left-0 top-full mt-2 z-50 w-64 rounded-2xl bg-[#181a20] border border-white/20 shadow-2xl p-4 space-y-3.5 text-xs text-white">
+              <div className="absolute left-0 top-full mt-2 z-50 w-64 rounded-2xl bg-[#0f151c]/95 backdrop-blur-2xl border border-white/20 shadow-2xl p-4 space-y-3.5 text-xs text-white">
                 <div className="flex items-center justify-between pb-1 border-b border-white/10 font-bold">
                   <span>Page Light Controls</span>
                   <button
@@ -1467,16 +1473,18 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             )}
           </div>
 
+          <div className="h-4 w-px bg-white/15 hidden sm:block" />
+
           {/* PERSONAL STUDY TOOLS (ONLY AVAILABLE ON STUDENT PROFILES) */}
           {!isStudentProfile ? (
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-900/60 border border-blue-400/30 text-xs text-blue-200">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-900/50 border border-blue-400/30 text-xs text-blue-200">
               <Building2 size={13} className="text-blue-300 shrink-0" />
               <span className="font-semibold">Dept View:</span>
               <span className="text-blue-100 text-[11px] hidden sm:inline">Personal highlights, sticky notes & study notebook locked.</span>
               <button
                 type="button"
                 onClick={onBack}
-                className="px-2.5 py-0.5 rounded-full bg-[#F5F23B] text-black font-bold text-[11px] hover:bg-yellow-300 transition-all cursor-pointer shrink-0"
+                className="px-2.5 py-0.5 rounded-lg bg-[#F5F23B] text-black font-bold text-[11px] hover:bg-yellow-300 transition-all cursor-pointer shrink-0"
               >
                 Switch to Student ID
               </button>
@@ -1487,98 +1495,114 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
               <button
                 type="button"
                 onClick={toggleLineFocus}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/15 transition-all cursor-pointer ${
-                  lineFocus ? "bg-amber-400 text-black font-bold shadow-md ring-2 ring-amber-300" : "bg-white/10 hover:bg-white/20 text-white"
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all cursor-pointer shadow-xs ${
+                  lineFocus
+                    ? "bg-amber-400 text-black border-amber-300 font-bold shadow-amber-400/25"
+                    : "bg-white/8 hover:bg-white/15 active:scale-95 border-white/15 text-white/90 hover:text-white"
                 }`}
                 title="Line Focus / Reading Ruler: Highlights the active line as you read, softly dimming the rest"
               >
-                <Sliders size={13} />
-                <span>Line Focus {lineFocus ? "ON" : "OFF"}</span>
+                <Sliders size={13} className={lineFocus ? "text-black" : "text-amber-300"} />
+                <span>Line Focus</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold ${lineFocus ? "bg-black/20 text-black" : "bg-white/10 text-white/70"}`}>
+                  {lineFocus ? "ON" : "OFF"}
+                </span>
               </button>
 
-              {/* HIGHLIGHTER TOOL */}
-              <div className="inline-flex items-center gap-1 bg-white/10 p-1 rounded-full border border-white/15">
+              <div className="h-4 w-px bg-white/15 hidden sm:block" />
+
+              {/* HIGHLIGHTER TOOL (Single-use per click) */}
+              <div className="inline-flex items-center gap-1 bg-white/8 p-1 rounded-xl border border-white/15 shadow-xs">
                 <button
                   type="button"
                   onClick={toggleHighlighter}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                    activeTool === "highlight" ? "bg-amber-400 text-black shadow-sm ring-2 ring-amber-300" : "text-white hover:bg-white/10"
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeTool === "highlight"
+                      ? "bg-amber-400 text-black shadow-sm ring-2 ring-amber-300"
+                      : "text-white/90 hover:text-white hover:bg-white/10"
                   }`}
+                  title="Click to turn on highlighter for one passage (automatically turns off after highlighting)"
                 >
                   <Highlighter size={13} />
-                  <span>Highlighter {activeTool === "highlight" ? "ON" : ""}</span>
+                  <span>Highlighter {activeTool === "highlight" ? "ACTIVE" : ""}</span>
                 </button>
 
                 {/* Color swatches */}
-                {Object.values(HIGHLIGHT_COLORS).map((col) => (
-                  <button
-                    key={col.id}
-                    type="button"
-                    onClick={() => selectHighlightColor(col.id)}
-                    className={`w-5 h-5 rounded-full transition-transform cursor-pointer ${
-                      highlightColor === col.id && activeTool === "highlight" ? "scale-125 ring-2 ring-white" : "hover:scale-110"
-                    }`}
-                    style={{ backgroundColor: col.border }}
-                    title={`Highlight in ${col.name}`}
-                  />
-                ))}
+                <div className="flex items-center gap-1 pl-1 border-l border-white/15">
+                  {Object.values(HIGHLIGHT_COLORS).map((col) => (
+                    <button
+                      key={col.id}
+                      type="button"
+                      onClick={() => selectHighlightColor(col.id)}
+                      className={`w-4.5 h-4.5 rounded-full transition-transform cursor-pointer ${
+                        highlightColor === col.id && activeTool === "highlight"
+                          ? "scale-125 ring-2 ring-white shadow-sm"
+                          : "hover:scale-115 opacity-85 hover:opacity-100"
+                      }`}
+                      style={{ backgroundColor: col.border }}
+                      title={`Highlight with ${col.name} (1-time use)`}
+                    />
+                  ))}
+                </div>
               </div>
 
               {/* STICKY NOTE / CODE TOOL */}
-              <div className="inline-flex items-center gap-1 bg-white/10 p-1 rounded-full border border-white/15">
+              <div className="inline-flex items-center gap-1 bg-white/8 p-1 rounded-xl border border-white/15 shadow-xs">
                 <button
                   type="button"
                   onClick={toggleStickyTool}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                    activeTool === "sticky" ? "bg-[#F5F23B] text-black shadow-sm ring-2 ring-yellow-200" : "text-white hover:bg-white/10"
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeTool === "sticky"
+                      ? "bg-[#F5F23B] text-black shadow-sm ring-2 ring-yellow-200"
+                      : "text-white/90 hover:text-white hover:bg-white/10"
                   }`}
                   title="Click anywhere on book or in side margins to drop a sticky note or code snippet"
                 >
                   <StickyNote size={13} />
-                  <span>+ Sticky Note / Code {activeTool === "sticky" ? "ACTIVE" : ""}</span>
+                  <span>+ Sticky Note {activeTool === "sticky" ? "ACTIVE" : ""}</span>
                 </button>
 
                 <select
                   value={stickyTag}
                   onChange={(e) => setStickyTag(e.target.value)}
-                  className="bg-black/40 text-[11px] font-bold text-white px-2 py-0.5 rounded-md outline-none cursor-pointer"
+                  className="bg-black/50 hover:bg-black/70 text-[11px] font-bold text-white px-2 py-0.5 rounded-md outline-none cursor-pointer border border-white/10"
                 >
                   <option value="Note">Note</option>
                   <option value="Code">Code</option>
                   <option value="Formula">Formula</option>
-                  <option value="Exam">Exam Note</option>
+                  <option value="Exam">Exam</option>
                 </select>
               </div>
 
               {/* UNDO / REDO CONTROLS */}
-              <div className="inline-flex items-center gap-1 bg-white/10 p-1 rounded-full border border-white/15">
+              <div className="inline-flex items-center gap-0.5 bg-white/8 p-1 rounded-xl border border-white/15 shadow-xs">
                 <button
                   type="button"
                   onClick={handleUndo}
                   disabled={historyIndex <= 0}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
                     historyIndex > 0
-                      ? "text-white hover:bg-white/15 cursor-pointer"
-                      : "text-white/40 cursor-not-allowed opacity-50"
+                      ? "text-white hover:bg-white/15 cursor-pointer active:scale-95"
+                      : "text-white/30 cursor-not-allowed"
                   }`}
                   title="Undo last annotation (Ctrl+Z / Cmd+Z)"
                 >
                   <Undo2 size={13} />
-                  <span>Undo</span>
+                  <span className="hidden md:inline">Undo</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleRedo}
                   disabled={historyIndex < 0 || historyIndex >= history.length - 1}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
                     historyIndex >= 0 && historyIndex < history.length - 1
-                      ? "text-white hover:bg-white/15 cursor-pointer"
-                      : "text-white/40 cursor-not-allowed opacity-50"
+                      ? "text-white hover:bg-white/15 cursor-pointer active:scale-95"
+                      : "text-white/30 cursor-not-allowed"
                   }`}
                   title="Redo annotation (Ctrl+Y / Cmd+Shift+Z)"
                 >
                   <Redo2 size={13} />
-                  <span>Redo</span>
+                  <span className="hidden md:inline">Redo</span>
                 </button>
               </div>
             </>
@@ -1589,9 +1613,12 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             <button
               type="button"
               onClick={toggleSectionZoom}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border border-white/15 transition-all cursor-pointer ${
-                sectionSelectActive ? "bg-amber-400 text-black font-bold" : "bg-white/10 hover:bg-white/20 text-white"
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all cursor-pointer shadow-xs ${
+                sectionSelectActive
+                  ? "bg-amber-400 text-black border-amber-300 font-bold shadow-amber-400/25"
+                  : "bg-white/8 hover:bg-white/15 active:scale-95 border-white/15 text-white/90 hover:text-white"
               }`}
+              title="Select and zoom into a specific diagram or section"
             >
               <ScanSearch size={13} />
               <span>{sectionSelectActive ? "Selecting..." : "Zoom Section"}</span>
@@ -1606,8 +1633,10 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
               <button
                 type="button"
                 onClick={toggleBookmark}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/15 transition-all cursor-pointer ${
-                  isBookmarked ? "bg-amber-400 text-black font-bold" : "bg-white/10 hover:bg-white/20 text-white"
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all cursor-pointer shadow-xs ${
+                  isBookmarked
+                    ? "bg-amber-400 text-black border-amber-300 font-bold shadow-amber-400/25"
+                    : "bg-white/8 hover:bg-white/15 active:scale-95 border-white/15 text-white/90 hover:text-white"
                 }`}
               >
                 {isBookmarked ? <BookMarked size={13} /> : <Bookmark size={13} />}
@@ -1617,10 +1646,13 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
               <button
                 type="button"
                 onClick={toggleNotebook}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#F5F23B] hover:bg-[#eae729] text-black font-bold shadow-md transition-all cursor-pointer"
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 text-black font-extrabold shadow-md shadow-amber-400/20 active:scale-95 transition-all cursor-pointer"
               >
                 <BookOpen size={13} />
-                <span>Study Notebook ({totalNotesCount})</span>
+                <span>Study Notebook</span>
+                <span className="bg-black/15 text-black text-[10px] px-1.5 py-0.2 rounded-full font-black">
+                  {totalNotesCount}
+                </span>
               </button>
             </>
           )}
@@ -1629,33 +1661,63 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
       {/* HELPER BANNER FOR ACTIVE TOOLS */}
       {activeTool === "highlight" && (
-        <div className="py-1.5 px-4 text-center text-xs font-bold bg-amber-400 text-black flex items-center justify-center gap-3 shadow-inner">
+        <div className="py-1.5 px-4 text-center text-xs font-bold bg-amber-400 text-black flex items-center justify-center gap-3 shadow-md animate-in fade-in duration-150">
           <span className="flex items-center gap-1.5">
-            <Highlighter size={14} className="animate-pulse" />
-            <span>Highlighter is <strong>ACTIVE (Multi-Use)</strong>: Click or drag text to highlight continuously in {HIGHLIGHT_COLORS[highlightColor].name}.</span>
+            <Highlighter size={13} className="animate-pulse" />
+            <span>Highlighter is <strong>ACTIVE</strong>: Click or drag text to highlight in {HIGHLIGHT_COLORS[highlightColor].name}. (Turns off after highlighting)</span>
           </span>
           <button
             type="button"
             onClick={() => setActiveTool(null)}
-            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-black text-white hover:bg-neutral-800 text-[11px] font-bold transition-all cursor-pointer shadow-sm"
+            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-black text-white hover:bg-neutral-800 text-[11px] font-bold transition-all cursor-pointer shadow-xs"
           >
-            <X size={12} strokeWidth={2.5} /> Done Highlighting
+            <X size={12} strokeWidth={2.5} /> Cancel
           </button>
         </div>
       )}
       {activeTool === "sticky" && (
-        <div className="py-1 px-4 text-center text-xs font-bold bg-[#F5F23B] text-black flex items-center justify-center gap-2">
-          <StickyNote size={13} /> Click anywhere ON the book or OUTSIDE in the margins to drop your note. Drag by grip to reposition. Press Esc to cancel.
+        <div className="py-1.5 px-4 text-center text-xs font-bold bg-[#F5F23B] text-black flex items-center justify-center gap-3 shadow-md animate-in fade-in duration-150">
+          <span className="flex items-center gap-1.5">
+            <StickyNote size={13} />
+            <span>Click anywhere ON the book or OUTSIDE in the margins to drop your note.</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setActiveTool(null)}
+            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-black text-white hover:bg-neutral-800 text-[11px] font-bold transition-all cursor-pointer shadow-xs"
+          >
+            <X size={12} strokeWidth={2.5} /> Cancel
+          </button>
         </div>
       )}
       {lineFocus && (
-        <div className="py-1 px-4 text-center text-xs font-bold bg-amber-400 text-black flex items-center justify-center gap-2">
-          <Sliders size={13} /> Line Focus Ruler is ACTIVE: Move your mouse or touch to illuminate reading lines. Click Line Focus or press Esc to exit.
+        <div className="py-1.5 px-4 text-center text-xs font-bold bg-amber-400 text-black flex items-center justify-center gap-3 shadow-md animate-in fade-in duration-150">
+          <span className="flex items-center gap-1.5">
+            <Sliders size={13} />
+            <span>Line Focus Ruler is <strong>ACTIVE</strong>: Move your mouse or touch to illuminate reading lines.</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setLineFocus(false)}
+            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-black text-white hover:bg-neutral-800 text-[11px] font-bold transition-all cursor-pointer shadow-xs"
+          >
+            <X size={12} strokeWidth={2.5} /> Exit Line Focus
+          </button>
         </div>
       )}
       {sectionSelectActive && book.pdfUrl && (
-        <div className="py-1 px-4 text-center text-xs font-bold bg-amber-400 text-black flex items-center justify-center gap-2">
-          <ScanSearch size={13} /> Drag a box over any section to zoom into it. Press Esc to cancel.
+        <div className="py-1.5 px-4 text-center text-xs font-bold bg-amber-400 text-black flex items-center justify-center gap-3 shadow-md animate-in fade-in duration-150">
+          <span className="flex items-center gap-1.5">
+            <ScanSearch size={13} />
+            <span>Drag a box over any section to zoom into it.</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setSectionSelectActive(false)}
+            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-black text-white hover:bg-neutral-800 text-[11px] font-bold transition-all cursor-pointer shadow-xs"
+          >
+            <X size={12} strokeWidth={2.5} /> Cancel
+          </button>
         </div>
       )}
 
@@ -1687,7 +1749,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           onPointerUp={handlePagePointerUp}
           onPointerCancel={handlePagePointerUp}
           onDragStart={(e) => e.preventDefault()}
-          className={`no-select select-none relative rounded-xl shadow-2xl flex flex-col items-center ${
+          className={`no-select select-none relative rounded-2xl flex flex-col items-center ${
             sectionSelectActive ? "cursor-crosshair" : activeTool === "highlight" ? "cursor-text" : activeTool === "sticky" ? "cursor-copy" : ""
           }`}
           style={{
@@ -1699,6 +1761,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             ...fontBody,
             color: currentTheme.textColor,
             filter: `brightness(${brightness}%)`,
+            boxShadow: "0 25px 65px -12px rgba(0,0,0,0.58), 0 0 0 1px rgba(255,255,255,0.08)",
           }}
           onContextMenu={(e) => e.preventDefault()}
         >
@@ -2317,22 +2380,23 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
       {/* FOOTER CONTROLS: PREVIOUS / NEXT / PAGE JUMP */}
       <div
-        className="flex items-center justify-center gap-6 py-3.5 border-t border-white/10 z-20"
+        className="flex items-center justify-center gap-4 sm:gap-6 py-3 border-t border-white/10 z-20 backdrop-blur-xl shadow-lg"
         style={{ backgroundColor: currentTheme.headerBg }}
       >
-        <Button
-          variant="outlineLight"
-          size="sm"
+        <button
+          type="button"
           onClick={prev}
           disabled={activeDocumentUrl ? pdfPageNumber === 1 : page === 0}
+          className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl border border-white/15 bg-white/10 hover:bg-white/20 disabled:opacity-35 disabled:cursor-not-allowed text-xs font-bold text-white transition-all cursor-pointer shadow-xs active:scale-95"
         >
-          <ChevronLeft size={16} strokeWidth={1.8} /> Previous
-        </Button>
+          <ChevronLeft size={15} strokeWidth={2.2} /> Previous
+        </button>
 
-        <div className="flex items-center gap-2">
+        <div className="inline-flex items-center gap-2 bg-black/40 border border-white/15 px-3.5 py-1 rounded-xl shadow-inner">
+          <span className="text-xs text-white/60 font-semibold">Page</span>
           <input
             type="number"
-            className="w-14 px-2 py-1 text-center text-sm font-bold rounded bg-white text-black outline-none border-2 border-transparent focus:border-amber-400 transition-colors"
+            className="w-12 px-1.5 py-0.5 text-center text-xs font-bold rounded-lg bg-white/15 text-white outline-none border border-white/20 focus:border-amber-400 focus:bg-white focus:text-black transition-all"
             value={jumpInput}
             onChange={(e) => setJumpInput(e.target.value)}
             onBlur={handleJump}
@@ -2340,19 +2404,19 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
               if (e.key === "Enter") handleJump();
             }}
           />
-          <span className="text-sm font-semibold text-white/70">
+          <span className="text-xs font-semibold text-white/60">
             of {totalPages || "?"}
           </span>
         </div>
 
-        <Button
-          variant="brass"
-          size="sm"
+        <button
+          type="button"
           onClick={next}
           disabled={activeDocumentUrl ? pdfPageNumber === totalPages : page === totalPages - 1}
+          className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 disabled:opacity-35 disabled:cursor-not-allowed text-xs font-bold text-black transition-all cursor-pointer shadow-md active:scale-95"
         >
-          Next <ChevronRight size={16} strokeWidth={1.8} />
-        </Button>
+          Next <ChevronRight size={15} strokeWidth={2.2} />
+        </button>
       </div>
     </div>
   );
