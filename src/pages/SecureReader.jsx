@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { 
   ChevronLeft, ChevronRight, ArrowLeft, ShieldAlert, Volume2, VolumeX, 
   ZoomIn, ZoomOut, RotateCcw, ScanSearch, X, Sun, Moon, Highlighter, 
-  StickyNote, Bookmark, BookMarked, Maximize, Minimize, Clock, Sliders, 
+  StickyNote, Bookmark, BookMarked, Maximize, Minimize, Minus, Maximize2, Clock, Sliders, 
   Palette, Trash2, Check, Copy, ChevronDown, Sparkles, Code, FileText, 
   Download, Eye, List, BookOpen, Layers, Building2, GripVertical,
   Undo2, Redo2, GraduationCap
@@ -480,14 +480,25 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     };
   }, []);
 
-  // Load customizations on mount or when studentKey changes
+  // Load customizations on mount or when studentKey / book changes
+  const hasLoadedCustomizationsRef = useRef("");
+
   useEffect(() => {
     if (!isStudentProfile || !studentKey) {
       setHighlights([]);
       setStickyNotes([]);
       setBookmarks([]);
+      hasLoadedCustomizationsRef.current = "";
       return;
     }
+
+    const currentKey = `${studentKey}_${book.id}`;
+    if (hasLoadedCustomizationsRef.current === currentKey) {
+      // Already loaded into memory for this student & book; do not clobber live edits
+      return;
+    }
+    hasLoadedCustomizationsRef.current = currentKey;
+
     try {
       const saved = localStorage.getItem(`reader_notes_${studentKey}_${book.id}`);
       if (saved) {
@@ -516,7 +527,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       setStickyNotes([]);
       setBookmarks([]);
     }
-  }, [studentKey, book.id, isStudentProfile, session?.currentStudent?.customizations?.books]);
+  }, [studentKey, book.id, isStudentProfile]);
 
   // Initialize annotation undo/redo history once initial load completes
   useEffect(() => {
@@ -887,6 +898,9 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   // Desk pointerdown: allow dropping sticky notes outside the book in the margins
   const handleDeskPointerDown = (e) => {
     if (activeTool !== "sticky") return;
+    if (e.target.closest('.sticky-note-wrapper') || e.target.closest('button, select, textarea, input')) {
+      return;
+    }
     if (!pageBoxRef.current) return;
     if (pageBoxRef.current.contains(e.target)) return;
 
@@ -920,15 +934,34 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
 
-    const updatedNotes = [...stickyNotes, newSticky];
-    setStickyNotes(updatedNotes);
-    pushToHistory(highlights, updatedNotes);
+    setStickyNotes((prev) => {
+      const updatedNotes = [...prev, newSticky];
+      pushToHistory(highlights, updatedNotes);
+      if (isStudentProfile && studentKey) {
+        try {
+          const payload = {
+            highlights,
+            stickyNotes: updatedNotes,
+            bookmarks,
+            theme: themeKey,
+            brightness,
+            warmLight,
+            lineFocus
+          };
+          localStorage.setItem(`reader_notes_${studentKey}_${book.id}`, JSON.stringify(payload));
+        } catch (_) {}
+      }
+      return updatedNotes;
+    });
     setActiveTool(null);
   };
 
   // Pointer interaction: Section Zoom vs Highlighter vs Sticky Note
   const handlePagePointerDown = (e) => {
     if (e.button !== 0) return;
+    if (e.target.closest('.sticky-note-wrapper') || e.target.closest('button, select, textarea, input')) {
+      return;
+    }
     const pt = getSelectionMetrics(e.clientX, e.clientY);
     if (!pt) return;
 
@@ -949,9 +982,25 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         author: session?.studentName || session?.name || "Student",
         createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
-      const updatedNotes = [...stickyNotes, newSticky];
-      setStickyNotes(updatedNotes);
-      pushToHistory(highlights, updatedNotes);
+      setStickyNotes((prev) => {
+        const updatedNotes = [...prev, newSticky];
+        pushToHistory(highlights, updatedNotes);
+        if (isStudentProfile && studentKey) {
+          try {
+            const payload = {
+              highlights,
+              stickyNotes: updatedNotes,
+              bookmarks,
+              theme: themeKey,
+              brightness,
+              warmLight,
+              lineFocus
+            };
+            localStorage.setItem(`reader_notes_${studentKey}_${book.id}`, JSON.stringify(payload));
+          } catch (_) {}
+        }
+        return updatedNotes;
+      });
       setActiveTool(null);
       return;
     }
@@ -1356,11 +1405,11 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       const deltaY = ((clientY - mouseY) / pageHeight) * 100;
 
       const newX = startX + deltaX;
-      const newY = Math.max(1, Math.min(84, startY + deltaY));
+      const newY = Math.max(1, Math.min(88, startY + deltaY));
 
       let placement = "page";
       if (newX < 0) placement = "margin-left";
-      else if (newX > 90) placement = "margin-right";
+      else if (newX > 88) placement = "margin-right";
       else placement = "page";
 
       setStickyNotes((prev) =>
@@ -1374,6 +1423,23 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
     const handlePointerUp = () => {
       setDraggingStickyId(null);
+      setStickyNotes((prev) => {
+        if (isStudentProfile && studentKey) {
+          try {
+            const payload = {
+              highlights,
+              stickyNotes: prev,
+              bookmarks,
+              theme: themeKey,
+              brightness,
+              warmLight,
+              lineFocus
+            };
+            localStorage.setItem(`reader_notes_${studentKey}_${book.id}`, JSON.stringify(payload));
+          } catch (_) {}
+        }
+        return prev;
+      });
     };
 
     window.addEventListener("pointermove", handlePointerMove);
@@ -1384,10 +1450,11 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("touchend", handlePointerUp);
     };
-  }, [draggingStickyId]);
+  }, [draggingStickyId, highlights, bookmarks, themeKey, brightness, warmLight, lineFocus, isStudentProfile, studentKey, book.id]);
 
   const startDragSticky = (e, id) => {
     e.stopPropagation();
+    if (e.button !== undefined && e.button !== 0) return;
     const note = stickyNotes.find((n) => n.id === id);
     if (!note || !pageBoxRef.current) return;
     const pageRect = pageBoxRef.current.getBoundingClientRect();
@@ -1403,10 +1470,10 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   };
 
   const toggleStickyPlacement = (id) => {
-    setStickyNotes((prev) =>
-      prev.map((n) => {
+    setStickyNotes((prev) => {
+      const updated = prev.map((n) => {
         if (n.id !== id) return n;
-        const isOutsideMargin = n.placement === "margin-right" || n.placement === "margin-left" || n.x >= 95 || n.x < 0;
+        const isOutsideMargin = n.placement === "margin-right" || n.placement === "margin-left" || n.x >= 92 || n.x < 0;
         if (isOutsideMargin) {
           // Move onto book page
           return { ...n, placement: "page", x: 25 };
@@ -1414,8 +1481,23 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           // Move outside book to right margin
           return { ...n, placement: "margin-right", x: 102 };
         }
-      })
-    );
+      });
+      if (isStudentProfile && studentKey) {
+        try {
+          const payload = {
+            highlights,
+            stickyNotes: updated,
+            bookmarks,
+            theme: themeKey,
+            brightness,
+            warmLight,
+            lineFocus
+          };
+          localStorage.setItem(`reader_notes_${studentKey}_${book.id}`, JSON.stringify(payload));
+        } catch (_) {}
+      }
+      return updated;
+    });
   };
 
   // Mutual Exclusivity Helpers: One active tool/mode turns off all others
@@ -1533,27 +1615,111 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   };
 
   const deleteSticky = (id) => {
-    const updated = stickyNotes.filter((n) => n.id !== id);
-    setStickyNotes(updated);
-    pushToHistory(highlights, updated);
+    setStickyNotes((prev) => {
+      const updated = prev.filter((n) => n.id !== id);
+      pushToHistory(highlights, updated);
+      if (isStudentProfile && studentKey) {
+        try {
+          const payload = {
+            highlights,
+            stickyNotes: updated,
+            bookmarks,
+            theme: themeKey,
+            brightness,
+            warmLight,
+            lineFocus
+          };
+          localStorage.setItem(`reader_notes_${studentKey}_${book.id}`, JSON.stringify(payload));
+        } catch (_) {}
+      }
+      return updated;
+    });
   };
 
   const toggleCollapseSticky = (id) => {
-    setStickyNotes((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isCollapsed: !n.isCollapsed } : n))
-    );
+    setStickyNotes((prev) => {
+      const updated = prev.map((n) => (n.id === id ? { ...n, isCollapsed: !n.isCollapsed } : n));
+      if (isStudentProfile && studentKey) {
+        try {
+          const payload = {
+            highlights,
+            stickyNotes: updated,
+            bookmarks,
+            theme: themeKey,
+            brightness,
+            warmLight,
+            lineFocus
+          };
+          localStorage.setItem(`reader_notes_${studentKey}_${book.id}`, JSON.stringify(payload));
+        } catch (_) {}
+      }
+      return updated;
+    });
+  };
+
+  const updateStickyColor = (id, color) => {
+    setStickyNotes((prev) => {
+      const updated = prev.map((n) => (n.id === id ? { ...n, color } : n));
+      pushToHistory(highlights, updated);
+      if (isStudentProfile && studentKey) {
+        try {
+          const payload = {
+            highlights,
+            stickyNotes: updated,
+            bookmarks,
+            theme: themeKey,
+            brightness,
+            warmLight,
+            lineFocus
+          };
+          localStorage.setItem(`reader_notes_${studentKey}_${book.id}`, JSON.stringify(payload));
+        } catch (_) {}
+      }
+      return updated;
+    });
   };
 
   const updateStickyText = (id, text) => {
-    setStickyNotes((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, text } : n))
-    );
+    setStickyNotes((prev) => {
+      const updated = prev.map((n) => (n.id === id ? { ...n, text } : n));
+      if (isStudentProfile && studentKey) {
+        try {
+          const payload = {
+            highlights,
+            stickyNotes: updated,
+            bookmarks,
+            theme: themeKey,
+            brightness,
+            warmLight,
+            lineFocus
+          };
+          localStorage.setItem(`reader_notes_${studentKey}_${book.id}`, JSON.stringify(payload));
+        } catch (_) {}
+      }
+      return updated;
+    });
   };
 
   const updateStickyTag = (id, tag) => {
-    setStickyNotes((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, tag } : n))
-    );
+    setStickyNotes((prev) => {
+      const updated = prev.map((n) => (n.id === id ? { ...n, tag } : n));
+      pushToHistory(highlights, updated);
+      if (isStudentProfile && studentKey) {
+        try {
+          const payload = {
+            highlights,
+            stickyNotes: updated,
+            bookmarks,
+            theme: themeKey,
+            brightness,
+            warmLight,
+            lineFocus
+          };
+          localStorage.setItem(`reader_notes_${studentKey}_${book.id}`, JSON.stringify(payload));
+        } catch (_) {}
+      }
+      return updated;
+    });
   };
 
   // 1-Click Study Notes Export to Clipboard
@@ -2067,6 +2233,24 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   <span>+ Sticky Note {activeTool === "sticky" ? "ACTIVE" : ""}</span>
                 </button>
 
+                {/* Sticky color swatches */}
+                <div className="flex items-center gap-1 pl-1 border-l border-white/15">
+                  {Object.entries(STICKY_COLORS).map(([cKey, cVal]) => (
+                    <button
+                      key={cKey}
+                      type="button"
+                      onClick={() => setStickyColor(cKey)}
+                      className={`w-4 h-4 rounded-full transition-transform cursor-pointer border ${
+                        stickyColor === cKey
+                          ? "scale-125 ring-2 ring-white border-white shadow-sm"
+                          : "border-white/30 hover:scale-115 opacity-85 hover:opacity-100"
+                      }`}
+                      style={{ backgroundColor: cVal.border }}
+                      title={`New note color: ${cVal.label}`}
+                    />
+                  ))}
+                </div>
+
                 <select
                   value={stickyTag}
                   onChange={(e) => setStickyTag(e.target.value)}
@@ -2521,67 +2705,151 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             .filter((n) => n.pageNumber === currentPageDisplay)
             .map((n) => {
               const col = STICKY_COLORS[n.color] || STICKY_COLORS.yellow;
-              const isMarginRight = n.placement === "margin-right" || n.x >= 95;
+              const isMarginRight = n.placement === "margin-right" || n.x >= 92;
               const isMarginLeft = n.placement === "margin-left" || n.x < 0;
               const isOutsideMargin = isMarginRight || isMarginLeft;
+              const isBeingDragged = draggingStickyId === n.id;
 
               let styleLeft;
               let styleRight;
 
-              if (isMarginRight) {
+              if (isBeingDragged) {
+                // Free floating while dragging across margins and page
+                styleLeft = `${n.x}%`;
+                styleRight = undefined;
+              } else if (isMarginRight) {
                 styleLeft = "calc(100% + 14px)";
                 styleRight = undefined;
               } else if (isMarginLeft) {
                 styleLeft = undefined;
                 styleRight = "calc(100% + 14px)";
               } else {
-                styleLeft = `${Math.max(2, Math.min(68, n.x))}%`;
+                styleLeft = `${Math.max(2, Math.min(n.isCollapsed ? 85 : 70, n.x))}%`;
                 styleRight = undefined;
               }
 
               return (
                 <div
                   key={n.id}
-                  className={`absolute z-50 pointer-events-auto shadow-2xl rounded-xl transition-all ${
-                    isOutsideMargin ? "ring-2 ring-amber-400/70" : ""
-                  }`}
+                  className={`sticky-note-wrapper absolute z-50 pointer-events-auto rounded-xl select-none ${
+                    isBeingDragged
+                      ? "cursor-grabbing shadow-2xl scale-102 transition-none"
+                      : "shadow-xl transition-[border-color,box-shadow]"
+                  } ${isOutsideMargin ? "ring-2 ring-amber-400/80" : ""}`}
                   style={{
                     left: styleLeft,
                     right: styleRight,
-                    top: `${Math.max(1, Math.min(84, n.y))}%`,
-                    width: n.isCollapsed ? "auto" : "220px",
-                    backgroundColor: col.bg,
-                    border: `1.5px solid ${col.border}`,
-                    color: col.text,
+                    top: `${Math.max(1, Math.min(88, n.y))}%`,
+                    width: n.isCollapsed ? "auto" : "240px",
                   }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onPointerUp={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
                 >
                   {n.isCollapsed ? (
-                    <button
-                      type="button"
-                      onClick={() => toggleCollapseSticky(n.id)}
-                      className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold hover:scale-105 transition-transform cursor-pointer"
-                      title="Click to expand note"
+                    <div
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-xl cursor-pointer hover:brightness-95 active:scale-98 transition-transform select-none"
+                      style={{
+                        backgroundColor: col.bg,
+                        border: `1.5px solid ${col.border}`,
+                        color: col.text,
+                        minWidth: "130px",
+                        maxWidth: "240px",
+                      }}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onPointerUp={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleCollapseSticky(n.id);
+                      }}
+                      title="Click anywhere to expand note"
                     >
-                      <span>📌</span>
-                      <span className="truncate max-w-[100px]">{n.text || n.tag || "Note"}</span>
-                      {isOutsideMargin && <span className="text-[9px] bg-black/10 px-1 rounded">Margin</span>}
-                    </button>
+                      {/* Drag Grip on Minimized Note */}
+                      <span
+                        onPointerDown={(e) => startDragSticky(e, n.id)}
+                        className="cursor-grab active:cursor-grabbing p-0.5 text-black/40 hover:text-black shrink-0"
+                        title="Drag note"
+                      >
+                        <GripVertical size={13} />
+                      </span>
+
+                      <span className="text-sm shrink-0">📌</span>
+
+                      {/* Note Tag Badge */}
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-black/10 shrink-0">
+                        {n.tag || "Note"}
+                      </span>
+
+                      {/* Note Text preview */}
+                      <span className="truncate flex-1 text-[11px] font-medium text-black/85">
+                        {n.text ? n.text : "Empty note"}
+                      </span>
+
+                      {/* Margin tag if outside */}
+                      {isOutsideMargin && (
+                        <span className="text-[9px] bg-black/15 font-semibold px-1 py-0.5 rounded shrink-0">
+                          Margin
+                        </span>
+                      )}
+
+                      {/* Single-Click Expand Button */}
+                      <button
+                        type="button"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onPointerUp={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleCollapseSticky(n.id);
+                        }}
+                        className="p-1 rounded-md hover:bg-black/15 cursor-pointer shrink-0 text-black/70 hover:text-black"
+                        title="Expand note"
+                      >
+                        <Maximize2 size={12} />
+                      </button>
+
+                      {/* Quick Delete directly on Minimized Note */}
+                      <button
+                        type="button"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onPointerUp={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteSticky(n.id);
+                        }}
+                        className="p-1 rounded-md hover:bg-black/15 text-rose-700 hover:text-rose-900 cursor-pointer shrink-0"
+                        title="Delete note"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
                   ) : (
-                    <div className="p-2.5 space-y-2">
-                      <div className="flex items-center justify-between gap-1 pb-1 border-b border-black/10">
-                        <div className="flex items-center gap-1">
+                    <div
+                      className="p-3 space-y-2.5 rounded-xl select-none"
+                      style={{
+                        backgroundColor: col.bg,
+                        border: `2px solid ${col.border}`,
+                        color: col.text,
+                        width: "240px",
+                      }}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onPointerUp={(e) => e.stopPropagation()}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {/* Header */}
+                      <div className="flex items-center justify-between gap-1 pb-1.5 border-b border-black/15">
+                        <div className="flex items-center gap-1.5">
                           <span
                             onPointerDown={(e) => startDragSticky(e, n.id)}
                             className="cursor-grab active:cursor-grabbing text-black/40 hover:text-black p-0.5"
                             title="Drag to reposition note (inside book or out to margins)"
                           >
-                            <GripVertical size={12} />
+                            <GripVertical size={13} />
                           </span>
                           <select
                             value={n.tag}
+                            onPointerDown={(e) => e.stopPropagation()}
                             onChange={(e) => updateStickyTag(n.id, e.target.value)}
-                            className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-black/10 outline-none cursor-pointer"
+                            className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-black/10 outline-none cursor-pointer border-0"
                           >
                             <option value="Note">Note</option>
                             <option value="Code">Code</option>
@@ -2590,46 +2858,91 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                           </select>
                         </div>
 
+                        {/* Header action buttons */}
                         <div className="flex items-center gap-1">
                           <button
                             type="button"
-                            onClick={() => toggleStickyPlacement(n.id)}
-                            className="px-1.5 py-0.5 rounded bg-black/10 hover:bg-black/20 text-[10px] font-bold transition-all cursor-pointer"
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onPointerUp={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleStickyPlacement(n.id);
+                            }}
+                            className="px-1.5 py-0.5 rounded bg-black/10 hover:bg-black/20 text-[10px] font-bold transition-colors cursor-pointer"
                             title={isOutsideMargin ? "Move onto book page" : "Move outside book to margin"}
                           >
-                            {isOutsideMargin ? "📖 Onto Page" : "📋 To Margin"}
+                            {isOutsideMargin ? "📖 Page" : "📋 Margin"}
                           </button>
+
+                          {/* 1-Click Minimize Button */}
                           <button
                             type="button"
-                            onClick={() => toggleCollapseSticky(n.id)}
-                            className="p-1 rounded hover:bg-black/10 cursor-pointer"
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onPointerUp={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleCollapseSticky(n.id);
+                            }}
+                            className="p-1 rounded-md hover:bg-black/15 text-black/70 hover:text-black cursor-pointer"
                             title="Minimize note"
                           >
-                            <Minimize size={11} />
+                            <Minus size={13} />
                           </button>
+
+                          {/* 1-Click Delete Button */}
                           <button
                             type="button"
-                            onClick={() => deleteSticky(n.id)}
-                            className="p-1 rounded hover:bg-black/10 text-rose-700 cursor-pointer"
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onPointerUp={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteSticky(n.id);
+                            }}
+                            className="p-1 rounded-md hover:bg-black/15 text-rose-700 hover:text-rose-900 cursor-pointer"
                             title="Delete note"
                           >
-                            <Trash2 size={11} />
+                            <Trash2 size={13} />
                           </button>
                         </div>
                       </div>
 
+                      {/* Color Picker Swatches directly on the note */}
+                      <div className="flex items-center gap-1.5 px-0.5">
+                        {Object.entries(STICKY_COLORS).map(([cKey, cVal]) => (
+                          <button
+                            key={cKey}
+                            type="button"
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onPointerUp={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateStickyColor(n.id, cKey);
+                            }}
+                            className={`w-3.5 h-3.5 rounded-full transition-transform cursor-pointer border ${
+                              n.color === cKey ? "scale-125 ring-2 ring-black/40 border-black/60" : "border-black/20 hover:scale-110"
+                            }`}
+                            style={{ backgroundColor: cVal.border }}
+                            title={`Color: ${cVal.label}`}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Textarea */}
                       <textarea
                         rows={3}
                         value={n.text}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
                         onChange={(e) => updateStickyText(n.id, e.target.value)}
                         placeholder={n.tag === "Code" ? "Paste code snippet here..." : "Type study notes..."}
-                        className={`w-full bg-white/80 p-1.5 rounded-lg text-xs outline-none border border-black/10 resize-none ${
+                        className={`w-full bg-white/90 p-2 rounded-lg text-xs outline-none border border-black/15 resize-none select-text focus:ring-2 focus:ring-amber-400/80 ${
                           n.tag === "Code" ? "font-mono text-[11px]" : ""
                         }`}
                       />
 
+                      {/* Footer */}
                       <div className="flex items-center justify-between text-[10px] text-black/60 pt-0.5">
-                        <span className="truncate max-w-[100px]">{n.author}</span>
+                        <span className="truncate max-w-[110px] font-medium">{n.author}</span>
                         <span className="flex items-center gap-1">
                           {isOutsideMargin ? (
                             <span className="text-[9px] bg-black/10 px-1 py-0.2 rounded font-semibold">Margin</span>
@@ -2830,8 +3143,12 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                             </button>
                             <button
                               type="button"
-                              onClick={() => deleteSticky(n.id)}
-                              className="p-1 rounded text-rose-400 hover:text-rose-300 cursor-pointer"
+                              onPointerDown={(e) => e.stopPropagation()}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteSticky(n.id);
+                              }}
+                              className="p-1 rounded text-rose-400 hover:text-rose-300 hover:bg-white/10 cursor-pointer"
                               title="Delete note"
                             >
                               <Trash2 size={12} />
