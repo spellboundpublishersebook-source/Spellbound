@@ -390,6 +390,106 @@ export default function ReaderDashboard({
 
   const [curatedIndex, setCuratedIndex] = useState(0);
 
+  // Helper for human-readable relative time
+  function formatRelativeTime(isoString) {
+    if (!isoString) return "";
+    try {
+      const diff = (Date.now() - new Date(isoString).getTime()) / 1000;
+      if (diff < 60) return "Just now";
+      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+      if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+      return new Date(isoString).toLocaleDateString();
+    } catch (_) {
+      return "";
+    }
+  }
+
+  // Student Continue Reading List
+  const studentKey = session?.studentId || session?.deptCode || session?.deptId || session?.id || "anon";
+  const continueReadingList = useMemo(() => {
+    const map = new Map();
+
+    // 1. Check local continue reading list
+    try {
+      const localSaved = localStorage.getItem(`continue_reading_${studentKey}`);
+      if (localSaved) {
+        const parsed = JSON.parse(localSaved);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((item) => {
+            if (item && item.bookId) {
+              map.set(item.bookId, item);
+            }
+          });
+        }
+      }
+    } catch (_) {}
+
+    // 2. Check DB reading progress from student profile / session / department
+    const dbProgress = session?.currentStudent?.customizations?.readingProgress ||
+                       session?.readingProgress ||
+                       activeDeptObj?.readingProgress ||
+                       {};
+
+    Object.keys(dbProgress).forEach((bookId) => {
+      const p = dbProgress[bookId];
+      if (p && (p.page || p.lastPage)) {
+        const existing = map.get(bookId);
+        if (!existing || new Date(p.lastReadAt || 0) > new Date(existing.lastReadAt || 0)) {
+          map.set(bookId, { bookId, ...p });
+        }
+      }
+    });
+
+    // 3. Check individual book storage keys
+    myBooksRaw.forEach((b) => {
+      if (!map.has(b.id)) {
+        try {
+          const raw = localStorage.getItem(`reader_progress_${studentKey}_${b.id}`);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && (parsed.page || parsed.lastPage)) {
+              map.set(b.id, { bookId: b.id, ...parsed });
+            }
+          } else {
+            const legacy = localStorage.getItem(`resume_${b.id}`);
+            if (legacy) {
+              const p = parseInt(legacy, 10);
+              if (!isNaN(p) && p > 1) {
+                map.set(b.id, { bookId: b.id, page: p, totalPages: b.totalPages || 100 });
+              }
+            }
+          }
+        } catch (_) {}
+      }
+    });
+
+    // Resolve book objects from myBooksRaw
+    const result = [];
+    map.forEach((prog, bId) => {
+      const bookObj = myBooksRaw.find((b) => b.id === bId);
+      if (bookObj) {
+        const lastPage = Number(prog.page || prog.lastPage || 1);
+        const total = Number(prog.totalPages || bookObj.totalPages || 1);
+        const percent = Math.min(100, Math.max(1, Math.round((lastPage / Math.max(total, 1)) * 100)));
+        result.push({
+          book: bookObj,
+          progress: {
+            page: lastPage,
+            totalPages: total,
+            percent,
+            sectionId: prog.sectionId || null,
+            lastReadAt: prog.lastReadAt || null,
+          },
+        });
+      }
+    });
+
+    // Sort: most recently read first
+    result.sort((a, b) => new Date(b.progress.lastReadAt || 0) - new Date(a.progress.lastReadAt || 0));
+    return result;
+  }, [session, myBooksRaw, activeDeptObj, studentKey]);
+
   const handleClearAll = () => {
     setSelectedGenres([]);
     setSelectedAuthors([]);
@@ -482,6 +582,105 @@ export default function ReaderDashboard({
           </div>
         ) : (
           <>
+            {/* Continue Reading Section (Shown when reader has books in progress) */}
+            {!isFilteredView && continueReadingList.length > 0 && (
+              <div className="admin-glass-panel rounded-[26px] overflow-hidden mb-10 p-6 sm:p-8 relative border-l-4 border-l-[#F5F23B]">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-3 border-b border-black/10">
+                  <div>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#F5F23B] text-[#111214] text-[11px] font-extrabold uppercase tracking-wider mb-2 shadow-sm">
+                      <Clock size={12} strokeWidth={2.5} />
+                      Continue Reading
+                    </div>
+                    <h2 className="text-2xl md:text-3xl font-bold text-[#111214] tracking-tight" style={fontDisplay}>
+                      Pick up where you left off
+                    </h2>
+                    <p className="text-slate-600 text-xs sm:text-sm mt-0.5">
+                      Jump straight back into your reading session — opens directly at your saved page.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 bg-white/70 px-3.5 py-1.5 rounded-full border border-white shrink-0 shadow-sm">
+                    <BookOpen size={13} className="text-slate-600" />
+                    <span>{continueReadingList.length} title{continueReadingList.length > 1 ? "s" : ""} in progress</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                  {continueReadingList.slice(0, 6).map(({ book, progress }) => (
+                    <div
+                      key={book.id}
+                      onClick={() => onOpenBook(book.id, progress.page)}
+                      className="admin-glass-pill rounded-2xl p-4 flex gap-4 hover:border-[#111214]/40 hover:shadow-xl transition-all duration-300 group/cr cursor-pointer bg-white/80 relative overflow-hidden"
+                    >
+                      {/* Cover with % Badge */}
+                      <div className="w-20 sm:w-24 aspect-[1/1.4] rounded-xl overflow-hidden flex-shrink-0 shadow-sm relative bg-white">
+                        <BookCover book={book} className="w-full h-full object-cover transition-transform duration-300 group-hover/cr:scale-105" />
+                        <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-black/80 text-[#F5F23B] text-[9px] font-extrabold tracking-wider shadow">
+                          {progress.percent}%
+                        </div>
+                      </div>
+
+                      {/* Info & Progress */}
+                      <div className="flex-1 flex flex-col justify-between min-w-0">
+                        <div>
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-200/80 text-slate-700 truncate">
+                              {book.genre || "Book"}
+                            </span>
+                            {progress.lastReadAt && (
+                              <span className="text-[10px] text-slate-500 font-medium shrink-0">
+                                {formatRelativeTime(progress.lastReadAt)}
+                              </span>
+                            )}
+                          </div>
+
+                          <h3
+                            className="font-bold text-sm text-[#111214] leading-snug line-clamp-2 hover:underline mb-0.5"
+                            title={book.title}
+                            style={fontDisplay}
+                          >
+                            {book.title}
+                          </h3>
+                          <p className="text-xs text-slate-600 truncate mb-2" title={book.author}>
+                            by {book.author || "Unknown"}
+                          </p>
+                        </div>
+
+                        {/* Progress Bar & Actions */}
+                        <div className="mt-2 pt-2 border-t border-black/5">
+                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 mb-1.5">
+                            <span>Page {progress.page} of {progress.totalPages}</span>
+                            <span className="text-emerald-700">{progress.percent}% read</span>
+                          </div>
+                          <div className="w-full h-1.5 rounded-full bg-slate-200 overflow-hidden mb-3">
+                            <div
+                              className="h-full rounded-full bg-[#111214] transition-all duration-500"
+                              style={{ width: `${progress.percent}%` }}
+                            />
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onOpenBook(book.id, progress.page);
+                              }}
+                              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full bg-[#111214] hover:bg-black text-[#F5F23B] text-xs font-bold shadow-sm transition-all cursor-pointer"
+                            >
+                              <BookOpen size={13} />
+                              <span>Resume Page {progress.page}</span>
+                              <ChevronRight size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Curated For You (Shown when no filter is isolating view) */}
             {!isFilteredView && curatedBooks.length > 0 && (
               <div className="admin-glass-panel rounded-[26px] overflow-hidden mb-10 p-6 sm:p-9 relative">

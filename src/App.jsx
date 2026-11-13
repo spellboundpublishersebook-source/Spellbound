@@ -42,9 +42,15 @@ export default function App() {
 
   const [view, setView] = useState(() => parseHash().v);
   const [openBookId, setOpenBookId] = useState(() => parseHash().bookId);
+  const [initialReaderPage, setInitialReaderPage] = useState(null);
 
   // Keep hash in sync with state
-  function navigate(v, bookId = null) {
+  function navigate(v, bookId = null, targetPage = null) {
+    if (targetPage) {
+      setInitialReaderPage(targetPage);
+    } else if (v !== "reading") {
+      setInitialReaderPage(null);
+    }
     const hash = bookId ? `${v}:${bookId}` : v;
     window.location.hash = hash;
     setView(v);
@@ -651,9 +657,22 @@ export default function App() {
 
   async function handleSaveStudentCustomizations(licenseId, deptId, studentId, bookId, customizations) {
     try {
-      // 1. Instant local persistence
-      const storageKey = `reader_custom_${studentId || deptId || 'anon'}_${bookId}`;
+      // 1. Instant local persistence for annotations & preferences
+      const userKey = studentId || deptId || 'anon';
+      const storageKey = `reader_custom_${userKey}_${bookId}`;
       localStorage.setItem(storageKey, JSON.stringify(customizations));
+
+      // 2. Instant local persistence for reading progress
+      if (customizations.progress) {
+        localStorage.setItem(`reader_progress_${userKey}_${bookId}`, JSON.stringify(customizations.progress));
+        try {
+          const recentKey = `continue_reading_${userKey}`;
+          const currentList = JSON.parse(localStorage.getItem(recentKey) || "[]");
+          const filtered = currentList.filter(item => item.bookId !== bookId);
+          filtered.unshift({ bookId, ...customizations.progress });
+          localStorage.setItem(recentKey, JSON.stringify(filtered.slice(0, 15)));
+        } catch (_) {}
+      }
 
       if (!licenseId || !deptId) return;
 
@@ -667,11 +686,19 @@ export default function App() {
       // Increment readsCount tracking if opening or reading
       dept.readsCount = (dept.readsCount || 0) + 1;
 
+      if (customizations.progress) {
+        dept.readingProgress = {
+          ...(dept.readingProgress || {}),
+          [bookId]: customizations.progress
+        };
+      }
+
       if (studentId && Array.isArray(dept.students)) {
         dept.students = dept.students.map(s => {
           if (s.studentId === studentId || s.id === studentId) {
             const stuCustom = s.customizations || {};
             const stuBooks = stuCustom.books || {};
+            const stuProgress = stuCustom.readingProgress || {};
             return {
               ...s,
               customizations: {
@@ -680,7 +707,11 @@ export default function App() {
                 books: {
                   ...stuBooks,
                   [bookId]: customizations.book
-                }
+                },
+                readingProgress: customizations.progress ? {
+                  ...stuProgress,
+                  [bookId]: customizations.progress
+                } : stuProgress
               }
             };
           }
@@ -691,6 +722,23 @@ export default function App() {
       depts[deptIdx] = dept;
       await supabase.from('licenses').update({ departments: depts }).eq('id', licenseId);
       setLicenses(prev => prev.map(l => l.id === licenseId ? { ...l, departments: depts } : l));
+
+      // Realtime session sync so ReaderDashboard updates instantly without reload
+      if (session && (session.studentId === studentId || session.id === studentId) && customizations.progress) {
+        setSession(prev => ({
+          ...prev,
+          currentStudent: {
+            ...prev.currentStudent,
+            customizations: {
+              ...(prev.currentStudent?.customizations || {}),
+              readingProgress: {
+                ...(prev.currentStudent?.customizations?.readingProgress || {}),
+                [bookId]: customizations.progress
+              }
+            }
+          }
+        }));
+      }
     } catch (err) {
       console.warn("Non-blocking student customization sync notice:", err);
     }
@@ -1333,7 +1381,13 @@ export default function App() {
         <ReaderDashboard
           session={session}
           books={availableBooks}
-          onOpenBook={(id) => navigate("book-details", id)}
+          onOpenBook={(id, pageNum) => {
+            if (pageNum) {
+              navigate("reading", id, pageNum);
+            } else {
+              navigate("book-details", id);
+            }
+          }}
           onCreateStudentProfile={handleCreateStudentProfile}
           onSwitchStudentProfile={handleSwitchStudentProfile}
         />
@@ -1342,7 +1396,11 @@ export default function App() {
         <SecureReader
           book={openBook}
           session={session}
-          onBack={() => navigate(session.role === "reader" ? "reader-dashboard" : session.role)}
+          initialPage={initialReaderPage}
+          onBack={() => {
+            setInitialReaderPage(null);
+            navigate(session.role === "reader" ? "reader-dashboard" : session.role);
+          }}
           onSaveStudentCustomizations={handleSaveStudentCustomizations}
         />
       )}

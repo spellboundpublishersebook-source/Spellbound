@@ -12,13 +12,38 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
   }, [book?.id]);
   const [showCite, setShowCite] = useState(false);
   const [openingReader, setOpeningReader] = useState(false);
+  const [targetPage, setTargetPage] = useState(null);
+
+  const studentKey = session?.studentId || session?.deptCode || session?.deptId || session?.id || "anon";
+  useEffect(() => {
+    try {
+      const dbProg = session?.currentStudent?.customizations?.readingProgress?.[book?.id]?.page ||
+                     session?.readingProgress?.[book?.id]?.page;
+      if (dbProg && Number(dbProg) > 1) {
+        setTargetPage(Number(dbProg));
+        return;
+      }
+      const raw = localStorage.getItem(`reader_progress_${studentKey}_${book?.id}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && Number(parsed.page) > 1) {
+          setTargetPage(Number(parsed.page));
+          return;
+        }
+      }
+      const legacy = localStorage.getItem(`resume_${book?.id}`);
+      if (legacy && Number(legacy) > 1) {
+        setTargetPage(Number(legacy));
+      }
+    } catch (_) {}
+  }, [book?.id, session, studentKey]);
   
   if (!book) return null;
 
-  const handleOpenReader = () => {
+  const handleOpenReader = (pageToOpen = null) => {
     setOpeningReader(true);
     setTimeout(() => {
-      onNavigate("reading", book.id);
+      onNavigate("reading", book.id, pageToOpen || targetPage);
     }, 650);
   };
 
@@ -62,13 +87,32 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
             <div className="w-full admin-glass-panel p-5 rounded-2xl">
               {session ? (
                 (session.role === "admin" || session.role === "uploader" || session.bookIds === "all" || session.bookIds?.includes(book.id)) ? (
-                  <AnimatedSweepButton 
-                    onClick={handleOpenReader} 
-                    variant="yellow"
-                    className="w-full font-bold py-3 rounded-full mb-1 text-sm shadow-sm"
-                  >
-                    <BookOpen size={18} /> {book.pdfUrl ? "View PDF" : "Read Book"}
-                  </AnimatedSweepButton>
+                  targetPage && targetPage > 1 ? (
+                    <>
+                      <AnimatedSweepButton 
+                        onClick={() => handleOpenReader(targetPage)} 
+                        variant="yellow"
+                        className="w-full font-bold py-3 rounded-full mb-2 text-sm shadow-sm"
+                      >
+                        <BookOpen size={18} /> Continue Reading (Page {targetPage})
+                      </AnimatedSweepButton>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenReader(1)}
+                        className="w-full text-center text-xs font-semibold text-slate-600 hover:text-[#111214] hover:underline py-1 transition-colors cursor-pointer"
+                      >
+                        Restart from beginning (Page 1)
+                      </button>
+                    </>
+                  ) : (
+                    <AnimatedSweepButton 
+                      onClick={() => handleOpenReader(1)} 
+                      variant="yellow"
+                      className="w-full font-bold py-3 rounded-full mb-1 text-sm shadow-sm"
+                    >
+                      <BookOpen size={18} /> {book.pdfUrl ? "View PDF" : "Read Book"}
+                    </AnimatedSweepButton>
+                  )
                 ) : (
                   <div className="w-full bg-white/70 text-[#111214] font-bold py-3 rounded-full text-center border border-white text-sm">
                     Not available for your institution

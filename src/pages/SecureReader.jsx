@@ -99,7 +99,7 @@ const STICKY_COLORS = {
   purple: { id: "purple", bg: "#F3E8FF", border: "#C084FC", text: "#581C87" },
 };
 
-export default function SecureReader({ book, session, onBack, onSaveStudentCustomizations }) {
+export default function SecureReader({ book, session, onBack, onSaveStudentCustomizations, initialPage = null }) {
   const [page, setPage] = useState(0); // For text pages
   const [pdfPageNumber, setPdfPageNumber] = useState(1);
   const [numPdfPages, setNumPdfPages] = useState(null);
@@ -107,6 +107,8 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const [isFocused, setIsFocused] = useState(true);
   const [jumpInput, setJumpInput] = useState("");
   const [isPlaying, setIsPlaying] = useState(false);
+  const [resumedToast, setResumedToast] = useState(null);
+  const [hasInitializedProgress, setHasInitializedProgress] = useState(false);
 
   // Particular Section Zoom state
   const [sectionSelectActive, setSectionSelectActive] = useState(false);
@@ -205,7 +207,98 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     } catch (_) {}
   }, [studentKey, book.id]);
 
-  // Save customizations (debounced)
+  const totalPages = activeDocumentUrl ? (numPdfPages || book.totalPages || 0) : (book.totalPages || (Array.isArray(book.pages) ? book.pages.length : 1));
+  const currentPageDisplay = activeDocumentUrl ? pdfPageNumber : (page + 1);
+
+  // Resume page on mount
+  useEffect(() => {
+    if (hasInitializedProgress) return;
+    
+    let targetPage = null;
+    let targetSection = null;
+
+    // 1. Direct explicit initialPage prop from "Continue Reading" button
+    if (initialPage && Number(initialPage) >= 1) {
+      targetPage = Number(initialPage);
+    } else {
+      // 2. Check student's DB profile reading progress
+      const dbProgress = session?.currentStudent?.customizations?.readingProgress?.[book.id] ||
+                         session?.readingProgress?.[book.id];
+      if (dbProgress && Number(dbProgress.page) >= 1) {
+        targetPage = Number(dbProgress.page);
+        targetSection = dbProgress.sectionId;
+      } else {
+        // 3. Check student local storage progress
+        try {
+          const raw = localStorage.getItem(`reader_progress_${studentKey}_${book.id}`);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && Number(parsed.page) >= 1) {
+              targetPage = Number(parsed.page);
+              targetSection = parsed.sectionId;
+            }
+          }
+        } catch (_) {}
+
+        // 4. Fallback legacy resume key
+        if (!targetPage) {
+          const legacy = localStorage.getItem(`resume_${book.id}`);
+          if (legacy) {
+            const p = parseInt(legacy, 10);
+            if (!isNaN(p) && p >= 1) targetPage = p;
+          }
+        }
+      }
+    }
+
+    if (targetPage && targetPage >= 1) {
+      if (activeDocumentUrl) setPdfPageNumber(targetPage);
+      else setPage(targetPage - 1);
+      
+      if (targetSection && epubSections.some(s => s.id === targetSection)) {
+        setActiveEpubSectionId(targetSection);
+      }
+
+      if (targetPage > 1) {
+        setResumedToast({ page: targetPage });
+        const timer = setTimeout(() => setResumedToast(null), 5000);
+        return () => clearTimeout(timer);
+      }
+    }
+
+    setHasInitializedProgress(true);
+  }, [book.id, Boolean(activeDocumentUrl), initialPage, studentKey, session, hasInitializedProgress, epubSections]);
+
+  // Save on page turn
+  useEffect(() => {
+    if (!currentPageDisplay) return;
+    
+    // Save to legacy key for backward compatibility
+    localStorage.setItem(`resume_${book.id}`, currentPageDisplay.toString());
+
+    // Save student-specific progress
+    const pct = Math.min(100, Math.max(1, Math.round((currentPageDisplay / Math.max(totalPages || 1, 1)) * 100)));
+    const progData = {
+      page: currentPageDisplay,
+      totalPages: totalPages || 1,
+      percent: pct,
+      sectionId: activeEpubSectionId,
+      lastReadAt: new Date().toISOString()
+    };
+
+    try {
+      localStorage.setItem(`reader_progress_${studentKey}_${book.id}`, JSON.stringify(progData));
+
+      // Update student recent continue reading list
+      const recentKey = `continue_reading_${studentKey}`;
+      const list = JSON.parse(localStorage.getItem(recentKey) || "[]");
+      const filtered = list.filter(i => i.bookId !== book.id);
+      filtered.unshift({ bookId: book.id, ...progData });
+      localStorage.setItem(recentKey, JSON.stringify(filtered.slice(0, 15)));
+    } catch (_) {}
+  }, [currentPageDisplay, activeEpubSectionId, totalPages, book.id, studentKey]);
+
+  // Save customizations & reading progress (debounced)
   useEffect(() => {
     const timer = setTimeout(() => {
       try {
@@ -220,6 +313,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         };
         localStorage.setItem(`reader_notes_${studentKey}_${book.id}`, JSON.stringify(payload));
         if (onSaveStudentCustomizations) {
+          const pct = Math.min(100, Math.max(1, Math.round((currentPageDisplay / Math.max(totalPages || 1, 1)) * 100)));
           onSaveStudentCustomizations(
             session?.institutionId || session?.id,
             session?.deptId,
@@ -227,64 +321,21 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             book.id,
             {
               global: { theme: themeKey, brightness, warmLight, lineFocus },
-              book: { highlights, stickyNotes, bookmarks }
+              book: { highlights, stickyNotes, bookmarks },
+              progress: {
+                page: currentPageDisplay,
+                totalPages: totalPages || 1,
+                percent: pct,
+                sectionId: activeEpubSectionId,
+                lastReadAt: new Date().toISOString()
+              }
             }
           );
         }
       } catch (_) {}
     }, 500);
     return () => clearTimeout(timer);
-  }, [highlights, stickyNotes, bookmarks, themeKey, brightness, warmLight, lineFocus, studentKey, book.id, onSaveStudentCustomizations, session]);
-
-  // Live timer tick
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setReadingSeconds((s) => s + 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Stop speech synthesis on unmount or page turn
-  useEffect(() => {
-    return () => {
-      window.speechSynthesis.cancel();
-    };
-  }, [page]);
-
-  const toggleReadAloud = () => {
-    if (isPlaying) {
-      window.speechSynthesis.cancel();
-      setIsPlaying(false);
-    } else {
-      if (activeDocumentUrl) return;
-      const text = Array.isArray(book.pages) ? book.pages[page] : "";
-      if (!text) return;
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.onend = () => setIsPlaying(false);
-      window.speechSynthesis.speak(utterance);
-      setIsPlaying(true);
-    }
-  };
-
-  const totalPages = activeDocumentUrl ? (numPdfPages || book.totalPages || 0) : (book.totalPages || (Array.isArray(book.pages) ? book.pages.length : 1));
-  const currentPageDisplay = activeDocumentUrl ? pdfPageNumber : (page + 1);
-
-  // Resume page on mount
-  useEffect(() => {
-    const saved = localStorage.getItem(`resume_${book.id}`);
-    if (saved) {
-      const p = parseInt(saved, 10);
-      if (!isNaN(p) && p >= 1) {
-        if (activeDocumentUrl) setPdfPageNumber(p);
-        else setPage(p - 1);
-      }
-    }
-  }, [book.id, Boolean(activeDocumentUrl)]);
-
-  // Save on page turn
-  useEffect(() => {
-    localStorage.setItem(`resume_${book.id}`, currentPageDisplay.toString());
-  }, [currentPageDisplay, book.id]);
+  }, [highlights, stickyNotes, bookmarks, themeKey, brightness, warmLight, lineFocus, studentKey, book.id, onSaveStudentCustomizations, session, currentPageDisplay, totalPages, activeEpubSectionId]);
 
   // Reset section zoom state when changing page or book
   useEffect(() => {
@@ -799,6 +850,38 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         <div className="fixed top-20 right-6 z-[120] bg-emerald-600 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2 animate-bounce">
           <Check size={14} /> Study notes copied! Ready to paste into assignments.
         </div>
+      )}
+
+      {/* RESUMED READING PROGRESS TOAST */}
+      {resumedToast && (
+        <aside aria-label="Reading progress notification" className="fixed top-16 left-1/2 -translate-x-1/2 z-[130] animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="bg-[#111214]/95 text-white backdrop-blur-md px-4 py-2 rounded-full shadow-2xl border border-white/20 flex items-center gap-3 text-xs font-semibold">
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#F5F23B] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#F5F23B]"></span>
+            </span>
+            <span>Resumed reading at <strong>Page {resumedToast.page}</strong> where you left off</span>
+            <button
+              type="button"
+              onClick={() => {
+                if (activeDocumentUrl) setPdfPageNumber(1);
+                else setPage(0);
+                setResumedToast(null);
+              }}
+              className="px-2.5 py-0.5 rounded-full bg-white/20 hover:bg-[#F5F23B] hover:text-[#111214] text-[11px] font-bold transition-all cursor-pointer"
+            >
+              Start at Page 1
+            </button>
+            <button
+              type="button"
+              onClick={() => setResumedToast(null)}
+              className="text-white/60 hover:text-white ml-0.5 cursor-pointer"
+              aria-label="Dismiss toast"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </aside>
       )}
 
       {/* TOP BAR: Book details + Quick Actions */}
