@@ -132,6 +132,22 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const [jumpInput, setJumpInput] = useState("");
   const [isPlaying, setIsPlaying] = useState(false);
   const [resumedToast, setResumedToast] = useState(null);
+
+  const toggleReadAloud = useCallback(() => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    if (isPlaying) {
+      window.speechSynthesis.cancel();
+      setIsPlaying(false);
+    } else {
+      const textToRead = Array.isArray(book.pages) ? book.pages[page] : "";
+      if (!textToRead) return;
+      const utterance = new SpeechSynthesisUtterance(textToRead);
+      utterance.onend = () => setIsPlaying(false);
+      utterance.onerror = () => setIsPlaying(false);
+      window.speechSynthesis.speak(utterance);
+      setIsPlaying(true);
+    }
+  }, [isPlaying, book.pages, page]);
   const hasInitializedRef = useRef(false);
   const bookIdRef = useRef(book.id);
   if (bookIdRef.current !== book.id) {
@@ -556,6 +572,22 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
   const totalPages = sectionTotalPages;
   const currentPageDisplay = activeDocumentUrl || isEpub ? pdfPageNumber : (page + 1);
+
+  // Disable pagination buttons when at document boundaries
+  const isPrevDisabled = useMemo(() => {
+    if (isEpub && epubSections.length > 0) {
+      return currentSectionIdx === 0 && (currentEpubSection?.type === "image" || pdfPageNumber <= 1);
+    }
+    return activeDocumentUrl ? pdfPageNumber === 1 : page === 0;
+  }, [isEpub, epubSections.length, currentSectionIdx, currentEpubSection?.type, pdfPageNumber, activeDocumentUrl, page]);
+
+  const isNextDisabled = useMemo(() => {
+    if (isEpub && epubSections.length > 0) {
+      const maxPages = currentEpubSection?.type === "image" ? 1 : (numPdfPages || (activeEpubDoc ? activeEpubDoc.totalPages : 1));
+      return currentSectionIdx === epubSections.length - 1 && pdfPageNumber >= maxPages;
+    }
+    return activeDocumentUrl ? pdfPageNumber === totalPages : page === (totalPages - 1);
+  }, [isEpub, epubSections.length, currentSectionIdx, currentEpubSection?.type, pdfPageNumber, numPdfPages, activeEpubDoc, activeDocumentUrl, totalPages, page]);
 
   // Resume page on mount (ONLY ONCE per book load, and ONLY for Student accounts with personal progress)
   useEffect(() => {
@@ -2849,11 +2881,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           <button
             type="button"
             onClick={prev}
-            disabled={
-              isEpub && epubSections.length > 0
-                ? (currentSectionIdx === 0 && (currentEpubSection?.type === "image" || pdfPageNumber <= 1))
-                : (activeDocumentUrl ? pdfPageNumber === 1 : page === 0)
-            }
+            disabled={isPrevDisabled}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-white/15 bg-white/10 hover:bg-white/20 disabled:opacity-35 disabled:cursor-not-allowed text-xs font-bold text-white transition-all cursor-pointer shadow-xs active:scale-95"
           >
             <ChevronLeft size={15} strokeWidth={2.2} /> <span className="hidden sm:inline">Previous</span>
@@ -2918,11 +2946,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           <button
             type="button"
             onClick={next}
-            disabled={
-              isEpub && epubSections.length > 0
-                ? (currentSectionIdx === epubSections.length - 1 && (currentEpubSection?.type === "image" || pdfPageNumber >= (numPdfPages || (activeEpubDoc ? activeEpubDoc.totalPages : 1))))
-                : (activeDocumentUrl ? pdfPageNumber === totalPages : page === totalPages - 1)
-            }
+            disabled={isNextDisabled}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 disabled:opacity-35 disabled:cursor-not-allowed text-xs font-bold text-black transition-all cursor-pointer shadow-md active:scale-95"
           >
             <span className="hidden sm:inline">Next</span> <ChevronRight size={15} strokeWidth={2.2} />
