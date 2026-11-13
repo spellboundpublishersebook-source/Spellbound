@@ -98,6 +98,11 @@ export function StatCard({ label, value, icon: Icon }) {
 export function Modal({ title, onClose, children, wide, maxWidth = null }) {
   const dialogRef = useRef(null);
   const titleId = useId();
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -113,7 +118,7 @@ export function Modal({ title, onClose, children, wide, maxWidth = null }) {
 
     const handleCancel = (e) => {
       e.preventDefault();
-      onClose?.();
+      onCloseRef.current?.();
     };
     dialog.addEventListener("cancel", handleCancel);
 
@@ -132,7 +137,7 @@ export function Modal({ title, onClose, children, wide, maxWidth = null }) {
           e.clientX > rect.right ||
           e.clientY < rect.top ||
           e.clientY > rect.bottom;
-        if (outside) onClose?.();
+        if (outside) onCloseRef.current?.();
       };
       dialog.addEventListener("pointerdown", onPointerDown);
       dialog.addEventListener("pointerup", onPointerUp);
@@ -145,13 +150,29 @@ export function Modal({ title, onClose, children, wide, maxWidth = null }) {
     return () => {
       dialog.removeEventListener("cancel", handleCancel);
       cleanPointerFallback?.();
-      if (dialog.open) dialog.close();
+      if (dialog.open) {
+        try {
+          dialog.close();
+        } catch {}
+      }
     };
-  }, [onClose]);
+  }, []);
 
   const handleLightDismissClick = (e) => {
     if (e.target === dialogRef.current) {
-      onClose?.();
+      onCloseRef.current?.();
+    }
+  };
+
+  const handleFormKeyDown = (e) => {
+    // Prevent accidental form submission when pressing Enter in single-line text/number/email inputs
+    if (
+      e.key === "Enter" &&
+      e.target.tagName === "INPUT" &&
+      e.target.type !== "submit" &&
+      e.target.type !== "button"
+    ) {
+      e.preventDefault();
     }
   };
 
@@ -184,7 +205,7 @@ export function Modal({ title, onClose, children, wide, maxWidth = null }) {
             {title}
           </h3>
           <button
-            onClick={onClose}
+            onClick={() => onCloseRef.current?.()}
             type="button"
             aria-label="Close modal"
             className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-800 bg-white/85 hover:bg-[#111214] hover:text-[#F5F23B] active:scale-95 px-3.5 py-1.5 rounded-full border border-slate-300/70 shadow-sm transition-all duration-150 cursor-pointer flex-shrink-0"
@@ -194,7 +215,10 @@ export function Modal({ title, onClose, children, wide, maxWidth = null }) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 text-[#111214]">
+        <div
+          className="flex-1 overflow-y-auto p-4 sm:p-6 text-[#111214]"
+          onKeyDown={handleFormKeyDown}
+        >
           {children}
         </div>
       </div>
