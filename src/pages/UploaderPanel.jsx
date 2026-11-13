@@ -527,7 +527,7 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
       </div>
 
       {showForm && (
-        <Modal title={editingId ? "Edit book" : "Add a new book"} onClose={() => setShowForm(false)} wide>
+        <Modal title={editingId ? "Edit book" : "Add a new book"} onClose={() => setShowForm(false)} wide preventBackdropClose={true}>
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
               <Field label="Title" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
@@ -700,6 +700,7 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
                           accept="image/*" 
                           className="w-full text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#111214] file:text-[#F5F23B] hover:file:opacity-90 cursor-pointer" 
                           onChange={(e) => setForm({ ...form, coverImage: e.target.files[0] })}
+                          onCancel={(e) => e.stopPropagation()}
                         />
                       </div>
                     )}
@@ -724,6 +725,7 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
                           accept="application/pdf" 
                           className="w-full text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#111214] file:text-[#F5F23B] hover:file:opacity-90 cursor-pointer" 
                           onChange={(e) => setForm({ ...form, pdfFile: e.target.files[0] })}
+                          onCancel={(e) => e.stopPropagation()}
                         />
                       </div>
                     )}
@@ -786,6 +788,7 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
                         accept="image/*,application/pdf"
                         className="w-full text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#111214] file:text-[#F5F23B] hover:file:opacity-90 cursor-pointer"
                         onChange={(e) => setForm({ ...form, coverImage: e.target.files[0] })}
+                        onCancel={(e) => e.stopPropagation()}
                       />
                     </div>
                   )}
@@ -817,6 +820,7 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
                         accept=".pdf,.epub,.docx,.html,image/*"
                         className="w-full text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#111214] file:text-[#F5F23B] hover:file:opacity-90 cursor-pointer"
                         onChange={(e) => setForm({ ...form, firstPageFile: e.target.files[0] })}
+                        onCancel={(e) => e.stopPropagation()}
                       />
                     </div>
                   )}
@@ -848,6 +852,7 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
                         accept=".pdf,.epub,.docx,.html,image/*"
                         className="w-full text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#111214] file:text-[#F5F23B] hover:file:opacity-90 cursor-pointer"
                         onChange={(e) => setForm({ ...form, contentsPageFile: e.target.files[0] })}
+                        onCancel={(e) => e.stopPropagation()}
                       />
                     </div>
                   )}
@@ -944,6 +949,7 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
                                 accept=".pdf,.epub,.docx,.html,image/*"
                                 className="w-full text-xs text-slate-700 file:mr-2 file:py-1 file:px-2.5 file:rounded-full file:border-0 file:text-[11px] file:font-bold file:bg-[#111214] file:text-[#F5F23B] hover:file:opacity-90 cursor-pointer"
                                 onChange={(e) => handleChapterFileChange(idx, e.target.files[0])}
+                                onCancel={(e) => e.stopPropagation()}
                               />
                             </div>
                           </div>

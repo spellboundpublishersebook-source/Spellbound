@@ -95,7 +95,7 @@ export function StatCard({ label, value, icon: Icon }) {
   );
 }
 
-export function Modal({ title, onClose, children, wide, maxWidth = null }) {
+export function Modal({ title, onClose, children, wide, maxWidth = null, preventBackdropClose = false }) {
   const dialogRef = useRef(null);
   const titleId = useId();
   const onCloseRef = useRef(onClose);
@@ -117,14 +117,21 @@ export function Modal({ title, onClose, children, wide, maxWidth = null }) {
     }
 
     const handleCancel = (e) => {
+      // Never close if cancel originated from a child input (such as file picker cancel)
+      if (e.target && e.target !== dialog) {
+        e.stopPropagation();
+        return;
+      }
       e.preventDefault();
-      onCloseRef.current?.();
+      if (!preventBackdropClose) {
+        onCloseRef.current?.();
+      }
     };
     dialog.addEventListener("cancel", handleCancel);
 
     // Fallback light-dismiss for browsers lacking closedby="any"
     let cleanPointerFallback = null;
-    if (!("closedBy" in HTMLDialogElement.prototype)) {
+    if (!preventBackdropClose && !("closedBy" in HTMLDialogElement.prototype)) {
       let pointerDownTarget = null;
       const onPointerDown = (e) => {
         pointerDownTarget = e.target;
@@ -156,9 +163,10 @@ export function Modal({ title, onClose, children, wide, maxWidth = null }) {
         } catch {}
       }
     };
-  }, []);
+  }, [preventBackdropClose]);
 
   const handleLightDismissClick = (e) => {
+    if (preventBackdropClose) return;
     if (e.target === dialogRef.current) {
       onCloseRef.current?.();
     }
@@ -185,7 +193,7 @@ export function Modal({ title, onClose, children, wide, maxWidth = null }) {
   return (
     <dialog
       ref={dialogRef}
-      closedby="any"
+      {...(!preventBackdropClose ? { closedby: "any" } : {})}
       aria-labelledby={titleId}
       onClick={handleLightDismissClick}
       className={`app-glass-dialog ${wide ? "app-glass-dialog-wide" : ""} ${widthClass}`}

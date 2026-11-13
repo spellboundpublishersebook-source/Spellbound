@@ -3596,6 +3596,7 @@ function FeaturedAuthorsTab({ books = [], authors = [], onAddAuthor, onRemoveAut
                     type="file"
                     accept="image/*"
                     onChange={handlePhotoUpload}
+                    onCancel={(e) => e.stopPropagation()}
                     className="w-full text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#111214] file:text-[#F5F23B] hover:file:opacity-90 cursor-pointer"
                     disabled={uploading}
                   />
