@@ -4,11 +4,13 @@ import { supabase } from "../supabaseClient";
 import { 
   Search, ShieldCheck, ChevronLeft, ChevronRight, ChevronUp, ChevronDown,
   ShoppingCart, BookOpen, Users, Star, Mail, 
-  Library, BookmarkCheck, X
+  Library, BookmarkCheck, X, Sparkles, FileText
 } from "lucide-react";
 import { fontDisplay, fontBody, getHomepageConfig } from "../theme";
 import AnimatedSweepButton from "../components/AnimatedSweepButton";
 import BookCover from "../components/BookCover";
+
+const isBookEpub = (b) => Boolean(b?.epubData || (b?.pages && typeof b?.pages === 'object' && !Array.isArray(b?.pages)));
 
 function AutoMarquee({ items = [], speed = 36, className = "", renderItem }) {
   const trackRef = useRef(null);
@@ -419,9 +421,20 @@ export default function CatalogPage({ books, onNavigate }) {
                           <div className="flex-1 min-w-0 pt-0.5">
                             <h4 className="text-[#111214] font-bold truncate text-sm" style={fontDisplay}>{b.title}</h4>
                             <p className="text-slate-600 text-xs truncate mt-0.5">{b.author}</p>
-                            <span className="inline-block text-slate-600 text-[10px] mt-1 uppercase font-bold tracking-wider bg-black/5 px-2 py-0.5 rounded">
-                              {b.genre}
-                            </span>
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <span className="inline-block text-slate-600 text-[10px] uppercase font-bold tracking-wider bg-black/5 px-2 py-0.5 rounded">
+                                {b.genre}
+                              </span>
+                              {isBookEpub(b) ? (
+                                <span className="inline-flex items-center gap-0.5 text-amber-900 text-[10px] uppercase font-bold tracking-wider bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded">
+                                  <Sparkles size={9} className="text-amber-600" /> e-Book
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-0.5 text-blue-900 text-[10px] uppercase font-bold tracking-wider bg-blue-500/10 border border-blue-400/30 px-1.5 py-0.5 rounded">
+                                  <FileText size={9} className="text-blue-600" /> PDF
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <div className="flex-shrink-0 text-[11px] font-bold text-[#111214] bg-[#F5F23B] hover:bg-[#eae729] px-3.5 py-1.5 rounded-full shadow-xs transition-colors">
                             View Access
@@ -547,6 +560,20 @@ export default function CatalogPage({ books, onNavigate }) {
                 <BookCover book={b} className="w-full h-full transition-transform duration-300 group-hover/card:scale-105" />
               </div>
               <div className="flex flex-col flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider bg-black/5 px-1.5 py-0.5 rounded">
+                    {b.genre || "Book"}
+                  </span>
+                  {isBookEpub(b) ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-900 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                      <Sparkles size={10} className="text-amber-600" /> e-Book
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-900 bg-blue-500/10 border border-blue-400/30 px-2 py-0.5 rounded-full">
+                      <FileText size={10} className="text-blue-600" /> PDF
+                    </span>
+                  )}
+                </div>
                 <h3 className="font-bold text-sm leading-tight mb-1 text-[#111214] group-hover/card:underline transition-colors line-clamp-2" style={fontDisplay}>{b.title}</h3>
                 <p className="text-xs text-slate-600 mb-2 truncate">{b.author}</p>
                 <div className="mt-auto">
@@ -893,8 +920,22 @@ export default function CatalogPage({ books, onNavigate }) {
                     onClick={() => onNavigate("book-details", b.id)}
                     className="admin-glass-panel group/card flex flex-col p-3 rounded-2xl cursor-pointer hover:border-[#111214]/40 hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
                   >
-                    <div className="w-full aspect-[2/3] rounded-xl mb-3 overflow-hidden shadow-sm">
+                    <div className="w-full aspect-[2/3] rounded-xl mb-2.5 overflow-hidden shadow-sm">
                       <BookCover book={b} className="w-full h-full transition-transform duration-300 group-hover/card:scale-105" />
+                    </div>
+                    <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                      <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider bg-black/5 px-1.5 py-0.5 rounded truncate">
+                        {b.genre || "Book"}
+                      </span>
+                      {isBookEpub(b) ? (
+                        <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-amber-900 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.2 rounded-full shrink-0">
+                          <Sparkles size={9} className="text-amber-600" /> e-Book
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-blue-900 bg-blue-500/10 border border-blue-400/30 px-1.5 py-0.2 rounded-full shrink-0">
+                          <FileText size={9} className="text-blue-600" /> PDF
+                        </span>
+                      )}
                     </div>
                     <h3 className="font-bold text-sm leading-tight line-clamp-2 text-[#111214] group-hover/card:underline transition-colors" style={fontDisplay}>{b.title}</h3>
                     <p className="text-xs text-slate-600 mt-1 truncate">{b.author}</p>

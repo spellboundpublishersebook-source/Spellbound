@@ -2,13 +2,15 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import { 
   Clock, AlertTriangle, BookOpen, ChevronRight, ChevronLeft, X, 
   User, Mail, Building2, ArrowUpDown, LayoutGrid, List, Check,
-  GraduationCap, Plus, Key, ShieldCheck, Search
+  GraduationCap, Plus, Key, ShieldCheck, Search, Sparkles, FileText
 } from "lucide-react";
 import { fontDisplay, fontBody } from "../theme";
 import { daysUntil } from "../data/mockData";
 import AnimatedSweepButton from "../components/AnimatedSweepButton";
 import BookCover from "../components/BookCover";
 import { Modal } from "../components/UI";
+
+const isBookEpub = (b) => Boolean(b?.epubData || (b?.pages && typeof b?.pages === 'object' && !Array.isArray(b?.pages)));
 
 // Wiley-Style Animated Details Button with Counter-Translation Mask
 function WileyDetailsButton({ onClick, className = "", fullWidth = false }) {
@@ -106,7 +108,18 @@ function CategoryCarouselRow({ genre, books, onOpenBook, onSelectGenre }) {
 
               {/* Badges / Type */}
               <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                <span>{b.pubType?.toUpperCase() || "EBOOK"}</span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span>{b.pubType?.toUpperCase() || "EBOOK"}</span>
+                  {isBookEpub(b) ? (
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-amber-500/15 text-amber-900 border border-amber-500/30">
+                      EPUB
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-blue-500/10 text-blue-900 border border-blue-400/30">
+                      PDF
+                    </span>
+                  )}
+                </div>
                 <BookOpen size={13} className="text-slate-700" />
               </div>
 
@@ -755,10 +768,21 @@ export default function ReaderDashboard({
                       {/* Info & Progress */}
                       <div className="flex-1 flex flex-col justify-between min-w-0">
                         <div>
-                          <div className="flex items-center justify-between gap-2 mb-1">
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-200/80 text-slate-700 truncate">
-                              {book.genre || "Book"}
-                            </span>
+                          <div className="flex items-center justify-between gap-2 mb-1.5">
+                            <div className="flex items-center gap-1.5 min-w-0 truncate">
+                              <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-200/80 text-slate-700 truncate">
+                                {book.genre || "Book"}
+                              </span>
+                              {isBookEpub(book) ? (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-amber-500/15 text-amber-900 border border-amber-500/30">
+                                  <Sparkles size={9} className="text-amber-600" /> e-Book
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-blue-500/10 text-blue-900 border border-blue-400/30">
+                                  <FileText size={9} className="text-blue-600" /> PDF
+                                </span>
+                              )}
+                            </div>
                             {progress.lastReadAt && (
                               <span className="text-[10px] text-slate-500 font-medium shrink-0">
                                 {formatRelativeTime(progress.lastReadAt)}
@@ -1229,8 +1253,19 @@ export default function ReaderDashboard({
                             </div>
 
                             {/* Badges / Type */}
-                            <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                              <span>{b.pubType?.toUpperCase() || "EBOOK"}</span>
+                            <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span>{b.pubType?.toUpperCase() || "EBOOK"}</span>
+                                {isBookEpub(b) ? (
+                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-amber-500/15 text-amber-900 border border-amber-500/30">
+                                    EPUB
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-blue-500/10 text-blue-900 border border-blue-400/30">
+                                    PDF
+                                  </span>
+                                )}
+                              </div>
                               <BookOpen size={13} className="text-slate-700" />
                             </div>
 
@@ -1282,6 +1317,20 @@ export default function ReaderDashboard({
 
                             {/* Right Info */}
                             <div className="flex-1 flex flex-col min-w-0">
+                              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 bg-black/5 px-2 py-0.5 rounded">
+                                  {b.genre || "Book"}
+                                </span>
+                                {isBookEpub(b) ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-900 border border-amber-500/30">
+                                    <Sparkles size={10} className="text-amber-600" /> e-Book (EPUB)
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-900 border border-blue-400/30">
+                                    <FileText size={10} className="text-blue-600" /> Standard PDF
+                                  </span>
+                                )}
+                              </div>
                               <h3
                                 onClick={() => onOpenBook(b.id)}
                                 className="text-xl font-bold text-[#111214] mb-1 cursor-pointer hover:underline"
@@ -1305,7 +1354,7 @@ export default function ReaderDashboard({
                               {/* Description */}
                               <div className="text-sm text-slate-700 leading-relaxed max-w-3xl">
                                 <p className={expandedDesc[b.id] ? "" : "line-clamp-3"}>
-                                  {b.description ||
+                                  {((b.description || "").split("__CUSTOM_FILTERS__:")[0].split("__EPUB_DATA__:")[0].trim()) ||
                                     "Presents a thorough overview of this subject matter, delivering essential insights and structured perspectives for researchers and avid readers."}
                                 </p>
                                 {b.description && b.description.length > 120 && (

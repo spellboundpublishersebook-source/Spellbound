@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, BookOpen, Calendar, Tag, Info, Quote, Copy, Download } from "lucide-react";
+import { ChevronLeft, BookOpen, Calendar, Tag, Info, Quote, Copy, Download, Sparkles, FileText } from "lucide-react";
 import { fontDisplay, fontBody } from "../theme";
 import BookLoader from "../components/BookLoader";
 import AnimatedSweepButton from "../components/AnimatedSweepButton";
@@ -14,6 +14,12 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
   const [showCite, setShowCite] = useState(false);
   const [openingReader, setOpeningReader] = useState(false);
   const [targetPage, setTargetPage] = useState(null);
+
+  const isEpub = Boolean(book?.epubData || (book?.pages && typeof book.pages === 'object' && !Array.isArray(book.pages)));
+  const displayDescription = (book?.description || "")
+    .split("__CUSTOM_FILTERS__:")[0]
+    .split("__EPUB_DATA__:")[0]
+    .trim();
 
   const studentKey = session?.studentId;
   useEffect(() => {
@@ -113,7 +119,7 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
                       variant="yellow"
                       className="w-full font-bold py-3 rounded-full mb-1 text-sm shadow-sm"
                     >
-                      <BookOpen size={18} /> {book.pdfUrl ? "View PDF" : "Read Book"}
+                      <BookOpen size={18} /> {isEpub ? "Read e-Book" : (book.pdfUrl ? "View PDF" : "Read Book")}
                     </AnimatedSweepButton>
                   )
                 ) : (
@@ -156,6 +162,22 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
 
           {/* Right Column - Details */}
           <div className="md:w-2/3">
+            {/* Format & Genre Badges */}
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="inline-block px-3 py-1 rounded-full bg-[#111214] text-[#F5F23B] text-[11px] font-extrabold uppercase tracking-wider">
+                {book.genre || "General"}
+              </span>
+              {isEpub ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-900 border border-amber-500/30 shadow-xs">
+                  <Sparkles size={13} className="text-amber-600" /> e-Book (EPUB)
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-500/10 text-blue-900 border border-blue-400/30 shadow-xs">
+                  <FileText size={13} className="text-blue-600" /> Standard PDF
+                </span>
+              )}
+            </div>
+
             <h1 className="text-3xl md:text-5xl font-bold mb-2 text-[#111214]" style={fontDisplay}>{book.title}</h1>
             <div className="flex flex-wrap items-center gap-4 mb-6">
               <h2 className="text-xl text-slate-700 font-semibold">by {book.author}</h2>
@@ -166,8 +188,8 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
             
             <div className="prose max-w-none text-slate-800 leading-relaxed mb-8">
               <h3 className="text-base font-bold text-[#111214] mb-3 border-b border-black/10 pb-2">Description</h3>
-              <p>
-                {book.description || 
+              <p className="whitespace-pre-line text-sm sm:text-base leading-relaxed">
+                {displayDescription || 
                  "No description provided for this title. This book is part of the SpellBound ( Publishers and Distributors ) catalog and offers an in-depth exploration of its subject matter, meticulously crafted by the author."}
               </p>
             </div>
@@ -203,12 +225,30 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
               <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white/60 border border-white/80">
                 <Info className="text-[#111214] mt-0.5 shrink-0" size={18} />
                 <div>
-                  <div className="text-[11px] text-slate-600 uppercase tracking-wider font-bold">Pages</div>
-                  <div className="font-semibold text-[#111214]">{book.totalPages || (book.pages ? book.pages.length : "N/A")}</div>
+                  <div className="text-[11px] text-slate-600 uppercase tracking-wider font-bold">Volume / Pages</div>
+                  <div className="font-semibold text-[#111214]">{isEpub ? `${book.epubData?.chapters?.length || 0} Chapters` : (book.totalPages || (book.pages ? book.pages.length : "N/A") + " pages")}</div>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white/60 border border-white/80 sm:col-span-2">
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white/60 border border-white/80">
+                <FileText className="text-[#111214] mt-0.5 shrink-0" size={18} />
+                <div>
+                  <div className="text-[11px] text-slate-600 uppercase tracking-wider font-bold">Document Format</div>
+                  <div className="font-semibold text-[#111214] flex items-center gap-1.5 mt-0.5">
+                    {isEpub ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-900">
+                        <Sparkles size={12} className="text-amber-600" /> Multi-Section e-Book (EPUB)
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-900">
+                        <FileText size={12} className="text-blue-600" /> Standard PDF Document
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white/60 border border-white/80">
                 <div className="text-[#111214] mt-0.5 font-bold text-xs px-1.5 py-0.5 rounded bg-[#F5F23B]">eISBN</div>
                 <div>
                   <div className="text-[11px] text-slate-600 uppercase tracking-wider font-bold">Online ISBN</div>

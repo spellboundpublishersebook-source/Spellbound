@@ -152,16 +152,22 @@ export default function App() {
           let epubData = null;
           if (dbBook.pages && typeof dbBook.pages === 'object' && !Array.isArray(dbBook.pages) && (dbBook.pages.type === 'epub' || dbBook.pages.format === 'epub')) {
             epubData = dbBook.pages;
-          } else if (dbBook.description && dbBook.description.includes("\n\n__EPUB_DATA__:")) {
+          } else if (dbBook.description && dbBook.description.includes("__EPUB_DATA__:")) {
             try {
-              epubData = JSON.parse(dbBook.description.split("\n\n__EPUB_DATA__:")[1]);
+              epubData = JSON.parse(dbBook.description.split("__EPUB_DATA__:")[1]);
             } catch (e) {}
           }
+          const cleanDescription = (dbBook.description || "")
+            .split("__CUSTOM_FILTERS__:")[0]
+            .split("__EPUB_DATA__:")[0]
+            .trim();
+
           return {
             id: dbBook.id, title: dbBook.title, author: dbBook.author, genre: dbBook.genre, pubType: dbBook.pubtype,
             publisher: dbBook.publisher, price: dbBook.price, color: dbBook.color,
             firstPublish: dbBook.firstpublish, copyright: dbBook.copyright,
-            printIsbn: dbBook.printisbn, onlineIsbn: dbBook.onlineisbn, description: dbBook.description,
+            printIsbn: dbBook.printisbn, onlineIsbn: dbBook.onlineisbn,
+            description: cleanDescription,
             totalPages: dbBook.totalpages, pages: dbBook.pages || ["This book has no content pages yet."],
             epubData,
             pdfUrl: dbBook.pdfurl, coverUrl: dbBook.coverurl
@@ -251,16 +257,22 @@ export default function App() {
           let epubData = null;
           if (dbBook.pages && typeof dbBook.pages === 'object' && !Array.isArray(dbBook.pages) && (dbBook.pages.type === 'epub' || dbBook.pages.format === 'epub')) {
             epubData = dbBook.pages;
-          } else if (dbBook.description && dbBook.description.includes("\n\n__EPUB_DATA__:")) {
+          } else if (dbBook.description && dbBook.description.includes("__EPUB_DATA__:")) {
             try {
-              epubData = JSON.parse(dbBook.description.split("\n\n__EPUB_DATA__:")[1]);
+              epubData = JSON.parse(dbBook.description.split("__EPUB_DATA__:")[1]);
             } catch (e) {}
           }
+          const cleanDescription = (dbBook.description || "")
+            .split("__CUSTOM_FILTERS__:")[0]
+            .split("__EPUB_DATA__:")[0]
+            .trim();
+
           const newB = {
             id: dbBook.id, title: dbBook.title, author: dbBook.author, genre: dbBook.genre, pubType: dbBook.pubtype,
             publisher: dbBook.publisher, price: dbBook.price, color: dbBook.color,
             firstPublish: dbBook.firstpublish, copyright: dbBook.copyright,
-            printIsbn: dbBook.printisbn, onlineIsbn: dbBook.onlineisbn, description: dbBook.description,
+            printIsbn: dbBook.printisbn, onlineIsbn: dbBook.onlineisbn,
+            description: cleanDescription,
             totalPages: dbBook.totalpages, pages: dbBook.pages || ["This book has no content pages yet."],
             epubData,
             pdfUrl: dbBook.pdfurl, coverUrl: dbBook.coverurl
@@ -271,11 +283,15 @@ export default function App() {
           let epubData = null;
           if (dbBook.pages && typeof dbBook.pages === 'object' && !Array.isArray(dbBook.pages) && (dbBook.pages.type === 'epub' || dbBook.pages.format === 'epub')) {
             epubData = dbBook.pages;
-          } else if (dbBook.description && dbBook.description.includes("\n\n__EPUB_DATA__:")) {
+          } else if (dbBook.description && dbBook.description.includes("__EPUB_DATA__:")) {
             try {
-              epubData = JSON.parse(dbBook.description.split("\n\n__EPUB_DATA__:")[1]);
+              epubData = JSON.parse(dbBook.description.split("__EPUB_DATA__:")[1]);
             } catch (e) {}
           }
+          const cleanDescription = dbBook.description !== undefined
+            ? (dbBook.description || "").split("__CUSTOM_FILTERS__:")[0].split("__EPUB_DATA__:")[0].trim()
+            : undefined;
+
           setBooks(prev => prev.map(b => b.id === dbBook.id ? {
             ...b,
             title: dbBook.title !== undefined ? dbBook.title : b.title,
@@ -289,7 +305,7 @@ export default function App() {
             copyright: dbBook.copyright !== undefined ? dbBook.copyright : b.copyright,
             printIsbn: dbBook.printisbn !== undefined ? dbBook.printisbn : b.printIsbn,
             onlineIsbn: dbBook.onlineisbn !== undefined ? dbBook.onlineisbn : b.onlineIsbn,
-            description: dbBook.description !== undefined ? dbBook.description : b.description,
+            description: cleanDescription !== undefined ? cleanDescription : b.description,
             totalPages: dbBook.totalpages !== undefined ? dbBook.totalpages : b.totalPages,
             pages: dbBook.pages !== undefined ? dbBook.pages : b.pages,
             epubData: epubData || b.epubData,
