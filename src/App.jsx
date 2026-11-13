@@ -142,14 +142,25 @@ export default function App() {
       setDbStatus("connected");
       
       if (booksData && booksData.length > 0) {
-        setBooks(booksData.map(dbBook => ({
-          id: dbBook.id, title: dbBook.title, author: dbBook.author, genre: dbBook.genre, pubType: dbBook.pubtype,
-          publisher: dbBook.publisher, price: dbBook.price, color: dbBook.color,
-          firstPublish: dbBook.firstpublish, copyright: dbBook.copyright,
-          printIsbn: dbBook.printisbn, onlineIsbn: dbBook.onlineisbn, description: dbBook.description,
-          totalPages: dbBook.totalpages, pages: dbBook.pages || ["This book has no content pages yet."],
-          pdfUrl: dbBook.pdfurl, coverUrl: dbBook.coverurl
-        })));
+        setBooks(booksData.map(dbBook => {
+          let epubData = null;
+          if (dbBook.pages && typeof dbBook.pages === 'object' && !Array.isArray(dbBook.pages) && (dbBook.pages.type === 'epub' || dbBook.pages.format === 'epub')) {
+            epubData = dbBook.pages;
+          } else if (dbBook.description && dbBook.description.includes("\n\n__EPUB_DATA__:")) {
+            try {
+              epubData = JSON.parse(dbBook.description.split("\n\n__EPUB_DATA__:")[1]);
+            } catch (e) {}
+          }
+          return {
+            id: dbBook.id, title: dbBook.title, author: dbBook.author, genre: dbBook.genre, pubType: dbBook.pubtype,
+            publisher: dbBook.publisher, price: dbBook.price, color: dbBook.color,
+            firstPublish: dbBook.firstpublish, copyright: dbBook.copyright,
+            printIsbn: dbBook.printisbn, onlineIsbn: dbBook.onlineisbn, description: dbBook.description,
+            totalPages: dbBook.totalpages, pages: dbBook.pages || ["This book has no content pages yet."],
+            epubData,
+            pdfUrl: dbBook.pdfurl, coverUrl: dbBook.coverurl
+          };
+        }));
       }
 
       const { data: licData } = await supabase.from('licenses').select('*');
@@ -786,6 +797,67 @@ export default function App() {
         else coverurl = supabase.storage.from('covers').getPublicUrl(fileName).data.publicUrl;
       }
 
+      // Handle EPUB / Multi-section uploads
+      let epubData = book.epubData || null;
+      if (book.uploadFormat === "epub" || (book.chapters && book.chapters.length > 0)) {
+        let firstPageUrl = book.firstPageUrl || null;
+        if (book.firstPageFile) {
+          const ext = book.firstPageFile.name.split('.').pop();
+          const fileName = `${book.id}_first_page_${Date.now()}.${ext}`;
+          const { error } = await supabase.storage.from('pdfs').upload(fileName, book.firstPageFile);
+          if (error) console.error("First page upload error:", error);
+          else firstPageUrl = supabase.storage.from('pdfs').getPublicUrl(fileName).data.publicUrl;
+        }
+
+        let contentsPageUrl = book.contentsPageUrl || null;
+        if (book.contentsPageFile) {
+          const ext = book.contentsPageFile.name.split('.').pop();
+          const fileName = `${book.id}_contents_${Date.now()}.${ext}`;
+          const { error } = await supabase.storage.from('pdfs').upload(fileName, book.contentsPageFile);
+          if (error) console.error("Contents page upload error:", error);
+          else contentsPageUrl = supabase.storage.from('pdfs').getPublicUrl(fileName).data.publicUrl;
+        }
+
+        const uploadedChapters = [];
+        const chaptersList = book.chapters || [];
+        for (let i = 0; i < chaptersList.length; i++) {
+          const chap = chaptersList[i];
+          let chapUrl = chap.url || null;
+          if (chap.file) {
+            const ext = chap.file.name.split('.').pop();
+            const fileName = `${book.id}_chap_${chap.number || i + 1}_${Date.now()}.${ext}`;
+            const { error } = await supabase.storage.from('pdfs').upload(fileName, chap.file);
+            if (error) console.error(`Chapter ${i + 1} upload error:`, error);
+            else chapUrl = supabase.storage.from('pdfs').getPublicUrl(fileName).data.publicUrl;
+          }
+          uploadedChapters.push({
+            id: chap.id || `chap-${i + 1}`,
+            number: chap.number || (i + 1),
+            title: chap.title || `Chapter ${i + 1}`,
+            url: chapUrl,
+            fileName: chap.file ? chap.file.name : (chap.fileName || null)
+          });
+        }
+
+        epubData = {
+          type: "epub",
+          format: "epub",
+          coverPage: { url: coverurl },
+          firstPage: { url: firstPageUrl, fileName: book.firstPageFile?.name || null },
+          contentsPage: { url: contentsPageUrl, fileName: book.contentsPageFile?.name || null },
+          chapters: uploadedChapters
+        };
+
+        if (!pdfurl) {
+          pdfurl = firstPageUrl || uploadedChapters.find(c => c.url)?.url || null;
+        }
+      }
+
+      const finalPages = epubData ? epubData : (book.pages || ["This book has no content pages yet."]);
+      const finalDescription = epubData
+        ? `${book.description || ""}\n\n__EPUB_DATA__:${JSON.stringify(epubData)}`
+        : book.description;
+
       const dbBook = {
         id: book.id,
         title: book.title,
@@ -799,9 +871,9 @@ export default function App() {
         copyright: book.copyright,
         printisbn: book.printIsbn,
         onlineisbn: book.onlineIsbn,
-        description: book.description,
+        description: finalDescription,
         totalpages: book.totalPages,
-        pages: book.pages,
+        pages: finalPages,
         pdfurl,
         coverurl,
         uploaded_by: session.id,
@@ -810,7 +882,7 @@ export default function App() {
       
       const { error } = await supabase.from('books').insert([dbBook]);
       if (error) throw error;
-      setBooks((prev) => [{...book, pdfUrl: pdfurl, coverUrl: coverurl}, ...prev]);
+      setBooks((prev) => [{...book, pdfUrl: pdfurl, coverUrl: coverurl, epubData}, ...prev]);
     } catch (err) {
       console.error("Error adding book to Supabase:", err);
       // Optimistic update fallback
@@ -837,6 +909,64 @@ export default function App() {
         if (!error) coverurl = supabase.storage.from('covers').getPublicUrl(fileName).data.publicUrl;
       }
 
+      // Handle EPUB / Multi-section uploads on edit
+      let epubData = updatedBook.epubData || null;
+      if (updatedBook.uploadFormat === "epub" || (updatedBook.chapters && updatedBook.chapters.length > 0)) {
+        let firstPageUrl = updatedBook.firstPageUrl || null;
+        if (updatedBook.firstPageFile) {
+          const ext = updatedBook.firstPageFile.name.split('.').pop();
+          const fileName = `${id}_first_page_${Date.now()}.${ext}`;
+          const { error } = await supabase.storage.from('pdfs').upload(fileName, updatedBook.firstPageFile, { upsert: true });
+          if (!error) firstPageUrl = supabase.storage.from('pdfs').getPublicUrl(fileName).data.publicUrl;
+        }
+
+        let contentsPageUrl = updatedBook.contentsPageUrl || null;
+        if (updatedBook.contentsPageFile) {
+          const ext = updatedBook.contentsPageFile.name.split('.').pop();
+          const fileName = `${id}_contents_${Date.now()}.${ext}`;
+          const { error } = await supabase.storage.from('pdfs').upload(fileName, updatedBook.contentsPageFile, { upsert: true });
+          if (!error) contentsPageUrl = supabase.storage.from('pdfs').getPublicUrl(fileName).data.publicUrl;
+        }
+
+        const uploadedChapters = [];
+        const chaptersList = updatedBook.chapters || [];
+        for (let i = 0; i < chaptersList.length; i++) {
+          const chap = chaptersList[i];
+          let chapUrl = chap.url || null;
+          if (chap.file) {
+            const ext = chap.file.name.split('.').pop();
+            const fileName = `${id}_chap_${chap.number || i + 1}_${Date.now()}.${ext}`;
+            const { error } = await supabase.storage.from('pdfs').upload(fileName, chap.file, { upsert: true });
+            if (!error) chapUrl = supabase.storage.from('pdfs').getPublicUrl(fileName).data.publicUrl;
+          }
+          uploadedChapters.push({
+            id: chap.id || `chap-${i + 1}`,
+            number: chap.number || (i + 1),
+            title: chap.title || `Chapter ${i + 1}`,
+            url: chapUrl,
+            fileName: chap.file ? chap.file.name : (chap.fileName || null)
+          });
+        }
+
+        epubData = {
+          type: "epub",
+          format: "epub",
+          coverPage: { url: coverurl },
+          firstPage: { url: firstPageUrl, fileName: updatedBook.firstPageFile?.name || (updatedBook.epubData?.firstPage?.fileName || null) },
+          contentsPage: { url: contentsPageUrl, fileName: updatedBook.contentsPageFile?.name || (updatedBook.epubData?.contentsPage?.fileName || null) },
+          chapters: uploadedChapters
+        };
+
+        if (!pdfurl) {
+          pdfurl = firstPageUrl || uploadedChapters.find(c => c.url)?.url || null;
+        }
+      }
+
+      const finalPages = epubData ? epubData : (updatedBook.pages || ["This book has no content pages yet."]);
+      const finalDescription = epubData
+        ? `${updatedBook.description || ""}\n\n__EPUB_DATA__:${JSON.stringify(epubData)}`
+        : updatedBook.description;
+
       const dbBook = {
         title: updatedBook.title,
         author: updatedBook.author,
@@ -849,9 +979,9 @@ export default function App() {
         copyright: updatedBook.copyright,
         printisbn: updatedBook.printIsbn,
         onlineisbn: updatedBook.onlineIsbn,
-        description: updatedBook.description,
+        description: finalDescription,
         totalpages: updatedBook.totalPages,
-        pages: updatedBook.pages,
+        pages: finalPages,
         pdfurl,
         coverurl
       };
@@ -866,7 +996,7 @@ export default function App() {
         console.error("Supabase update error:", error);
         alert("Failed to update book in Supabase: " + error.message);
       } else {
-        setBooks((prev) => prev.map(b => b.id === id ? { ...b, ...updatedBook, pdfUrl: pdfurl, coverUrl: coverurl } : b));
+        setBooks((prev) => prev.map(b => b.id === id ? { ...b, ...updatedBook, pdfUrl: pdfurl, coverUrl: coverurl, epubData } : b));
       }
     } catch (err) {
       console.error("Edit catch error:", err);

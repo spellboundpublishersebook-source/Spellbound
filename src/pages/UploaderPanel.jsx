@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { Plus, Trash2, UploadCloud, BookOpen, Edit2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Trash2, UploadCloud, BookOpen, Edit2, ChevronLeft, ChevronRight, Layers, FileText, Sparkles, FolderUp, CheckCircle2, ChevronDown, ChevronUp, FileUp, HelpCircle } from "lucide-react";
 import { palette, fontDisplay, getGenres, getPubTypes, getCustomHeadings, getPublishers } from "../theme";
 import Button from "../components/Button";
 import { Field, Select, TextArea, Modal } from "../components/UI";
@@ -54,24 +54,144 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
   }, [showForm, editingId]);
 
   const getFreshDefaultForm = () => ({
+    uploadFormat: "pdf", // "pdf" | "epub"
     title: "", author: "", genre: "", pubType: "", publisher: getPublishers()[0] || "Spellbound", price: "", color: spineChoices[0],
     firstPublish: "", copyright: "", printIsbn: "", onlineIsbn: "", description: "", totalPages: "",
-    pagesText: "", pdfFile: null, coverImage: null, customFields: {}
+    pagesText: "",
+    // Standard PDF fields
+    pdfFile: null,
+    coverImage: null,
+    pdfUrl: null,
+    coverUrl: null,
+    // EPUB Multi-section fields
+    firstPageFile: null,
+    firstPageUrl: null,
+    contentsPageFile: null,
+    contentsPageUrl: null,
+    chapterCount: 3,
+    chapters: [
+      { id: "c1", number: 1, title: "Chapter 1", file: null, url: null, fileName: "" },
+      { id: "c2", number: 2, title: "Chapter 2", file: null, url: null, fileName: "" },
+      { id: "c3", number: 3, title: "Chapter 3", file: null, url: null, fileName: "" },
+    ],
+    customFields: {}
   });
   const [form, setForm] = useState(getFreshDefaultForm);
 
   const [pendingUpload, setPendingUpload] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
 
+  function handleChapterCountChange(count) {
+    const n = Math.max(1, Math.min(100, parseInt(count, 10) || 1));
+    setForm(prev => {
+      const current = prev.chapters || [];
+      let updated = [];
+      if (n > current.length) {
+        updated = [...current];
+        for (let i = current.length + 1; i <= n; i++) {
+          updated.push({
+            id: `chap-${i}-${Date.now()}`,
+            number: i,
+            title: `Chapter ${i}`,
+            file: null,
+            url: null,
+            fileName: ""
+          });
+        }
+      } else {
+        updated = current.slice(0, n);
+      }
+      return { ...prev, chapterCount: n, chapters: updated };
+    });
+  }
+
+  function handleAddChapter() {
+    setForm(prev => {
+      const nextNum = (prev.chapters?.length || 0) + 1;
+      const newChap = {
+        id: `chap-${nextNum}-${Date.now()}`,
+        number: nextNum,
+        title: `Chapter ${nextNum}`,
+        file: null,
+        url: null,
+        fileName: ""
+      };
+      const updated = [...(prev.chapters || []), newChap];
+      return { ...prev, chapterCount: updated.length, chapters: updated };
+    });
+  }
+
+  function handleRemoveChapter(index) {
+    setForm(prev => {
+      const updated = prev.chapters.filter((_, i) => i !== index).map((c, i) => ({
+        ...c,
+        number: i + 1,
+        title: c.title || `Chapter ${i + 1}`
+      }));
+      return { ...prev, chapterCount: updated.length, chapters: updated };
+    });
+  }
+
+  function handleChapterTitleChange(index, title) {
+    setForm(prev => {
+      const updated = [...prev.chapters];
+      updated[index] = { ...updated[index], title };
+      return { ...prev, chapters: updated };
+    });
+  }
+
+  function handleChapterFileChange(index, file) {
+    setForm(prev => {
+      const updated = [...prev.chapters];
+      updated[index] = {
+        ...updated[index],
+        file,
+        fileName: file ? file.name : ""
+      };
+      return { ...prev, chapters: updated };
+    });
+  }
+
   function handleEditClick(book) {
     setEditingId(book.id);
     let parsedCustomFields = {};
-    if (book.description && book.description.includes("\n\n__CUSTOM_FILTERS__:")) {
+    const rawDesc = book.description || "";
+    let epubData = book.epubData || null;
+
+    if (rawDesc.includes("\n\n__CUSTOM_FILTERS__:")) {
       try {
-        parsedCustomFields = JSON.parse(book.description.split("\n\n__CUSTOM_FILTERS__:")[1]);
+        parsedCustomFields = JSON.parse(rawDesc.split("\n\n__CUSTOM_FILTERS__:")[1].split("\n\n__EPUB_DATA__:")[0]);
       } catch (e) {}
     }
+    if (!epubData && rawDesc.includes("\n\n__EPUB_DATA__:")) {
+      try {
+        epubData = JSON.parse(rawDesc.split("\n\n__EPUB_DATA__:")[1]);
+      } catch (e) {}
+    }
+    if (!epubData && book.pages && typeof book.pages === "object" && !Array.isArray(book.pages) && (book.pages.type === "epub" || book.pages.format === "epub")) {
+      epubData = book.pages;
+    }
+
+    const cleanDesc = rawDesc.split("\n\n__CUSTOM_FILTERS__:")[0].split("\n\n__EPUB_DATA__:")[0];
+    const isEpub = Boolean(epubData || (book.pages && typeof book.pages === "object" && !Array.isArray(book.pages)));
+
+    const initialChapters = epubData?.chapters?.length
+      ? epubData.chapters.map((c, i) => ({
+          id: c.id || `chap-${i + 1}`,
+          number: c.number || (i + 1),
+          title: c.title || `Chapter ${i + 1}`,
+          file: null,
+          url: c.url || null,
+          fileName: c.fileName || ""
+        }))
+      : [
+          { id: "c1", number: 1, title: "Chapter 1", file: null, url: null, fileName: "" },
+          { id: "c2", number: 2, title: "Chapter 2", file: null, url: null, fileName: "" },
+          { id: "c3", number: 3, title: "Chapter 3", file: null, url: null, fileName: "" }
+        ];
+
     setForm({
+      uploadFormat: isEpub ? "epub" : "pdf",
       title: book.title || "",
       author: book.author || "",
       genre: book.genre || "",
@@ -83,13 +203,19 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
       copyright: "",
       printIsbn: book.printIsbn || "",
       onlineIsbn: book.onlineIsbn || "",
-      description: (book.description || "").split("\n\n__CUSTOM_FILTERS__:")[0],
+      description: cleanDesc,
       totalPages: book.totalPages || "",
-      pagesText: book.pages ? book.pages.join("\n---\n") : "",
+      pagesText: Array.isArray(book.pages) ? book.pages.join("\n---\n") : "",
       pdfFile: null,
       coverImage: null,
       pdfUrl: book.pdfUrl,
       coverUrl: book.coverUrl,
+      firstPageFile: null,
+      firstPageUrl: epubData?.firstPage?.url || null,
+      contentsPageFile: null,
+      contentsPageUrl: epubData?.contentsPage?.url || null,
+      chapterCount: initialChapters.length,
+      chapters: initialChapters,
       customFields: parsedCustomFields
     });
     setShowForm(true);
@@ -102,6 +228,7 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
     const pages = form.pagesText.split("\n---\n").map((p) => p.trim()).filter(Boolean);
     const newBook = {
       id: editingId || `b${Date.now()}`,
+      uploadFormat: form.uploadFormat,
       title: form.title,
       author: form.author,
       genre: form.genre,
@@ -114,12 +241,18 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
       printIsbn: form.printIsbn,
       onlineIsbn: form.onlineIsbn,
       description: form.description + (Object.keys(form.customFields).length > 0 ? "\n\n__CUSTOM_FILTERS__:" + JSON.stringify(form.customFields) : ""),
-      totalPages: form.totalPages ? Number(form.totalPages) : null,
+      totalPages: form.totalPages ? Number(form.totalPages) : (form.uploadFormat === "epub" ? form.chapters.length : null),
       pages: pages.length ? pages : ["This book has no content pages yet."],
       pdfFile: form.pdfFile,
       coverImage: form.coverImage,
       pdfUrl: form.pdfUrl,
       coverUrl: form.coverUrl,
+      // EPUB Multi-section payloads
+      firstPageFile: form.firstPageFile,
+      firstPageUrl: form.firstPageUrl,
+      contentsPageFile: form.contentsPageFile,
+      contentsPageUrl: form.contentsPageUrl,
+      chapters: form.chapters
     };
 
     if (editingId) {
@@ -235,10 +368,25 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
                 )}
               </div>
               <div className="flex flex-col min-w-0 flex-1 z-10">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#D4A017] mb-1">{pendingUpload.genre}</span>
+                <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#D4A017]">{pendingUpload.genre}</span>
+                  {pendingUpload.uploadFormat === "epub" ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-900 border border-amber-500/30">
+                      <Sparkles size={10} className="text-amber-600" /> e-Book (EPUB)
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-500/10 text-slate-700 border border-slate-400/30">
+                      <FileText size={10} className="text-slate-500" /> PDF
+                    </span>
+                  )}
+                </div>
                 <span className="font-bold text-sm leading-tight text-[#111111]" style={fontDisplay}>{pendingUpload.title}</span>
                 <span className="text-xs text-black mt-0.5">{pendingUpload.author} · {pendingUpload.publisher}</span>
-                <span className="text-xs text-black mt-0.5">{pendingUpload.totalPages || pendingUpload.pages?.length || 0} pages</span>
+                <span className="text-xs text-black mt-0.5 font-medium">
+                  {pendingUpload.uploadFormat === "epub"
+                    ? `${pendingUpload.chapters?.length || 0} chapters`
+                    : `${pendingUpload.totalPages || pendingUpload.pages?.length || 0} pages`}
+                </span>
                 
                 <div className="mt-auto pt-3 flex items-center gap-2 text-xs font-semibold text-black hover:text-black transition-colors">
                   {uploadProgress < 100 ? `Uploading... ${uploadProgress}%` : "Finished!"}
@@ -249,6 +397,8 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
 
           {paginatedBooks.map((b) => {
             const hasCover = Boolean(b.coverUrl && b.coverUrl !== "null" && b.coverUrl !== "undefined" && b.coverUrl.trim() !== "");
+            const isEpubBook = Boolean(b.epubData || (b.pages && typeof b.pages === 'object' && !Array.isArray(b.pages)));
+            const chapterTotal = b.epubData?.chapters?.length || (b.pages?.chapters?.length) || 0;
             return (
             <div key={b.id} className={`flex gap-4 p-5 transition-all ${embedded ? 'rounded-2xl bg-white/60 backdrop-blur-xl border border-white/85 shadow-sm hover:bg-white/80 hover:-translate-y-0.5 hover:shadow-md' : 'rounded-xl border border-gray-100 bg-white shadow-sm hover:shadow-md'}`}>
               <div
@@ -266,10 +416,23 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
                 )}
               </div>
               <div className="flex flex-col min-w-0 flex-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#D4A017] mb-1">{b.genre}</span>
+                <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#D4A017]">{b.genre}</span>
+                  {isEpubBook ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-900 border border-amber-500/30">
+                      <Sparkles size={10} className="text-amber-600" /> e-Book (EPUB)
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-500/10 text-slate-700 border border-slate-400/30">
+                      <FileText size={10} className="text-slate-500" /> PDF
+                    </span>
+                  )}
+                </div>
                 <span className="font-bold text-sm leading-tight text-[#111111]" style={fontDisplay}>{b.title}</span>
                 <span className="text-xs text-black mt-0.5">{b.author} · {b.publisher}</span>
-                <span className="text-xs text-black mt-0.5">{b.totalPages || b.pages?.length || 0} pages</span>
+                <span className="text-xs text-black mt-0.5 font-medium">
+                  {isEpubBook ? `${chapterTotal} chapters` : `${b.totalPages || b.pages?.length || 0} pages`}
+                </span>
                 
                 <div className="mt-auto pt-3 flex flex-wrap items-center gap-2">
                   <button
@@ -440,69 +603,348 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
               onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
 
-            <div className="grid sm:grid-cols-2 gap-4 mb-4">
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label htmlFor="book-cover-file" className="block text-xs font-bold uppercase tracking-wider text-slate-700">Book Cover Image {editingId && !form.coverUrl && <span className="text-[11px] font-normal normal-case text-slate-500">(Optional)</span>}</label>
-                  {editingId && form.coverUrl && (
-                    <button type="button" onClick={() => setForm({...form, coverUrl: null, coverImage: null})} className="text-xs font-semibold text-rose-600 hover:underline cursor-pointer">Remove Cover</button>
-                  )}
-                </div>
-                {editingId && form.coverUrl ? (
-                  <div className="text-xs px-3.5 py-3 bg-emerald-100/75 text-emerald-900 border border-emerald-200 rounded-2xl flex items-center justify-between gap-2">
-                    <span className="font-semibold">Current Cover Saved</span>
-                    <span className="text-[11px] text-emerald-800/80">Remove first to replace</span>
-                  </div>
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-slate-300/90 bg-white/65 hover:border-[#111214] p-3.5 transition-colors">
-                    <input 
-                      id="book-cover-file"
-                      type="file" 
-                      accept="image/*" 
-                      className="w-full text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#111214] file:text-[#F5F23B] hover:file:opacity-90 cursor-pointer" 
-                      onChange={(e) => setForm({ ...form, coverImage: e.target.files[0] })}
-                    />
-                  </div>
-                )}
+            {/* E-BOOK FORMAT SELECTION */}
+            <div className="mb-6 p-4 rounded-2xl admin-glass-panel border border-white/80 shadow-xs">
+              <div className="flex items-center justify-between mb-2.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                  <Layers size={14} className="text-amber-500" />
+                  <span>Choose Upload Format &amp; Style</span>
+                </label>
+                <span className="text-[11px] text-slate-500 font-medium">Single PDF or Multi-Part Chapters</span>
               </div>
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label htmlFor="book-pdf-file" className="block text-xs font-bold uppercase tracking-wider text-slate-700">E-book PDF File {editingId && !form.pdfUrl && <span className="text-[11px] font-normal normal-case text-slate-500">(Optional)</span>}</label>
-                  {editingId && form.pdfUrl && (
-                    <button type="button" onClick={() => setForm({...form, pdfUrl: null, pdfFile: null})} className="text-xs font-semibold text-rose-600 hover:underline cursor-pointer">Remove PDF</button>
-                  )}
-                </div>
-                {editingId && form.pdfUrl ? (
-                  <div className="text-xs px-3.5 py-3 bg-emerald-100/75 text-emerald-900 border border-emerald-200 rounded-2xl flex items-center justify-between gap-2">
-                    <span className="font-semibold">Current PDF Saved</span>
-                    <span className="text-[11px] text-emerald-800/80">Remove first to replace</span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setForm(prev => ({ ...prev, uploadFormat: "pdf" }))}
+                  className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-start gap-3 ${
+                    form.uploadFormat === "pdf"
+                      ? "bg-[#111214] text-[#F5F23B] border-[#111214] shadow-md ring-2 ring-[#F5F23B]/30"
+                      : "admin-glass-pill hover:bg-white text-slate-800 border-white/80"
+                  }`}
+                >
+                  <FileText size={20} className={form.uploadFormat === "pdf" ? "text-[#F5F23B] shrink-0 mt-0.5" : "text-slate-600 shrink-0 mt-0.5"} />
+                  <div>
+                    <div className="font-bold text-sm">Standard Single PDF</div>
+                    <div className={`text-xs mt-0.5 leading-snug ${form.uploadFormat === "pdf" ? "text-slate-200" : "text-slate-500"}`}>
+                      Upload front cover artwork and a single master PDF document.
+                    </div>
                   </div>
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-slate-300/90 bg-white/65 hover:border-[#111214] p-3.5 transition-colors">
-                    <input 
-                      id="book-pdf-file"
-                      type="file" 
-                      accept="application/pdf" 
-                      className="w-full text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#111214] file:text-[#F5F23B] hover:file:opacity-90 cursor-pointer" 
-                      onChange={(e) => setForm({ ...form, pdfFile: e.target.files[0] })}
-                    />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setForm(prev => ({ ...prev, uploadFormat: "epub" }))}
+                  className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-start gap-3 ${
+                    form.uploadFormat === "epub"
+                      ? "bg-[#111214] text-[#F5F23B] border-[#111214] shadow-md ring-2 ring-[#F5F23B]/30"
+                      : "admin-glass-pill hover:bg-white text-slate-800 border-white/80"
+                  }`}
+                >
+                  <Sparkles size={20} className={form.uploadFormat === "epub" ? "text-[#F5F23B] shrink-0 mt-0.5" : "text-amber-600 shrink-0 mt-0.5"} />
+                  <div>
+                    <div className="font-bold text-sm">e-Book / EPUB (Multi-Section)</div>
+                    <div className={`text-xs mt-0.5 leading-snug ${form.uploadFormat === "epub" ? "text-slate-200" : "text-slate-500"}`}>
+                      Cover page, first page, contents page, and dynamic chapter containers.
+                    </div>
                   </div>
-                )}
+                </button>
               </div>
             </div>
 
-            <TextArea
-              label="Page content (separate pages with a line containing only ---)"
-              rows={6}
-              placeholder={"Page one text here...\n---\nPage two text here..."}
-              value={form.pagesText}
-              onChange={(e) => setForm({ ...form, pagesText: e.target.value })}
-            />
-            <p className="text-xs mb-4 text-black">
-              In a production build, this would accept an actual manuscript upload (PDF/EPUB) which gets converted
-              into secure pages automatically — this box is a stand-in for that pipeline.
+            {/* FORMAT 1: STANDARD PDF UPLOAD */}
+            {form.uploadFormat === "pdf" && (
+              <>
+                <div className="grid sm:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <label htmlFor="book-cover-file" className="block text-xs font-bold uppercase tracking-wider text-slate-700">Book Cover Image {editingId && !form.coverUrl && <span className="text-[11px] font-normal normal-case text-slate-500">(Optional)</span>}</label>
+                      {editingId && form.coverUrl && (
+                        <button type="button" onClick={() => setForm({...form, coverUrl: null, coverImage: null})} className="text-xs font-semibold text-rose-600 hover:underline cursor-pointer">Remove Cover</button>
+                      )}
+                    </div>
+                    {editingId && form.coverUrl ? (
+                      <div className="text-xs px-3.5 py-3 bg-emerald-100/75 text-emerald-900 border border-emerald-200 rounded-2xl flex items-center justify-between gap-2">
+                        <span className="font-semibold flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-700" /> Current Cover Saved</span>
+                        <span className="text-[11px] text-emerald-800/80">Remove first to replace</span>
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border border-dashed border-slate-300/90 bg-white/65 hover:border-[#111214] p-3.5 transition-colors">
+                        <input 
+                          id="book-cover-file"
+                          type="file" 
+                          accept="image/*" 
+                          className="w-full text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#111214] file:text-[#F5F23B] hover:file:opacity-90 cursor-pointer" 
+                          onChange={(e) => setForm({ ...form, coverImage: e.target.files[0] })}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <label htmlFor="book-pdf-file" className="block text-xs font-bold uppercase tracking-wider text-slate-700">E-book PDF File {editingId && !form.pdfUrl && <span className="text-[11px] font-normal normal-case text-slate-500">(Optional)</span>}</label>
+                      {editingId && form.pdfUrl && (
+                        <button type="button" onClick={() => setForm({...form, pdfUrl: null, pdfFile: null})} className="text-xs font-semibold text-rose-600 hover:underline cursor-pointer">Remove PDF</button>
+                      )}
+                    </div>
+                    {editingId && form.pdfUrl ? (
+                      <div className="text-xs px-3.5 py-3 bg-emerald-100/75 text-emerald-900 border border-emerald-200 rounded-2xl flex items-center justify-between gap-2">
+                        <span className="font-semibold flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-700" /> Current PDF Saved</span>
+                        <span className="text-[11px] text-emerald-800/80">Remove first to replace</span>
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border border-dashed border-slate-300/90 bg-white/65 hover:border-[#111214] p-3.5 transition-colors">
+                        <input 
+                          id="book-pdf-file"
+                          type="file" 
+                          accept="application/pdf" 
+                          className="w-full text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#111214] file:text-[#F5F23B] hover:file:opacity-90 cursor-pointer" 
+                          onChange={(e) => setForm({ ...form, pdfFile: e.target.files[0] })}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <TextArea
+                  label="Page content (separate pages with a line containing only ---)"
+                  rows={4}
+                  placeholder={"Page one text here...\n---\nPage two text here..."}
+                  value={form.pagesText}
+                  onChange={(e) => setForm({ ...form, pagesText: e.target.value })}
+                />
+              </>
+            )}
+
+            {/* FORMAT 2: EPUB / MULTI-SECTION CHAPTER UPLOADS */}
+            {form.uploadFormat === "epub" && (
+              <div className="space-y-4 mb-5 p-4 rounded-2xl admin-glass-shell border border-amber-500/25 bg-amber-500/5">
+                <div className="flex items-center gap-2 pb-2 border-b border-black/10">
+                  <FolderUp size={18} className="text-amber-600" />
+                  <div>
+                    <h3 className="font-bold text-sm text-[#111214]">e-Book Section &amp; Chapter Uploads</h3>
+                    <p className="text-[11px] text-slate-600">Upload your cover, front matter, contents, and chapter files to build the complete e-book.</p>
+                  </div>
+                </div>
+
+                {/* 1. COVER PAGE */}
+                <div className="p-3.5 rounded-xl admin-glass-panel border border-white/80">
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label htmlFor="epub-cover-file" className="block text-xs font-bold uppercase tracking-wider text-slate-800">
+                      1. Cover Page File {editingId && !form.coverUrl && <span className="text-[11px] font-normal normal-case text-slate-500">(Optional)</span>}
+                    </label>
+                    {editingId && form.coverUrl && (
+                      <button type="button" onClick={() => setForm({ ...form, coverUrl: null, coverImage: null })} className="text-xs font-semibold text-rose-600 hover:underline cursor-pointer">
+                        Remove Cover
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-600 mb-2">Upload the front cover artwork or cover page document.</p>
+                  {editingId && form.coverUrl ? (
+                    <div className="text-xs px-3.5 py-3 bg-emerald-100/75 text-emerald-900 border border-emerald-200 rounded-xl flex items-center justify-between gap-2">
+                      <span className="font-semibold flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-700" /> Current Cover Page Saved</span>
+                      <span className="text-[11px] text-emerald-800/80">Remove first to replace</span>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-slate-300 bg-white/70 hover:border-[#111214] p-3 transition-colors">
+                      <input
+                        id="epub-cover-file"
+                        type="file"
+                        accept="image/*,application/pdf"
+                        className="w-full text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#111214] file:text-[#F5F23B] hover:file:opacity-90 cursor-pointer"
+                        onChange={(e) => setForm({ ...form, coverImage: e.target.files[0] })}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. FIRST PAGE / FRONT MATTER */}
+                <div className="p-3.5 rounded-xl admin-glass-panel border border-white/80">
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label htmlFor="epub-first-page-file" className="block text-xs font-bold uppercase tracking-wider text-slate-800">
+                      2. First Page (Title / Front Matter)
+                    </label>
+                    {editingId && form.firstPageUrl && (
+                      <button type="button" onClick={() => setForm({ ...form, firstPageUrl: null, firstPageFile: null })} className="text-xs font-semibold text-rose-600 hover:underline cursor-pointer">
+                        Remove File
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-600 mb-2">Upload the opening title page, imprint, preface, or front matter file.</p>
+                  {editingId && form.firstPageUrl ? (
+                    <div className="text-xs px-3.5 py-3 bg-emerald-100/75 text-emerald-900 border border-emerald-200 rounded-xl flex items-center justify-between gap-2">
+                      <span className="font-semibold flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-700" /> Current First Page Saved</span>
+                      <span className="text-[11px] text-emerald-800/80">Remove first to replace</span>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-slate-300 bg-white/70 hover:border-[#111214] p-3 transition-colors">
+                      <input
+                        id="epub-first-page-file"
+                        type="file"
+                        accept=".pdf,.epub,.docx,.html,image/*"
+                        className="w-full text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#111214] file:text-[#F5F23B] hover:file:opacity-90 cursor-pointer"
+                        onChange={(e) => setForm({ ...form, firstPageFile: e.target.files[0] })}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. CONTENTS PAGES */}
+                <div className="p-3.5 rounded-xl admin-glass-panel border border-white/80">
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label htmlFor="epub-contents-file" className="block text-xs font-bold uppercase tracking-wider text-slate-800">
+                      3. Contents Pages (Table of Contents / Index)
+                    </label>
+                    {editingId && form.contentsPageUrl && (
+                      <button type="button" onClick={() => setForm({ ...form, contentsPageUrl: null, contentsPageFile: null })} className="text-xs font-semibold text-rose-600 hover:underline cursor-pointer">
+                        Remove File
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-600 mb-2">Upload the table of contents or index overview pages.</p>
+                  {editingId && form.contentsPageUrl ? (
+                    <div className="text-xs px-3.5 py-3 bg-emerald-100/75 text-emerald-900 border border-emerald-200 rounded-xl flex items-center justify-between gap-2">
+                      <span className="font-semibold flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-700" /> Current Contents Page Saved</span>
+                      <span className="text-[11px] text-emerald-800/80">Remove first to replace</span>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-slate-300 bg-white/70 hover:border-[#111214] p-3 transition-colors">
+                      <input
+                        id="epub-contents-file"
+                        type="file"
+                        accept=".pdf,.epub,.docx,.html,image/*"
+                        className="w-full text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#111214] file:text-[#F5F23B] hover:file:opacity-90 cursor-pointer"
+                        onChange={(e) => setForm({ ...form, contentsPageFile: e.target.files[0] })}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 4. CHAPTERS CONFIGURATION & DYNAMIC CONTAINERS */}
+                <div className="p-4 rounded-xl admin-glass-panel border border-white/80 shadow-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-black/10">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                        <Layers size={15} className="text-amber-600" />
+                        <span>4. Book Chapters Structure</span>
+                      </label>
+                      <p className="text-xs text-slate-600 mt-0.5">Specify chapter count below to automatically generate upload containers for each chapter.</p>
+                    </div>
+
+                    {/* PROMPT BOX: HOW MANY CHAPTERS DOES THE BOOK HAVE */}
+                    <div className="flex items-center gap-2 bg-white/85 p-2 rounded-xl border border-black/10 shadow-xs">
+                      <span className="text-xs font-bold text-slate-800 whitespace-nowrap">How many chapters?</span>
+                      <button
+                        type="button"
+                        onClick={() => handleChapterCountChange((form.chapters?.length || 1) - 1)}
+                        disabled={(form.chapters?.length || 1) <= 1}
+                        className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed font-bold text-sm flex items-center justify-center cursor-pointer transition-colors"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={form.chapters?.length || form.chapterCount || 1}
+                        onChange={(e) => handleChapterCountChange(e.target.value)}
+                        className="w-12 text-center text-xs font-bold py-1 px-1 rounded-md border border-slate-300 focus:outline-none focus:ring-1 focus:ring-black"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleChapterCountChange((form.chapters?.length || 1) + 1)}
+                        className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 font-bold text-sm flex items-center justify-center cursor-pointer transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* DYNAMIC CHAPTER CONTAINERS */}
+                  <div className="mt-4 space-y-3">
+                    {form.chapters?.map((chap, idx) => (
+                      <div key={chap.id || `chap-${idx}`} className="p-3.5 rounded-xl bg-white/60 border border-white/90 shadow-2xs hover:bg-white/80 transition-all">
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-black bg-[#111214] text-[#F5F23B]">
+                            Chapter {chap.number || idx + 1}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            {chap.url && (
+                              <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-300">
+                                ✓ Saved
+                              </span>
+                            )}
+                            {form.chapters.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveChapter(idx)}
+                                className="text-xs font-semibold text-rose-600 hover:text-rose-800 hover:underline cursor-pointer flex items-center gap-1"
+                              >
+                                <Trash2 size={12} /> Remove
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
+                          <div>
+                            <label htmlFor={`chap-title-${idx}`} className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                              Chapter Title (optional)
+                            </label>
+                            <input
+                              id={`chap-title-${idx}`}
+                              type="text"
+                              placeholder={`Chapter ${chap.number || idx + 1} Title (e.g. Introduction)`}
+                              value={chap.title || ""}
+                              onChange={(e) => handleChapterTitleChange(idx, e.target.value)}
+                              className="glass-field-control text-xs !min-h-[38px] !py-1.5"
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor={`chap-file-${idx}`} className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                              Chapter File (.pdf, .epub, document)
+                            </label>
+                            <div className="rounded-xl border border-dashed border-slate-300 bg-white/70 hover:border-[#111214] p-1.5 transition-colors">
+                              <input
+                                id={`chap-file-${idx}`}
+                                type="file"
+                                accept=".pdf,.epub,.docx,.html,image/*"
+                                className="w-full text-xs text-slate-700 file:mr-2 file:py-1 file:px-2.5 file:rounded-full file:border-0 file:text-[11px] file:font-bold file:bg-[#111214] file:text-[#F5F23B] hover:file:opacity-90 cursor-pointer"
+                                onChange={(e) => handleChapterFileChange(idx, e.target.files[0])}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        {chap.fileName && (
+                          <div className="mt-2 text-[11px] text-slate-600 flex items-center gap-1 font-medium">
+                            <CheckCircle2 size={12} className="text-emerald-600" />
+                            <span>Selected file: <strong>{chap.fileName}</strong></span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-black/10 flex justify-between items-center">
+                    <span className="text-xs text-slate-600 font-medium">
+                      Total: <strong>{form.chapters?.length || 0}</strong> chapter containers configured
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleAddChapter}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-[#111214] text-[#F5F23B] hover:bg-black transition-all cursor-pointer shadow-xs"
+                    >
+                      <Plus size={13} strokeWidth={2.4} /> Add Another Chapter
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <p className="text-xs mb-4 text-slate-600">
+              Files uploaded here are stored securely in the database and catalog storage to form the complete publication.
             </p>
-            <Button type="submit" className="w-full"><UploadCloud size={16} strokeWidth={1.8} /> Publish book to catalog</Button>
+            <Button type="submit" className="w-full"><UploadCloud size={16} strokeWidth={1.8} /> {editingId ? "Save changes & update catalog" : "Publish book to catalog"}</Button>
           </form>
         </Modal>
       )}
