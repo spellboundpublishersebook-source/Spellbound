@@ -166,7 +166,7 @@ export default function UploaderPanel({ books, onAddBook, onEditBook, onDeleteBo
     }
     if (!epubData && rawDesc.includes("\n\n__EPUB_DATA__:")) {
       try {
-        epubData = JSON.parse(rawDesc.split("\n\n__EPUB_DATA__:")[1]);
+        epubData = JSON.parse(rawDesc.split("\n\n__EPUB_DATA__:")[1].split("\n\n__CUSTOM_FILTERS__:")[0]);
       } catch (e) {}
     }
     if (!epubData && book.pages && typeof book.pages === "object" && !Array.isArray(book.pages) && (book.pages.type === "epub" || book.pages.format === "epub")) {

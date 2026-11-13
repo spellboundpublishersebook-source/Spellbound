@@ -154,7 +154,8 @@ export default function App() {
             epubData = dbBook.pages;
           } else if (dbBook.description && dbBook.description.includes("__EPUB_DATA__:")) {
             try {
-              epubData = JSON.parse(dbBook.description.split("__EPUB_DATA__:")[1]);
+              const rawJson = dbBook.description.split("__EPUB_DATA__:")[1].split("__CUSTOM_FILTERS__:")[0].trim();
+              epubData = JSON.parse(rawJson);
             } catch (e) {}
           }
           const cleanDescription = (dbBook.description || "")
@@ -259,7 +260,8 @@ export default function App() {
             epubData = dbBook.pages;
           } else if (dbBook.description && dbBook.description.includes("__EPUB_DATA__:")) {
             try {
-              epubData = JSON.parse(dbBook.description.split("__EPUB_DATA__:")[1]);
+              const rawJson = dbBook.description.split("__EPUB_DATA__:")[1].split("__CUSTOM_FILTERS__:")[0].trim();
+              epubData = JSON.parse(rawJson);
             } catch (e) {}
           }
           const cleanDescription = (dbBook.description || "")
@@ -285,7 +287,8 @@ export default function App() {
             epubData = dbBook.pages;
           } else if (dbBook.description && dbBook.description.includes("__EPUB_DATA__:")) {
             try {
-              epubData = JSON.parse(dbBook.description.split("__EPUB_DATA__:")[1]);
+              const rawJson = dbBook.description.split("__EPUB_DATA__:")[1].split("__CUSTOM_FILTERS__:")[0].trim();
+              epubData = JSON.parse(rawJson);
             } catch (e) {}
           }
           const cleanDescription = dbBook.description !== undefined
