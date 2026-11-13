@@ -174,7 +174,8 @@ export default function ReaderDashboard({
   books,
   onOpenBook,
   onCreateStudentProfile,
-  onSwitchStudentProfile
+  onSwitchStudentProfile,
+  onSwitchToDeptLogin
 }) {
   const [selectedGenres, setSelectedGenres] = useState([]);
   const [selectedAuthors, setSelectedAuthors] = useState([]);
@@ -255,6 +256,15 @@ export default function ReaderDashboard({
     } else {
       setStudentError(res?.message || "Could not switch student profile.");
     }
+  }
+
+  function handleSwitchToDept() {
+    const targetLicId = session.institutionId || session.id;
+    const targetDeptId = session.deptId || selectedDeptId || (activeDeptObj?.id);
+    if (onSwitchToDeptLogin) {
+      onSwitchToDeptLogin(targetLicId, targetDeptId);
+    }
+    setShowStudentModal(false);
   }
   
   // Type filters
@@ -535,17 +545,57 @@ export default function ReaderDashboard({
                     <GraduationCap size={13} /> Student: {session.studentName} ({session.studentId})
                   </span>
                 )}
-                {(session.type === "department" || session.type === "student" || (session.departments && session.departments.length > 0)) && (
-                  <button
-                    type="button"
-                    onClick={() => { setShowStudentModal(true); setStudentError(""); }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#111214] text-[#F5F23B] hover:bg-black font-bold text-xs shadow-sm transition-all cursor-pointer shrink-0 ml-auto"
-                  >
-                    <GraduationCap size={13} />
-                    {session.type === "student" ? "Switch Student Profile" : "👤 Create / Switch Student ID"}
-                  </button>
+                {session.type === "student" ? (
+                  <div className="flex flex-wrap items-center gap-2 shrink-0 ml-auto">
+                    <button
+                      type="button"
+                      onClick={() => { setShowStudentModal(true); setStudentError(""); }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#111214] text-[#F5F23B] hover:bg-black font-bold text-xs shadow-sm transition-all cursor-pointer"
+                    >
+                      <GraduationCap size={13} />
+                      Switch Student Profile
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSwitchToDept}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/95 text-blue-900 hover:bg-blue-100 border border-blue-300 font-bold text-xs shadow-sm transition-all cursor-pointer"
+                      title="Switch back to shared Department Login"
+                    >
+                      <Building2 size={13} />
+                      Switch to Dept Login
+                    </button>
+                  </div>
+                ) : (
+                  (session.type === "department" || (session.departments && session.departments.length > 0)) && (
+                    <button
+                      type="button"
+                      onClick={() => { setShowStudentModal(true); setStudentError(""); }}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#111214] text-[#F5F23B] hover:bg-black font-bold text-xs shadow-sm transition-all cursor-pointer shrink-0 ml-auto"
+                    >
+                      <GraduationCap size={13} />
+                      👤 Create / Switch to Student ID
+                    </button>
+                  )
                 )}
               </div>
+
+              {session.type === "department" && (
+                <div className="mt-2.5 p-3 rounded-2xl bg-blue-50/90 border border-blue-200/90 text-xs text-blue-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs backdrop-blur-md">
+                  <div className="flex items-center gap-2">
+                    <Building2 size={16} className="text-blue-700 shrink-0" />
+                    <span>
+                      <strong>Department Shared Login:</strong> Full catalog reading enabled. Personal customization features (highlighter, sticky notes, study notebook) are reserved for Personal Student Profiles.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setShowStudentModal(true); setStudentTab("create"); setStudentError(""); }}
+                    className="underline font-bold text-blue-900 hover:text-black shrink-0 cursor-pointer"
+                  >
+                    Create Free Student Profile →
+                  </button>
+                </div>
+              )}
 
               <p className="text-slate-700 text-sm md:text-base max-w-2xl">
                 {session.type === "trial"
@@ -1514,6 +1564,26 @@ export default function ReaderDashboard({
                   </button>
                 </div>
               </form>
+            )}
+
+            {session.type === "student" && (
+              <div className="pt-3 border-t border-black/10 mt-3 flex items-center justify-between bg-blue-50/80 p-3.5 rounded-2xl border border-blue-200/90">
+                <div>
+                  <div className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                    <Building2 size={14} className="text-blue-700" /> Switch to Department Login
+                  </div>
+                  <div className="text-[11px] text-blue-800">
+                    Exit personal student profile and return to shared department view.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSwitchToDept}
+                  className="px-3.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm transition-all cursor-pointer shrink-0"
+                >
+                  Switch to Dept
+                </button>
+              </div>
             )}
           </div>
         </Modal>

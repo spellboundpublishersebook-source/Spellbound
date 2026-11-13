@@ -655,6 +655,34 @@ export default function App() {
     return { ok: true };
   }
 
+  function handleSwitchToDeptLogin(licenseId, deptId) {
+    const targetLic = licenses.find(l => l.id === licenseId) || licenses.find(l => l.id === session?.institutionId);
+    const depts = targetLic?.departments || session?.departments || [];
+    const dept = depts.find(d => d.id === deptId) || depts.find(d => d.id === session?.deptId) || depts[0];
+
+    const deptLoginId = dept?.loginId || `${targetLic?.id || session?.institutionId || 'COL'}-${dept?.code || 'DEPT'}`;
+    const deptName = dept?.name || session?.department || "Department";
+
+    setSession(prev => ({
+      ...prev,
+      role: "reader",
+      type: "department",
+      id: deptLoginId,
+      studentId: null,
+      studentName: null,
+      currentStudent: null,
+      deptId: dept?.id || prev?.deptId,
+      deptCode: dept?.code || prev?.deptCode,
+      department: deptName,
+      name: `${targetLic?.name || prev?.institution || 'College'} — ${deptName}`,
+      institution: targetLic?.name || prev?.institution,
+      institutionId: targetLic?.id || prev?.institutionId,
+      departments: depts
+    }));
+
+    return { ok: true };
+  }
+
   async function handleSaveStudentCustomizations(licenseId, deptId, studentId, bookId, customizations) {
     try {
       // 1. Instant local persistence for annotations & preferences
@@ -1390,6 +1418,7 @@ export default function App() {
           }}
           onCreateStudentProfile={handleCreateStudentProfile}
           onSwitchStudentProfile={handleSwitchStudentProfile}
+          onSwitchToDeptLogin={handleSwitchToDeptLogin}
         />
       )}
       {view === "reading" && session && openBook && (

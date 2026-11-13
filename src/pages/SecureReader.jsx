@@ -4,7 +4,7 @@ import {
   ZoomIn, ZoomOut, RotateCcw, ScanSearch, X, Sun, Moon, Highlighter, 
   StickyNote, Bookmark, BookMarked, Maximize, Minimize, Clock, Sliders, 
   Palette, Trash2, Check, Copy, ChevronDown, Sparkles, Code, FileText, 
-  Download, Eye, List, BookOpen, Layers
+  Download, Eye, List, BookOpen, Layers, Building2
 } from "lucide-react";
 import { palette, fontDisplay, fontBody } from "../theme";
 import { supabase } from "../supabaseClient";
@@ -130,6 +130,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   // ==========================================
   // STUDENT CUSTOMIZATION STATES
   // ==========================================
+  const isStudentProfile = session?.type === "student";
   const studentKey = session?.studentId || session?.deptId || session?.id || "anon";
   const [themeKey, setThemeKey] = useState("cream");
   const [brightness, setBrightness] = useState(100); // 50% to 150%
@@ -1083,81 +1084,99 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             )}
           </div>
 
-          {/* LINE FOCUS / READING RULER TOGGLE */}
-          <button
-            type="button"
-            onClick={() => setLineFocus((v) => !v)}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/15 transition-all cursor-pointer ${
-              lineFocus ? "bg-amber-400 text-black font-bold shadow-md" : "bg-white/10 hover:bg-white/20 text-white"
-            }`}
-            title="Line Focus / Reading Ruler: Highlights the active line as you read, softly dimming the rest"
-          >
-            <Sliders size={13} />
-            <span>Line Focus {lineFocus ? "ON" : "OFF"}</span>
-          </button>
-
-          {/* HIGHLIGHTER TOOL */}
-          <div className="inline-flex items-center gap-1 bg-white/10 p-1 rounded-full border border-white/15">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTool(activeTool === "highlight" ? null : "highlight");
-                setSectionSelectActive(false);
-              }}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                activeTool === "highlight" ? "bg-amber-400 text-black shadow-sm" : "text-white hover:bg-white/10"
-              }`}
-            >
-              <Highlighter size={13} />
-              <span>Highlighter</span>
-            </button>
-
-            {/* Color swatches */}
-            {Object.values(HIGHLIGHT_COLORS).map((col) => (
+          {/* PERSONAL STUDY TOOLS (ONLY AVAILABLE ON STUDENT PROFILES) */}
+          {!isStudentProfile ? (
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-900/60 border border-blue-400/30 text-xs text-blue-200">
+              <Building2 size={13} className="text-blue-300 shrink-0" />
+              <span className="font-semibold">Dept View:</span>
+              <span className="text-blue-100 text-[11px] hidden sm:inline">Personal highlights, sticky notes & study notebook locked.</span>
               <button
-                key={col.id}
                 type="button"
-                onClick={() => {
-                  setHighlightColor(col.id);
-                  setActiveTool("highlight");
-                }}
-                className={`w-5 h-5 rounded-full transition-transform cursor-pointer ${
-                  highlightColor === col.id && activeTool === "highlight" ? "scale-125 ring-2 ring-white" : "hover:scale-110"
+                onClick={onBack}
+                className="px-2.5 py-0.5 rounded-full bg-[#F5F23B] text-black font-bold text-[11px] hover:bg-yellow-300 transition-all cursor-pointer shrink-0"
+              >
+                Switch to Student ID
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* LINE FOCUS / READING RULER TOGGLE */}
+              <button
+                type="button"
+                onClick={() => setLineFocus((v) => !v)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/15 transition-all cursor-pointer ${
+                  lineFocus ? "bg-amber-400 text-black font-bold shadow-md" : "bg-white/10 hover:bg-white/20 text-white"
                 }`}
-                style={{ backgroundColor: col.border }}
-                title={`Highlight in ${col.name}`}
-              />
-            ))}
-          </div>
+                title="Line Focus / Reading Ruler: Highlights the active line as you read, softly dimming the rest"
+              >
+                <Sliders size={13} />
+                <span>Line Focus {lineFocus ? "ON" : "OFF"}</span>
+              </button>
 
-          {/* STICKY NOTE / CODE TOOL */}
-          <div className="inline-flex items-center gap-1 bg-white/10 p-1 rounded-full border border-white/15">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTool(activeTool === "sticky" ? null : "sticky");
-                setSectionSelectActive(false);
-              }}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                activeTool === "sticky" ? "bg-[#F5F23B] text-black shadow-sm" : "text-white hover:bg-white/10"
-              }`}
-              title="Click on page to drop a sticky note or code snippet"
-            >
-              <StickyNote size={13} />
-              <span>+ Sticky Note / Code</span>
-            </button>
+              {/* HIGHLIGHTER TOOL */}
+              <div className="inline-flex items-center gap-1 bg-white/10 p-1 rounded-full border border-white/15">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTool(activeTool === "highlight" ? null : "highlight");
+                    setSectionSelectActive(false);
+                  }}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    activeTool === "highlight" ? "bg-amber-400 text-black shadow-sm" : "text-white hover:bg-white/10"
+                  }`}
+                >
+                  <Highlighter size={13} />
+                  <span>Highlighter</span>
+                </button>
 
-            <select
-              value={stickyTag}
-              onChange={(e) => setStickyTag(e.target.value)}
-              className="bg-black/40 text-[11px] font-bold text-white px-2 py-0.5 rounded-md outline-none cursor-pointer"
-            >
-              <option value="Note">Note</option>
-              <option value="Code">Code</option>
-              <option value="Formula">Formula</option>
-              <option value="Exam">Exam Note</option>
-            </select>
-          </div>
+                {/* Color swatches */}
+                {Object.values(HIGHLIGHT_COLORS).map((col) => (
+                  <button
+                    key={col.id}
+                    type="button"
+                    onClick={() => {
+                      setHighlightColor(col.id);
+                      setActiveTool("highlight");
+                    }}
+                    className={`w-5 h-5 rounded-full transition-transform cursor-pointer ${
+                      highlightColor === col.id && activeTool === "highlight" ? "scale-125 ring-2 ring-white" : "hover:scale-110"
+                    }`}
+                    style={{ backgroundColor: col.border }}
+                    title={`Highlight in ${col.name}`}
+                  />
+                ))}
+              </div>
+
+              {/* STICKY NOTE / CODE TOOL */}
+              <div className="inline-flex items-center gap-1 bg-white/10 p-1 rounded-full border border-white/15">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTool(activeTool === "sticky" ? null : "sticky");
+                    setSectionSelectActive(false);
+                  }}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    activeTool === "sticky" ? "bg-[#F5F23B] text-black shadow-sm" : "text-white hover:bg-white/10"
+                  }`}
+                  title="Click on page to drop a sticky note or code snippet"
+                >
+                  <StickyNote size={13} />
+                  <span>+ Sticky Note / Code</span>
+                </button>
+
+                <select
+                  value={stickyTag}
+                  onChange={(e) => setStickyTag(e.target.value)}
+                  className="bg-black/40 text-[11px] font-bold text-white px-2 py-0.5 rounded-md outline-none cursor-pointer"
+                >
+                  <option value="Note">Note</option>
+                  <option value="Code">Code</option>
+                  <option value="Formula">Formula</option>
+                  <option value="Exam">Exam Note</option>
+                </select>
+              </div>
+            </>
+          )}
 
           {/* SECTION ZOOM BUTTON (for PDFs) */}
           {book.pdfUrl && (
@@ -1181,25 +1200,29 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
         {/* RIGHT GROUP: BOOKMARK + PERSONAL STUDY NOTEBOOK DRAWER TOGGLE */}
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={toggleBookmark}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/15 transition-all cursor-pointer ${
-              isBookmarked ? "bg-amber-400 text-black font-bold" : "bg-white/10 hover:bg-white/20 text-white"
-            }`}
-          >
-            {isBookmarked ? <BookMarked size={13} /> : <Bookmark size={13} />}
-            <span>{isBookmarked ? "Bookmarked" : "Bookmark"}</span>
-          </button>
+          {isStudentProfile && (
+            <>
+              <button
+                type="button"
+                onClick={toggleBookmark}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/15 transition-all cursor-pointer ${
+                  isBookmarked ? "bg-amber-400 text-black font-bold" : "bg-white/10 hover:bg-white/20 text-white"
+                }`}
+              >
+                {isBookmarked ? <BookMarked size={13} /> : <Bookmark size={13} />}
+                <span>{isBookmarked ? "Bookmarked" : "Bookmark"}</span>
+              </button>
 
-          <button
-            type="button"
-            onClick={() => setShowNotebook((v) => !v)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#F5F23B] hover:bg-[#eae729] text-black font-bold shadow-md transition-all cursor-pointer"
-          >
-            <BookOpen size={13} />
-            <span>Study Notebook ({totalNotesCount})</span>
-          </button>
+              <button
+                type="button"
+                onClick={() => setShowNotebook((v) => !v)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#F5F23B] hover:bg-[#eae729] text-black font-bold shadow-md transition-all cursor-pointer"
+              >
+                <BookOpen size={13} />
+                <span>Study Notebook ({totalNotesCount})</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -1337,8 +1360,8 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             </div>
           )}
 
-          {/* RENDER HIGHLIGHTS ON THIS PAGE */}
-          {highlights
+          {/* RENDER HIGHLIGHTS ON THIS PAGE (STUDENT PROFILES ONLY) */}
+          {isStudentProfile && highlights
             .filter((h) => h.pageNumber === currentPageDisplay)
             .map((h) => (
               <div
@@ -1367,8 +1390,8 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
               </div>
             ))}
 
-          {/* RENDER STICKY NOTES ON THIS PAGE */}
-          {stickyNotes
+          {/* RENDER STICKY NOTES ON THIS PAGE (STUDENT PROFILES ONLY) */}
+          {isStudentProfile && stickyNotes
             .filter((n) => n.pageNumber === currentPageDisplay)
             .map((n) => {
               const col = STICKY_COLORS[n.color] || STICKY_COLORS.yellow;
