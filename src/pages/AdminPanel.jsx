@@ -1,6 +1,6 @@
 import { supabase } from "../supabaseClient";
 import React, { useState, useMemo, useRef } from "react";
-import { Plus, Trash2, Check, X, Users, UploadCloud, Gift, Search, BookOpen, Settings, LayoutTemplate, Mail, AlertTriangle, Key, Activity, Eye, Edit3, ArrowUpRight, SlidersHorizontal, PanelLeft } from "lucide-react";
+import { Plus, Trash2, Check, X, Users, UploadCloud, Gift, Search, BookOpen, Settings, LayoutTemplate, Mail, AlertTriangle, Key, Activity, Eye, EyeOff, Edit3, ArrowUpRight, SlidersHorizontal, PanelLeft, Building2, Copy, CheckCircle2, ChevronDown, ChevronUp, GraduationCap } from "lucide-react";
 import { palette, fontDisplay, getGenres, setGenres as saveGenres, getPubTypes, setPubTypes as savePubTypes, getPublishers, setPublishers as savePublishers, getCustomHeadings, setCustomHeadings as saveCustomHeadings, getHomepageConfig, setHomepageConfig, getPages, setPages } from "../theme";
 import { addMonths, today, daysUntil, genCredentialId, genPassword } from "../data/mockData";
 import { renderEmailHtml, COMPANY_LOGO_URL } from "../email";
@@ -33,6 +33,7 @@ export default function AdminPanel({
   books, licenses, uploaders, trialRequests, readers = [], subscribers = [], emailTemplates, featuredAuthors,
   activeReadingSessions = [],
   onCreateLicense, onRevokeLicense, onDeleteLicense, onToggleLicenseStatus, onEditInstitutionAccess, onRotateSemesterPassword,
+  onUpdateInstitutionDepartments,
   onCreateReader, onRevokeReader, onDeleteReader, onToggleReaderStatus, onEditReaderAccess, onResendReaderEmail,
   onAddUploader, onRemoveUploader,
   onApproveTrial, onRejectTrial, onDeleteTrial, onDeleteRejectedTrials, onEditTrialAccess, onResendTrialEmail, onResendInstitutionEmail, onUpdateEmailTemplate,
@@ -497,6 +498,7 @@ export default function AdminPanel({
                 onResendEmail={onResendInstitutionEmail}
                 onEditAccess={onEditInstitutionAccess}
                 onRotateSemesterPassword={onRotateSemesterPassword}
+                onUpdateInstitutionDepartments={onUpdateInstitutionDepartments}
               />
             )}
             {tab === "readers" && (
@@ -552,7 +554,8 @@ function InstitutionsTab({
   onToggleLicenseStatus,
   onResendEmail,
   onEditAccess,
-  onRotateSemesterPassword
+  onRotateSemesterPassword,
+  onUpdateInstitutionDepartments
 }) {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
@@ -570,6 +573,89 @@ function InstitutionsTab({
   const [authorFilter, setAuthorFilter] = useState("All");
   const [issuedCreds, setIssuedCreds] = useState(null);
   const [isTest, setIsTest] = useState(false);
+
+  // Department Management state
+  const [managingDeptLicense, setManagingDeptLicense] = useState(null);
+  const [newDeptName, setNewDeptName] = useState("");
+  const [newDeptCode, setNewDeptCode] = useState("");
+  const [newDeptLoginId, setNewDeptLoginId] = useState("");
+  const [newDeptPassword, setNewDeptPassword] = useState("");
+  const [showDeptPw, setShowDeptPw] = useState({});
+  const [copiedKey, setCopiedKey] = useState(null);
+  const [viewingStudentsDeptId, setViewingStudentsDeptId] = useState(null);
+  const [isSavingDept, setIsSavingDept] = useState(false);
+
+  function openManageDepartments(license) {
+    const fresh = licenses.find(l => l.id === license.id) || license;
+    setManagingDeptLicense(fresh);
+    setNewDeptName("");
+    setNewDeptCode("");
+    setNewDeptLoginId("");
+    setNewDeptPassword("");
+    setViewingStudentsDeptId(null);
+  }
+
+  async function handleAddDepartment(e) {
+    e.preventDefault();
+    if (!managingDeptLicense || !newDeptName.trim()) return;
+    setIsSavingDept(true);
+
+    const code = (newDeptCode.trim() || newDeptName.trim().slice(0, 3)).toUpperCase();
+    const loginId = newDeptLoginId.trim() || `${managingDeptLicense.id}-${code}`;
+    const password = newDeptPassword.trim() || genPassword();
+
+    const newDept = {
+      id: `dept_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      name: newDeptName.trim(),
+      code,
+      loginId,
+      password,
+      readsCount: 0,
+      students: [],
+      createdAt: new Date().toISOString()
+    };
+
+    const currentDepts = Array.isArray(managingDeptLicense.departments) ? [...managingDeptLicense.departments] : [];
+    if (currentDepts.some(d => (d.loginId || "").toLowerCase() === loginId.toLowerCase())) {
+      alert("A department with Login ID '" + loginId + "' already exists for this institution.");
+      setIsSavingDept(false);
+      return;
+    }
+
+    const updated = [...currentDepts, newDept];
+    const ok = await onUpdateInstitutionDepartments(managingDeptLicense.id, updated);
+    setIsSavingDept(false);
+    if (ok !== false) {
+      setManagingDeptLicense(prev => ({ ...prev, departments: updated }));
+      setNewDeptName("");
+      setNewDeptCode("");
+      setNewDeptLoginId("");
+      setNewDeptPassword("");
+    }
+  }
+
+  async function handleDeleteDepartment(deptId) {
+    if (!managingDeptLicense) return;
+    if (!window.confirm("Are you sure you want to remove this department? Its Department ID and all student profiles will be removed.")) {
+      return;
+    }
+    const currentDepts = Array.isArray(managingDeptLicense.departments) ? [...managingDeptLicense.departments] : [];
+    const updated = currentDepts.filter(d => d.id !== deptId);
+    const ok = await onUpdateInstitutionDepartments(managingDeptLicense.id, updated);
+    if (ok !== false) {
+      setManagingDeptLicense(prev => ({ ...prev, departments: updated }));
+      if (viewingStudentsDeptId === deptId) setViewingStudentsDeptId(null);
+    }
+  }
+
+  function handleCopyText(text, key) {
+    if (!text) return;
+    try {
+      navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), 2000);
+    } catch (_) {}
+  }
 
   // Semester Password Rotation state
   const [rotatingLicense, setRotatingLicense] = useState(null);
@@ -792,6 +878,14 @@ function InstitutionsTab({
                           className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-indigo-100/85 hover:bg-indigo-200/90 text-indigo-800 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]"
                         >
                           <Key size={11} /> Rotate PW
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openManageDepartments(l)}
+                          className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-blue-100/85 hover:bg-blue-200/90 text-blue-900 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]"
+                          title="Manage departments, generate dept IDs and track usage"
+                        >
+                          <Building2 size={11} /> Depts ({Array.isArray(l.departments) ? l.departments.length : 0})
                         </button>
                         <button onClick={() => openEditAccess(l)} className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full bg-white/85 hover:bg-white border border-black/10 text-[#111214] text-[11px] font-semibold transition-colors cursor-pointer shadow-xs">
                           Edit Access
@@ -1095,6 +1189,235 @@ function InstitutionsTab({
                 className="bg-red-600 hover:bg-red-700 text-white border-red-600"
               >
                 <Trash2 size={14} /> {isDeletingLicense ? "Deleting..." : "Delete Permanently"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {managingDeptLicense && (
+        <Modal
+          title={`Departments — ${managingDeptLicense.name}`}
+          onClose={() => setManagingDeptLicense(null)}
+          wide
+        >
+          <div className="space-y-5">
+            {/* Institution Info Card */}
+            <div className="p-4 rounded-2xl bg-slate-100/80 border border-black/10 flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <div className="text-xs uppercase tracking-wider font-bold text-zinc-500 mb-0.5">Institution License</div>
+                <div className="text-base font-bold text-[#111214]">{managingDeptLicense.name}</div>
+                <div className="text-xs text-zinc-600 mt-1 flex items-center gap-2">
+                  <span>College ID: <code className="font-mono bg-white px-2 py-0.5 rounded border border-black/10 font-bold">{managingDeptLicense.id}</code></span>
+                  <span>•</span>
+                  <span>Total Depts: <strong>{(managingDeptLicense.departments || []).length}</strong></span>
+                </div>
+              </div>
+              <div className="text-xs text-zinc-600 max-w-sm">
+                💡 Each department gets its own Login ID and password so students can log in under their department, create personal student IDs, and usage is tracked department-by-department.
+              </div>
+            </div>
+
+            {/* Add Department Form */}
+            <form onSubmit={handleAddDepartment} className="p-4 rounded-2xl bg-[#F5F23B]/15 border border-[#F5F23B]/60 space-y-3">
+              <div className="text-xs font-bold uppercase tracking-wider text-[#111214] flex items-center gap-1.5">
+                <Plus size={14} /> Add New Department
+              </div>
+              <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-zinc-700 uppercase mb-1">Dept Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Computer Science"
+                    value={newDeptName}
+                    onChange={(e) => {
+                      setNewDeptName(e.target.value);
+                      if (!newDeptCode) {
+                        const words = e.target.value.split(/\s+/).filter(Boolean);
+                        const autoCode = words.length > 1 ? words.map(w => w[0]).join('').slice(0, 4) : e.target.value.slice(0, 3);
+                        setNewDeptCode(autoCode.toUpperCase());
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-black/15 text-xs font-medium text-[#111214] outline-none focus:border-amber-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-zinc-700 uppercase mb-1">Dept Code</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. CSE"
+                    value={newDeptCode}
+                    onChange={(e) => setNewDeptCode(e.target.value.toUpperCase())}
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-black/15 text-xs font-medium text-[#111214] outline-none focus:border-amber-400 uppercase"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-zinc-700 uppercase mb-1">Custom Login ID</label>
+                  <input
+                    type="text"
+                    placeholder={newDeptCode ? `${managingDeptLicense.id}-${newDeptCode}` : "Leave blank to auto-generate"}
+                    value={newDeptLoginId}
+                    onChange={(e) => setNewDeptLoginId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-black/15 text-xs font-medium text-[#111214] outline-none focus:border-amber-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-zinc-700 uppercase mb-1">Password</label>
+                  <input
+                    type="text"
+                    placeholder="Leave blank to auto-generate"
+                    value={newDeptPassword}
+                    onChange={(e) => setNewDeptPassword(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-black/15 text-xs font-medium text-[#111214] outline-none focus:border-amber-400"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end pt-1">
+                <Button type="submit" disabled={isSavingDept || !newDeptName.trim()} variant="brass" size="sm">
+                  <Plus size={13} /> {isSavingDept ? "Adding..." : "Add Department"}
+                </Button>
+              </div>
+            </form>
+
+            {/* Department List */}
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wider text-zinc-700 mb-2 flex items-center justify-between">
+                <span>Active Departments ({(managingDeptLicense.departments || []).length})</span>
+                <span className="text-[11px] font-normal text-zinc-500">Track reads and student profiles per department</span>
+              </div>
+
+              {(!managingDeptLicense.departments || managingDeptLicense.departments.length === 0) ? (
+                <div className="p-8 text-center rounded-2xl bg-white/50 border border-black/5 text-xs text-zinc-500">
+                  No departments created yet. Use the form above to create departments like Computer Science, Mechanical Eng, Botany, etc.
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+                  {managingDeptLicense.departments.map((dept) => {
+                    const isPwVisible = showDeptPw[dept.id];
+                    const isCopiedId = copiedKey === `id_${dept.id}`;
+                    const isCopiedPw = copiedKey === `pw_${dept.id}`;
+                    const isViewingStudents = viewingStudentsDeptId === dept.id;
+                    const studentList = Array.isArray(dept.students) ? dept.students : [];
+
+                    return (
+                      <div key={dept.id} className="p-4 rounded-2xl bg-white/70 border border-black/10 shadow-xs space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-900 font-extrabold text-xs flex items-center justify-center shrink-0">
+                              {dept.code || dept.name.slice(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="font-bold text-sm text-[#111214] flex items-center gap-2">
+                                <span>{dept.name}</span>
+                                {dept.code && (
+                                  <span className="px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-800 text-[10px] font-bold border border-blue-200">
+                                    {dept.code}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-xs text-zinc-500 flex items-center gap-3 mt-0.5">
+                                <span className="inline-flex items-center gap-1 font-semibold text-emerald-700">
+                                  📊 Reads: <strong>{dept.readsCount || 0}</strong>
+                                </span>
+                                <span>•</span>
+                                <span className="inline-flex items-center gap-1">
+                                  <Users size={12} /> {studentList.length} student profile{studentList.length !== 1 ? 's' : ''}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {studentList.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setViewingStudentsDeptId(isViewingStudents ? null : dept.id)}
+                                className="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-zinc-700 text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+                              >
+                                {isViewingStudents ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                                {isViewingStudents ? "Hide Students" : "View Students"}
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteDepartment(dept.id)}
+                              className="px-2.5 py-1 rounded-full bg-rose-100/80 hover:bg-rose-200 text-rose-700 text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+                              title="Delete department"
+                            >
+                              <Trash2 size={12} /> Delete
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Credentials Row */}
+                        <div className="flex flex-wrap items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-black/5 text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-zinc-600">Login ID:</span>
+                            <code className="px-2 py-0.5 rounded bg-white font-mono font-bold text-zinc-900 border border-black/10">
+                              {dept.loginId}
+                            </code>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyText(dept.loginId, `id_${dept.id}`)}
+                              className="p-1 rounded hover:bg-white text-zinc-500 hover:text-black cursor-pointer"
+                              title="Copy Login ID"
+                            >
+                              {isCopiedId ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                            </button>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-zinc-600">Password:</span>
+                            <code className="px-2 py-0.5 rounded bg-white font-mono font-bold text-zinc-900 border border-black/10">
+                              {isPwVisible ? dept.password : "••••••••"}
+                            </code>
+                            <button
+                              type="button"
+                              onClick={() => setShowDeptPw(prev => ({ ...prev, [dept.id]: !prev[dept.id] }))}
+                              className="p-1 rounded hover:bg-white text-zinc-500 hover:text-black cursor-pointer"
+                              title={isPwVisible ? "Hide password" : "Show password"}
+                            >
+                              {isPwVisible ? <EyeOff size={13} /> : <Eye size={13} />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyText(dept.password, `pw_${dept.id}`)}
+                              className="p-1 rounded hover:bg-white text-zinc-500 hover:text-black cursor-pointer"
+                              title="Copy password"
+                            >
+                              {isCopiedPw ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Expanded Student Profiles View */}
+                        {isViewingStudents && (
+                          <div className="p-3 rounded-xl bg-white border border-blue-100 space-y-2">
+                            <div className="text-[11px] font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1">
+                              <GraduationCap size={13} /> Registered Students ({studentList.length})
+                            </div>
+                            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-2">
+                              {studentList.map((stu) => (
+                                <div key={stu.id || stu.studentId} className="p-2 rounded-lg bg-slate-50 border border-black/5 text-xs">
+                                  <div className="font-bold text-zinc-900">{stu.name}</div>
+                                  <div className="text-zinc-600 font-mono text-[11px]">ID: {stu.studentId}</div>
+                                  <div className="text-[10px] text-zinc-600 mt-0.5">Joined {new Date(stu.createdAt).toLocaleDateString()}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-black/10">
+              <Button type="button" onClick={() => setManagingDeptLicense(null)} className="px-6">
+                Done
               </Button>
             </div>
           </div>

@@ -165,7 +165,13 @@ export default function App() {
 
       const { data: licData } = await supabase.from('licenses').select('*');
       if (licData && licData.length > 0) {
-        setLicenses(licData.map(l => ({ ...l, bookIds: l.bookids || [], startDate: l.startdate, endDate: l.enddate })));
+        setLicenses(licData.map(l => ({
+          ...l,
+          bookIds: l.bookids || [],
+          startDate: l.startdate,
+          endDate: l.enddate,
+          departments: Array.isArray(l.departments) ? l.departments : []
+        })));
       }
 
       const { data: uplData } = await supabase.from('uploaders').select('*');
@@ -278,9 +284,21 @@ export default function App() {
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'licenses' }, (payload) => {
         if (payload.eventType === 'INSERT') {
-          setLicenses(prev => [...prev, { ...payload.new, bookIds: payload.new.bookids || [], startDate: payload.new.startdate, endDate: payload.new.enddate }]);
+          setLicenses(prev => [...prev, {
+            ...payload.new,
+            bookIds: payload.new.bookids || [],
+            startDate: payload.new.startdate,
+            endDate: payload.new.enddate,
+            departments: Array.isArray(payload.new.departments) ? payload.new.departments : []
+          }]);
         } else if (payload.eventType === 'UPDATE') {
-          setLicenses(prev => prev.map(l => l.id === payload.new.id ? { ...payload.new, bookIds: payload.new.bookids || [], startDate: payload.new.startdate, endDate: payload.new.enddate } : l));
+          setLicenses(prev => prev.map(l => l.id === payload.new.id ? {
+            ...payload.new,
+            bookIds: payload.new.bookids || [],
+            startDate: payload.new.startdate,
+            endDate: payload.new.enddate,
+            departments: Array.isArray(payload.new.departments) ? payload.new.departments : []
+          } : l));
         } else if (payload.eventType === 'DELETE') {
           setLicenses(prev => prev.filter(l => l.id !== payload.old.id));
         }
@@ -316,7 +334,7 @@ export default function App() {
       }
       return { ok: false, message: "Incorrect uploader ID or password." };
     }
-    // reader / institution — check licenses and approved trials
+    // reader / institution — check licenses, departments, students, and approved trials
     const license = licenses.find((l) => l.id === id && l.password === password);
     if (license) {
       if (license.type === "offline") {
@@ -328,11 +346,83 @@ export default function App() {
       setSession({
         role: "reader", id, name: license.name, type: "license",
         email: license.email || null, institution: license.institution || license.name,
+        institutionId: license.id,
         bookIds: license.bookIds, startDate: license.startDate, endDate: license.endDate,
+        departments: license.departments || []
       });
       if (openBookId) navigate("book-details", openBookId);
       else navigate("reader-dashboard");
       return { ok: true };
+    }
+
+    // Check college departments and student profiles under licenses
+    for (const lic of licenses) {
+      const depts = Array.isArray(lic.departments) ? lic.departments : [];
+
+      // 1. Department Login
+      const deptMatch = depts.find((d) => (d.loginId === id || d.id === id) && d.password === password);
+      if (deptMatch) {
+        if (lic.type === "offline") {
+          return { ok: false, message: "Your institution's access has been temporarily suspended." };
+        }
+        if (daysUntil(lic.endDate) < 0) {
+          return { ok: false, message: "This institution license has expired. Contact the publisher to renew." };
+        }
+        setSession({
+          role: "reader",
+          id: deptMatch.loginId || deptMatch.id,
+          deptId: deptMatch.id,
+          deptCode: deptMatch.code,
+          name: `${lic.name} — ${deptMatch.name}`,
+          type: "department",
+          institution: lic.name,
+          institutionId: lic.id,
+          department: deptMatch.name,
+          bookIds: lic.bookIds,
+          startDate: lic.startDate,
+          endDate: lic.endDate,
+          currentStudent: null,
+          departments: lic.departments || []
+        });
+        if (openBookId) navigate("book-details", openBookId);
+        else navigate("reader-dashboard");
+        return { ok: true };
+      }
+
+      // 2. Personal Student Profile Login within Department
+      for (const d of depts) {
+        const students = Array.isArray(d.students) ? d.students : [];
+        const stuMatch = students.find((s) => (s.studentId === id || s.id === id) && s.password === password);
+        if (stuMatch) {
+          if (lic.type === "offline") {
+            return { ok: false, message: "Your institution's access has been temporarily suspended." };
+          }
+          if (daysUntil(lic.endDate) < 0) {
+            return { ok: false, message: "This institution license has expired. Contact the publisher to renew." };
+          }
+          setSession({
+            role: "reader",
+            id: stuMatch.studentId || stuMatch.id,
+            studentId: stuMatch.studentId,
+            studentName: stuMatch.name,
+            deptId: d.id,
+            deptCode: d.code,
+            name: stuMatch.name,
+            type: "student",
+            institution: lic.name,
+            institutionId: lic.id,
+            department: d.name,
+            bookIds: lic.bookIds,
+            startDate: lic.startDate,
+            endDate: lic.endDate,
+            currentStudent: stuMatch,
+            departments: lic.departments || []
+          });
+          if (openBookId) navigate("book-details", openBookId);
+          else navigate("reader-dashboard");
+          return { ok: true };
+        }
+      }
     }
     
     // Check readers (individual trial / paid accounts)
@@ -448,6 +538,162 @@ export default function App() {
     }
     setLicenses((prev) => prev.map(l => l.id === id ? { ...l, password: newPassword } : l));
     return true;
+  }
+
+  async function handleUpdateInstitutionDepartments(licenseId, updatedDepartments) {
+    try {
+      const { error } = await supabase.from('licenses').update({ departments: updatedDepartments }).eq('id', licenseId);
+      if (error) {
+        console.error("Error updating institution departments in DB:", error);
+        alert("Database error updating departments: " + error.message);
+        return false;
+      }
+    } catch(e) {
+      console.error(e);
+      alert("Error updating departments: " + e.message);
+      return false;
+    }
+    setLicenses((prev) => prev.map(l => l.id === licenseId ? { ...l, departments: updatedDepartments } : l));
+    if (session && (session.id === licenseId || session.institutionId === licenseId)) {
+      setSession(prev => ({ ...prev, departments: updatedDepartments }));
+    }
+    return true;
+  }
+
+  async function handleCreateStudentProfile(licenseId, deptId, studentData) {
+    try {
+      const targetLic = licenses.find(l => l.id === licenseId);
+      if (!targetLic) return { ok: false, message: "Institution license not found." };
+
+      const depts = Array.isArray(targetLic.departments) ? [...targetLic.departments] : [];
+      const deptIdx = depts.findIndex(d => d.id === deptId);
+      if (deptIdx === -1) return { ok: false, message: "Department not found." };
+
+      const currentStudents = Array.isArray(depts[deptIdx].students) ? [...depts[deptIdx].students] : [];
+      const studentIdClean = (studentData.studentId || "").trim();
+      if (currentStudents.some(s => s.studentId?.toLowerCase() === studentIdClean.toLowerCase())) {
+        return { ok: false, message: "A student with this ID / Roll No already exists in this department." };
+      }
+
+      const newStudent = {
+        id: `stu_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        studentId: studentIdClean,
+        name: (studentData.name || "").trim(),
+        password: (studentData.password || "").trim(),
+        createdAt: new Date().toISOString(),
+        customizations: {}
+      };
+
+      depts[deptIdx] = {
+        ...depts[deptIdx],
+        students: [...currentStudents, newStudent]
+      };
+
+      const { error } = await supabase.from('licenses').update({ departments: depts }).eq('id', licenseId);
+      if (error) throw error;
+
+      setLicenses(prev => prev.map(l => l.id === licenseId ? { ...l, departments: depts } : l));
+
+      // Switch active session to this student
+      setSession(prev => ({
+        ...prev,
+        role: "reader",
+        type: "student",
+        id: newStudent.studentId,
+        studentId: newStudent.studentId,
+        studentName: newStudent.name,
+        deptId: depts[deptIdx].id,
+        deptCode: depts[deptIdx].code,
+        name: newStudent.name,
+        institution: targetLic.name,
+        institutionId: targetLic.id,
+        department: depts[deptIdx].name,
+        currentStudent: newStudent,
+        departments: depts
+      }));
+
+      return { ok: true, student: newStudent };
+    } catch(err) {
+      console.error("Error creating student profile:", err);
+      alert("Error creating student profile: " + err.message);
+      return { ok: false, message: err.message };
+    }
+  }
+
+  async function handleSwitchStudentProfile(licenseId, deptId, studentId, studentPassword) {
+    const targetLic = licenses.find(l => l.id === licenseId);
+    if (!targetLic) return { ok: false, message: "Institution not found" };
+    const dept = (targetLic.departments || []).find(d => d.id === deptId);
+    if (!dept) return { ok: false, message: "Department not found" };
+    const stu = (dept.students || []).find(s => s.studentId === studentId);
+    if (!stu) return { ok: false, message: "Student profile not found" };
+    if (studentPassword && stu.password && stu.password !== studentPassword) {
+      return { ok: false, message: "Incorrect password for this student profile" };
+    }
+    setSession(prev => ({
+      ...prev,
+      role: "reader",
+      type: "student",
+      id: stu.studentId,
+      studentId: stu.studentId,
+      studentName: stu.name,
+      deptId: dept.id,
+      deptCode: dept.code,
+      name: stu.name,
+      institution: targetLic.name,
+      institutionId: targetLic.id,
+      department: dept.name,
+      currentStudent: stu,
+      departments: targetLic.departments || []
+    }));
+    return { ok: true };
+  }
+
+  async function handleSaveStudentCustomizations(licenseId, deptId, studentId, bookId, customizations) {
+    try {
+      // 1. Instant local persistence
+      const storageKey = `reader_custom_${studentId || deptId || 'anon'}_${bookId}`;
+      localStorage.setItem(storageKey, JSON.stringify(customizations));
+
+      if (!licenseId || !deptId) return;
+
+      const targetLic = licenses.find(l => l.id === licenseId);
+      if (!targetLic) return;
+      const depts = Array.isArray(targetLic.departments) ? [...targetLic.departments] : [];
+      const deptIdx = depts.findIndex(d => d.id === deptId);
+      if (deptIdx === -1) return;
+
+      const dept = { ...depts[deptIdx] };
+      // Increment readsCount tracking if opening or reading
+      dept.readsCount = (dept.readsCount || 0) + 1;
+
+      if (studentId && Array.isArray(dept.students)) {
+        dept.students = dept.students.map(s => {
+          if (s.studentId === studentId || s.id === studentId) {
+            const stuCustom = s.customizations || {};
+            const stuBooks = stuCustom.books || {};
+            return {
+              ...s,
+              customizations: {
+                ...stuCustom,
+                ...customizations.global,
+                books: {
+                  ...stuBooks,
+                  [bookId]: customizations.book
+                }
+              }
+            };
+          }
+          return s;
+        });
+      }
+
+      depts[deptIdx] = dept;
+      await supabase.from('licenses').update({ departments: depts }).eq('id', licenseId);
+      setLicenses(prev => prev.map(l => l.id === licenseId ? { ...l, departments: depts } : l));
+    } catch (err) {
+      console.warn("Non-blocking student customization sync notice:", err);
+    }
   }
   
   async function handleEditTrialAccess(id, bookIds) {
@@ -1064,10 +1310,21 @@ export default function App() {
       {view === "trial" && <TrialPage onRequestTrial={handleRequestTrial} onNavigate={navigate} />}
 
       {view === "reader-dashboard" && session?.role === "reader" && (
-        <ReaderDashboard session={session} books={availableBooks} onOpenBook={(id) => navigate("book-details", id)} />
+        <ReaderDashboard
+          session={session}
+          books={availableBooks}
+          onOpenBook={(id) => navigate("book-details", id)}
+          onCreateStudentProfile={handleCreateStudentProfile}
+          onSwitchStudentProfile={handleSwitchStudentProfile}
+        />
       )}
       {view === "reading" && session && openBook && (
-        <SecureReader book={openBook} session={session} onBack={() => navigate(session.role === "reader" ? "reader-dashboard" : session.role)} />
+        <SecureReader
+          book={openBook}
+          session={session}
+          onBack={() => navigate(session.role === "reader" ? "reader-dashboard" : session.role)}
+          onSaveStudentCustomizations={handleSaveStudentCustomizations}
+        />
       )}
 
       {view === "uploader" && session?.role === "uploader" && (
@@ -1080,6 +1337,7 @@ export default function App() {
           featuredAuthors={featuredAuthors} activeReadingSessions={activeReadingSessions}
           onCreateLicense={handleCreateLicense} onRevokeLicense={handleRevokeLicense} onDeleteLicense={handleDeleteLicense} onToggleLicenseStatus={handleToggleLicenseStatus}
           onEditInstitutionAccess={handleEditInstitutionAccess} onRotateSemesterPassword={handleRotateSemesterPassword}
+          onUpdateInstitutionDepartments={handleUpdateInstitutionDepartments}
           onCreateReader={handleCreateReader} onRevokeReader={handleRevokeReader} onDeleteReader={handleDeleteReader} onToggleReaderStatus={handleToggleReaderStatus}
           onEditReaderAccess={handleEditReaderAccess} onResendReaderEmail={handleResendReaderEmail}
           onAddUploader={handleAddUploader} onRemoveUploader={handleRemoveUploader}

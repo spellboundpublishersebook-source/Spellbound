@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { 
   Clock, AlertTriangle, BookOpen, ChevronRight, ChevronLeft, X, 
-  User, Mail, Building2, ArrowUpDown, LayoutGrid, List, Check 
+  User, Mail, Building2, ArrowUpDown, LayoutGrid, List, Check,
+  GraduationCap, Plus, Key, ShieldCheck
 } from "lucide-react";
 import { fontDisplay, fontBody } from "../theme";
 import { daysUntil } from "../data/mockData";
@@ -168,13 +169,93 @@ function CategoryCarouselRow({ genre, books, onOpenBook, onSelectGenre }) {
   );
 }
 
-export default function ReaderDashboard({ session, books, onOpenBook }) {
+export default function ReaderDashboard({
+  session,
+  books,
+  onOpenBook,
+  onCreateStudentProfile,
+  onSwitchStudentProfile
+}) {
   const [selectedGenres, setSelectedGenres] = useState([]);
   const [selectedAuthors, setSelectedAuthors] = useState([]);
   const [selectedYears, setSelectedYears] = useState([]);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showAuthorModal, setShowAuthorModal] = useState(false);
   const [showYearModal, setShowYearModal] = useState(false);
+
+  // Student Profile Modal State
+  const [showStudentModal, setShowStudentModal] = useState(false);
+  const [studentTab, setStudentTab] = useState("create"); // "create" | "switch"
+  const [selectedDeptId, setSelectedDeptId] = useState(session.deptId || (session.departments && session.departments[0]?.id) || "");
+  const [newStudentName, setNewStudentName] = useState("");
+  const [newStudentRoll, setNewStudentRoll] = useState("");
+  const [newStudentPw, setNewStudentPw] = useState("");
+  const [switchStudentId, setSwitchStudentId] = useState("");
+  const [switchStudentPw, setSwitchStudentPw] = useState("");
+  const [studentError, setStudentError] = useState("");
+  const [isCreatingStudent, setIsCreatingStudent] = useState(false);
+
+  const activeDeptObj = useMemo(() => {
+    const list = Array.isArray(session.departments) ? session.departments : [];
+    if (selectedDeptId) return list.find(d => d.id === selectedDeptId) || list[0] || null;
+    return list.find(d => d.id === session.deptId) || list[0] || null;
+  }, [session, selectedDeptId]);
+
+  async function handleStudentSubmit(e) {
+    e.preventDefault();
+    setStudentError("");
+    if (!newStudentName.trim() || !newStudentRoll.trim() || !newStudentPw.trim()) {
+      setStudentError("Please fill out all fields.");
+      return;
+    }
+
+    const targetLicId = session.institutionId || session.id;
+    const targetDeptId = selectedDeptId || session.deptId || (activeDeptObj?.id);
+    if (!targetDeptId) {
+      setStudentError("Please select a department first.");
+      return;
+    }
+
+    setIsCreatingStudent(true);
+    const res = await onCreateStudentProfile(targetLicId, targetDeptId, {
+      name: newStudentName.trim(),
+      studentId: newStudentRoll.trim(),
+      password: newStudentPw.trim()
+    });
+    setIsCreatingStudent(false);
+
+    if (res && res.ok) {
+      setShowStudentModal(false);
+      setNewStudentName("");
+      setNewStudentRoll("");
+      setNewStudentPw("");
+    } else {
+      setStudentError(res?.message || "Failed to create student profile.");
+    }
+  }
+
+  async function handleStudentSwitch(e) {
+    e.preventDefault();
+    setStudentError("");
+    if (!switchStudentId.trim()) {
+      setStudentError("Please select or enter your Student ID.");
+      return;
+    }
+    const targetLicId = session.institutionId || session.id;
+    const targetDeptId = selectedDeptId || session.deptId || (activeDeptObj?.id);
+    if (!targetDeptId) {
+      setStudentError("Please select a department.");
+      return;
+    }
+    const res = await onSwitchStudentProfile(targetLicId, targetDeptId, switchStudentId.trim(), switchStudentPw.trim());
+    if (res && res.ok) {
+      setShowStudentModal(false);
+      setSwitchStudentId("");
+      setSwitchStudentPw("");
+    } else {
+      setStudentError(res?.message || "Could not switch student profile.");
+    }
+  }
   
   // Type filters
   const [typeFilter, setTypeFilter] = useState(true); // eBook
@@ -336,13 +417,33 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
                 {session.name}'s Library
               </h1>
 
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-4 mt-3 text-xs sm:text-sm text-[#111214] admin-glass-pill py-2.5 px-4 rounded-2xl inline-flex">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-4 mt-3 text-xs sm:text-sm text-[#111214] admin-glass-pill py-2.5 px-4 rounded-2xl inline-flex max-w-full">
                 <span className="flex items-center gap-1.5"><User size={15} className="text-slate-700" /> <span className="font-bold">ID:</span> {session.id}</span>
                 {session.email && (
                   <span className="flex items-center gap-1.5"><Mail size={15} className="text-slate-700" /> <span className="font-bold">Email:</span> {session.email}</span>
                 )}
-                {session.institution && session.institution !== session.name && (
-                  <span className="flex items-center gap-1.5"><Building2 size={15} className="text-slate-700" /> <span className="font-bold">Institution:</span> {session.institution}</span>
+                {session.institution && (
+                  <span className="flex items-center gap-1.5"><Building2 size={15} className="text-slate-700" /> <span className="font-bold">College:</span> {session.institution}</span>
+                )}
+                {session.department && (
+                  <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-100/90 text-blue-900 font-bold text-xs border border-blue-200">
+                    Dept: {session.department} {session.deptCode ? `(${session.deptCode})` : ""}
+                  </span>
+                )}
+                {session.type === "student" && session.studentName && (
+                  <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100/90 text-emerald-900 font-bold text-xs border border-emerald-200">
+                    <GraduationCap size={13} /> Student: {session.studentName} ({session.studentId})
+                  </span>
+                )}
+                {(session.type === "department" || session.type === "student" || (session.departments && session.departments.length > 0)) && (
+                  <button
+                    type="button"
+                    onClick={() => { setShowStudentModal(true); setStudentError(""); }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#111214] text-[#F5F23B] hover:bg-black font-bold text-xs shadow-sm transition-all cursor-pointer shrink-0 ml-auto"
+                  >
+                    <GraduationCap size={13} />
+                    {session.type === "student" ? "Switch Student Profile" : "👤 Create / Switch Student ID"}
+                  </button>
                 )}
               </div>
 
@@ -1043,6 +1144,178 @@ export default function ReaderDashboard({ session, books, onOpenBook }) {
           </div>
           <div className="text-right pt-3 border-t border-black/10">
             <button type="button" onClick={() => setShowYearModal(false)} className="bg-[#111214] text-[#F5F23B] px-6 py-2.5 rounded-full text-xs font-bold hover:opacity-95 transition-opacity cursor-pointer">Done</button>
+          </div>
+        </Modal>
+      )}
+
+      {showStudentModal && (
+        <Modal
+          title={session.type === "student" ? "Student Workspace Profile" : "Personal Student Profile"}
+          onClose={() => setShowStudentModal(false)}
+        >
+          <div className="space-y-4">
+            {/* Department Selection / Context */}
+            {Array.isArray(session.departments) && session.departments.length > 1 && (
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 mb-1">
+                  Select Department
+                </label>
+                <select
+                  value={selectedDeptId}
+                  onChange={(e) => setSelectedDeptId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-black/15 text-xs font-semibold text-[#111214] outline-none"
+                >
+                  {session.departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} {d.code ? `(${d.code})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Tab switch between Create Profile and Switch Existing */}
+            <div className="flex bg-slate-100 p-1 rounded-full text-xs font-bold border border-black/5">
+              <button
+                type="button"
+                onClick={() => { setStudentTab("create"); setStudentError(""); }}
+                className={`flex-1 py-1.5 px-3 rounded-full transition-all cursor-pointer ${
+                  studentTab === "create" ? "bg-[#111214] text-[#F5F23B] shadow-xs" : "text-zinc-600 hover:text-black"
+                }`}
+              >
+                + Create Personal Profile
+              </button>
+              <button
+                type="button"
+                onClick={() => { setStudentTab("switch"); setStudentError(""); }}
+                className={`flex-1 py-1.5 px-3 rounded-full transition-all cursor-pointer ${
+                  studentTab === "switch" ? "bg-[#111214] text-[#F5F23B] shadow-xs" : "text-zinc-600 hover:text-black"
+                }`}
+              >
+                Switch Student ({activeDeptObj?.students?.length || 0})
+              </button>
+            </div>
+
+            {studentError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs font-medium text-rose-700">
+                {studentError}
+              </div>
+            )}
+
+            {studentTab === "create" ? (
+              <form onSubmit={handleStudentSubmit} className="space-y-3.5">
+                <p className="text-xs text-zinc-600 leading-relaxed">
+                  Creating your personal Student ID allows you to customize your reader with highlights, page lighting, line focus ruler, sticky codes, and study notes that stay saved to your profile.
+                </p>
+
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 uppercase mb-1">Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Aarav Sharma"
+                    value={newStudentName}
+                    onChange={(e) => setNewStudentName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-black/15 text-xs font-medium text-[#111214] outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 uppercase mb-1">Student Roll No / ID *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. CSE-2024-042"
+                    value={newStudentRoll}
+                    onChange={(e) => setNewStudentRoll(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-black/15 text-xs font-medium text-[#111214] outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 uppercase mb-1">Personal Password *</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Choose a password to secure your notes"
+                    value={newStudentPw}
+                    onChange={(e) => setNewStudentPw(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-black/15 text-xs font-medium text-[#111214] outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-black/10">
+                  <button
+                    type="button"
+                    onClick={() => setShowStudentModal(false)}
+                    className="px-4 py-2 rounded-full border border-black/15 text-xs font-bold text-zinc-700 hover:bg-slate-100 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isCreatingStudent}
+                    className="px-5 py-2 rounded-full bg-[#F5F23B] hover:bg-[#eae729] text-[#111214] text-xs font-bold shadow-md cursor-pointer disabled:opacity-50"
+                  >
+                    {isCreatingStudent ? "Creating Profile..." : "Create & Start Reading"}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleStudentSwitch} className="space-y-3.5">
+                <p className="text-xs text-zinc-600 leading-relaxed">
+                  Switch to your personal student workspace to load your personal highlights and sticky notes.
+                </p>
+
+                {(!activeDeptObj?.students || activeDeptObj.students.length === 0) ? (
+                  <div className="p-4 rounded-xl bg-slate-50 border border-black/5 text-xs text-zinc-500 text-center">
+                    No student profiles registered under this department yet. Switch to "Create Personal Profile" tab to register.
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 uppercase mb-1">Select Student Profile</label>
+                    <select
+                      value={switchStudentId}
+                      onChange={(e) => setSwitchStudentId(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-black/15 text-xs font-medium text-[#111214] outline-none focus:border-amber-400 mb-3"
+                    >
+                      <option value="">-- Choose Profile --</option>
+                      {activeDeptObj.students.map((stu) => (
+                        <option key={stu.id || stu.studentId} value={stu.studentId}>
+                          {stu.name} (ID: {stu.studentId})
+                        </option>
+                      ))}
+                    </select>
+
+                    <label className="block text-xs font-bold text-zinc-700 uppercase mb-1">Student Password</label>
+                    <input
+                      type="password"
+                      placeholder="Enter profile password"
+                      value={switchStudentPw}
+                      onChange={(e) => setSwitchStudentPw(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-black/15 text-xs font-medium text-[#111214] outline-none focus:border-amber-400"
+                    />
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-black/10">
+                  <button
+                    type="button"
+                    onClick={() => setShowStudentModal(false)}
+                    className="px-4 py-2 rounded-full border border-black/15 text-xs font-bold text-zinc-700 hover:bg-slate-100 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!switchStudentId}
+                    className="px-5 py-2 rounded-full bg-[#111214] text-[#F5F23B] text-xs font-bold shadow-md cursor-pointer disabled:opacity-50"
+                  >
+                    Switch Profile
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </Modal>
       )}

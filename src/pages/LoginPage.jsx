@@ -108,7 +108,7 @@ export default function LoginPage({ onLogin, mode = "all" }) {
   }
 
   const labelFor = (t) => {
-    if (t === "reader") return "Institution / Reader ID";
+    if (t === "reader") return "Institution / Department / Student ID";
     if (t === "uploader") return "Uploader ID";
     return "Admin ID";
   };
@@ -189,6 +189,7 @@ export default function LoginPage({ onLogin, mode = "all" }) {
                   className="glass-field-control"
                   value={id}
                   onChange={e => setId(e.target.value)}
+                  placeholder={tab === "reader" ? "e.g. GVC2026, GVC-CSE, or Student ID" : ""}
                   required
                   autoComplete="username"
                   autoCorrect="off"
