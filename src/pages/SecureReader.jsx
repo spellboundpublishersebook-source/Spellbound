@@ -108,7 +108,12 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const [jumpInput, setJumpInput] = useState("");
   const [isPlaying, setIsPlaying] = useState(false);
   const [resumedToast, setResumedToast] = useState(null);
-  const [hasInitializedProgress, setHasInitializedProgress] = useState(false);
+  const hasInitializedRef = useRef(false);
+  const bookIdRef = useRef(book.id);
+  if (bookIdRef.current !== book.id) {
+    bookIdRef.current = book.id;
+    hasInitializedRef.current = false;
+  }
 
   // Particular Section Zoom state
   const [sectionSelectActive, setSectionSelectActive] = useState(false);
@@ -211,9 +216,10 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const totalPages = activeDocumentUrl ? (numPdfPages || book.totalPages || 0) : (book.totalPages || (Array.isArray(book.pages) ? book.pages.length : 1));
   const currentPageDisplay = activeDocumentUrl ? pdfPageNumber : (page + 1);
 
-  // Resume page on mount
+  // Resume page on mount (ONLY ONCE per book load)
   useEffect(() => {
-    if (hasInitializedProgress) return;
+    if (hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
     
     let targetPage = null;
     let targetSection = null;
@@ -262,13 +268,18 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
       if (targetPage > 1) {
         setResumedToast({ page: targetPage });
-        const timer = setTimeout(() => setResumedToast(null), 5000);
-        return () => clearTimeout(timer);
       }
     }
+  }, [book.id, Boolean(activeDocumentUrl)]);
 
-    setHasInitializedProgress(true);
-  }, [book.id, Boolean(activeDocumentUrl), initialPage, studentKey, session, hasInitializedProgress, epubSections]);
+  // Auto-dismiss resumed toast after 5 seconds
+  useEffect(() => {
+    if (!resumedToast) return;
+    const timer = setTimeout(() => {
+      setResumedToast(null);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [resumedToast]);
 
   // Save on page turn
   useEffect(() => {
