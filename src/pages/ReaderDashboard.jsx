@@ -415,9 +415,10 @@ export default function ReaderDashboard({
     }
   }
 
-  // Student Continue Reading List
-  const studentKey = session?.studentId || session?.deptCode || session?.deptId || session?.id || "anon";
+  // Student Continue Reading List (Strictly reserved ONLY for Student profile mode)
+  const studentKey = session?.studentId || "anon";
   const continueReadingList = useMemo(() => {
+    if (session?.type !== "student") return [];
     const map = new Map();
 
     // 1. Check local continue reading list
@@ -632,8 +633,8 @@ export default function ReaderDashboard({
           </div>
         ) : (
           <>
-            {/* Continue Reading Section (Shown when reader has books in progress) */}
-            {!isFilteredView && continueReadingList.length > 0 && (
+            {/* Continue Reading Section (Shown ONLY when reader is student and has books in progress) */}
+            {session?.type === "student" && !isFilteredView && continueReadingList.length > 0 && (
               <div className="admin-glass-panel rounded-[26px] overflow-hidden mb-10 p-6 sm:p-8 relative border-l-4 border-l-[#F5F23B]">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-3 border-b border-black/10">
                   <div>

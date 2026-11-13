@@ -16,6 +16,10 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
 
   const studentKey = session?.studentId || session?.deptCode || session?.deptId || session?.id || "anon";
   useEffect(() => {
+    if (session?.type !== "student") {
+      setTargetPage(null);
+      return;
+    }
     try {
       const dbProg = session?.currentStudent?.customizations?.readingProgress?.[book?.id]?.page ||
                      session?.readingProgress?.[book?.id]?.page;
@@ -87,7 +91,7 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
             <div className="w-full admin-glass-panel p-5 rounded-2xl">
               {session ? (
                 (session.role === "admin" || session.role === "uploader" || session.bookIds === "all" || session.bookIds?.includes(book.id)) ? (
-                  targetPage && targetPage > 1 ? (
+                  session?.type === "student" && targetPage && targetPage > 1 ? (
                     <>
                       <AnimatedSweepButton 
                         onClick={() => handleOpenReader(targetPage)} 

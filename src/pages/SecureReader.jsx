@@ -4,7 +4,7 @@ import {
   ZoomIn, ZoomOut, RotateCcw, ScanSearch, X, Sun, Moon, Highlighter, 
   StickyNote, Bookmark, BookMarked, Maximize, Minimize, Clock, Sliders, 
   Palette, Trash2, Check, Copy, ChevronDown, Sparkles, Code, FileText, 
-  Download, Eye, List, BookOpen, Layers, Building2
+  Download, Eye, List, BookOpen, Layers, Building2, GripVertical
 } from "lucide-react";
 import { palette, fontDisplay, fontBody } from "../theme";
 import { supabase } from "../supabaseClient";
@@ -160,6 +160,13 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const [copiedToast, setCopiedToast] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Dragging & Dropdown refs
+  const themeDropdownRef = useRef(null);
+  const lightDropdownRef = useRef(null);
+  const readingDeskRef = useRef(null);
+  const [draggingStickyId, setDraggingStickyId] = useState(null);
+  const dragStartPosRef = useRef({ mouseX: 0, mouseY: 0, startX: 0, startY: 0, pageWidth: 640, pageHeight: 800 });
+
   // Live session reading timer
   const [readingSeconds, setReadingSeconds] = useState(0);
 
@@ -216,7 +223,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const totalPages = activeDocumentUrl ? (numPdfPages || book.totalPages || 0) : (book.totalPages || (Array.isArray(book.pages) ? book.pages.length : 1));
   const currentPageDisplay = activeDocumentUrl ? pdfPageNumber : (page + 1);
 
-  // Resume page on mount (ONLY ONCE per book load)
+  // Resume page on mount (ONLY ONCE per book load, and ONLY for Student accounts)
   useEffect(() => {
     if (hasInitializedRef.current) return;
     hasInitializedRef.current = true;
@@ -224,35 +231,37 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     let targetPage = null;
     let targetSection = null;
 
-    // 1. Direct explicit initialPage prop from "Continue Reading" button
-    if (initialPage && Number(initialPage) >= 1) {
-      targetPage = Number(initialPage);
-    } else {
-      // 2. Check student's DB profile reading progress
-      const dbProgress = session?.currentStudent?.customizations?.readingProgress?.[book.id] ||
-                         session?.readingProgress?.[book.id];
-      if (dbProgress && Number(dbProgress.page) >= 1) {
-        targetPage = Number(dbProgress.page);
-        targetSection = dbProgress.sectionId;
+    if (session?.type === "student") {
+      // 1. Direct explicit initialPage prop from "Continue Reading" button
+      if (initialPage && Number(initialPage) >= 1) {
+        targetPage = Number(initialPage);
       } else {
-        // 3. Check student local storage progress
-        try {
-          const raw = localStorage.getItem(`reader_progress_${studentKey}_${book.id}`);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (parsed && Number(parsed.page) >= 1) {
-              targetPage = Number(parsed.page);
-              targetSection = parsed.sectionId;
+        // 2. Check student's DB profile reading progress
+        const dbProgress = session?.currentStudent?.customizations?.readingProgress?.[book.id] ||
+                           session?.readingProgress?.[book.id];
+        if (dbProgress && Number(dbProgress.page) >= 1) {
+          targetPage = Number(dbProgress.page);
+          targetSection = dbProgress.sectionId;
+        } else {
+          // 3. Check student local storage progress
+          try {
+            const raw = localStorage.getItem(`reader_progress_${studentKey}_${book.id}`);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (parsed && Number(parsed.page) >= 1) {
+                targetPage = Number(parsed.page);
+                targetSection = parsed.sectionId;
+              }
             }
-          }
-        } catch (_) {}
+          } catch (_) {}
 
-        // 4. Fallback legacy resume key
-        if (!targetPage) {
-          const legacy = localStorage.getItem(`resume_${book.id}`);
-          if (legacy) {
-            const p = parseInt(legacy, 10);
-            if (!isNaN(p) && p >= 1) targetPage = p;
+          // 4. Fallback legacy resume key
+          if (!targetPage) {
+            const legacy = localStorage.getItem(`resume_${book.id}`);
+            if (legacy) {
+              const p = parseInt(legacy, 10);
+              if (!isNaN(p) && p >= 1) targetPage = p;
+            }
           }
         }
       }
@@ -270,7 +279,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         setResumedToast({ page: targetPage });
       }
     }
-  }, [book.id, Boolean(activeDocumentUrl)]);
+  }, [book.id, Boolean(activeDocumentUrl), session?.type]);
 
   // Auto-dismiss resumed toast after 5 seconds
   useEffect(() => {
@@ -281,10 +290,11 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     return () => clearTimeout(timer);
   }, [resumedToast]);
 
-  // Save on page turn
+  // Save on page turn (ONLY for Student mode)
   useEffect(() => {
     if (!currentPageDisplay) return;
-    
+    if (session?.type !== "student") return;
+
     // Save to legacy key for backward compatibility
     localStorage.setItem(`resume_${book.id}`, currentPageDisplay.toString());
 
@@ -308,7 +318,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       filtered.unshift({ bookId: book.id, ...progData });
       localStorage.setItem(recentKey, JSON.stringify(filtered.slice(0, 15)));
     } catch (_) {}
-  }, [currentPageDisplay, activeEpubSectionId, totalPages, book.id, studentKey]);
+  }, [currentPageDisplay, activeEpubSectionId, totalPages, book.id, studentKey, session?.type]);
 
   // Save customizations & reading progress (debounced)
   useEffect(() => {
@@ -407,19 +417,60 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     };
   };
 
+  // Desk pointerdown: allow dropping sticky notes outside the book in the margins
+  const handleDeskPointerDown = (e) => {
+    if (activeTool !== "sticky") return;
+    if (!pageBoxRef.current) return;
+    if (pageBoxRef.current.contains(e.target)) return;
+
+    const pageRect = pageBoxRef.current.getBoundingClientRect();
+    const relX = e.clientX - pageRect.left;
+    const relY = e.clientY - pageRect.top;
+
+    let placement = "margin-right";
+    let xPct = 102;
+    const yPct = Math.max(2, Math.min(84, (relY / Math.max(pageRect.height, 1)) * 100));
+
+    if (relX < 0) {
+      placement = "margin-left";
+      xPct = -32;
+    } else {
+      placement = "margin-right";
+      xPct = 102;
+    }
+
+    const newSticky = {
+      id: `note_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      pageNumber: currentPageDisplay,
+      placement,
+      x: xPct,
+      y: yPct,
+      color: stickyColor,
+      tag: stickyTag,
+      text: "",
+      isCollapsed: false,
+      author: session?.studentName || session?.name || "Student",
+      createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+
+    setStickyNotes((prev) => [...prev, newSticky]);
+    setActiveTool(null);
+  };
+
   // Pointer interaction: Section Zoom vs Highlighter vs Sticky Note
   const handlePagePointerDown = (e) => {
     if (e.button !== 0) return;
     const pt = getSelectionMetrics(e.clientX, e.clientY);
     if (!pt) return;
 
-    // 1. Sticky Note Tool: drop a sticky note at click coordinate
+    // 1. Sticky Note Tool: drop a sticky note on the book page
     if (activeTool === "sticky") {
-      const xPct = Math.max(3, Math.min(72, (pt.x / pt.pageWidth) * 100));
-      const yPct = Math.max(3, Math.min(84, (pt.y / pt.pageHeight) * 100));
+      const xPct = Math.max(3, Math.min(68, (pt.x / pt.pageWidth) * 100));
+      const yPct = Math.max(2, Math.min(84, (pt.y / pt.pageHeight) * 100));
       const newSticky = {
         id: `note_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         pageNumber: currentPageDisplay,
+        placement: "page",
         x: xPct,
         y: yPct,
         color: stickyColor,
@@ -443,13 +494,6 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   };
 
   const handlePagePointerMove = (e) => {
-    // Update line focus position
-    if (lineFocus && pageBoxRef.current) {
-      const rect = pageBoxRef.current.getBoundingClientRect();
-      const relY = e.clientY - rect.top;
-      setLineFocusY(Math.max(20, Math.min(rect.height - 20, relY)));
-    }
-
     if (!areaStartRef.current) return;
     const pt = getSelectionMetrics(e.clientX, e.clientY);
     if (!pt) return;
@@ -508,6 +552,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
       setHighlights((prev) => [...prev, newHl]);
+      // Note: activeTool remains "highlight" so student can continue highlighting until they toggle off or press Esc!
       return;
     }
 
@@ -723,6 +768,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           if (sectionCrop) handleCloseSectionZoom();
           else if (sectionSelectActive) setSectionSelectActive(false);
           else if (activeTool) setActiveTool(null);
+          else if (lineFocus) setLineFocus(false);
           else if (showNotebook) setShowNotebook(false);
           else if (showLightControls) setShowLightControls(false);
           else if (showThemeControls) setShowThemeControls(false);
@@ -747,7 +793,220 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       window.removeEventListener("focus", handleFocus);
       window.removeEventListener("blur", handleBlur);
     };
-  }, [next, prev, sectionCrop, handleCloseSectionZoom, sectionSelectActive, activeTool, showNotebook, showLightControls, showThemeControls]);
+  }, [next, prev, sectionCrop, handleCloseSectionZoom, sectionSelectActive, activeTool, lineFocus, showNotebook, showLightControls, showThemeControls]);
+
+  // Click outside to dismiss dropdowns (Theme, Page Lights)
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (showThemeControls && themeDropdownRef.current && !themeDropdownRef.current.contains(e.target)) {
+        setShowThemeControls(false);
+      }
+      if (showLightControls && lightDropdownRef.current && !lightDropdownRef.current.contains(e.target)) {
+        setShowLightControls(false);
+      }
+    };
+    document.addEventListener("pointerdown", handleOutsideClick);
+    return () => document.removeEventListener("pointerdown", handleOutsideClick);
+  }, [showThemeControls, showLightControls]);
+
+  // Window-level smooth pointer tracking for Line Focus reading ruler
+  useEffect(() => {
+    if (!lineFocus) return;
+    const handleLineFocusMove = (e) => {
+      if (!pageBoxRef.current) return;
+      const rect = pageBoxRef.current.getBoundingClientRect();
+      if (rect.height > 0) {
+        const clientY = e.clientY ?? e.touches?.[0]?.clientY;
+        if (typeof clientY === "number") {
+          const relY = clientY - rect.top;
+          setLineFocusY(Math.max(20, Math.min(rect.height - 20, relY)));
+        }
+      }
+    };
+    window.addEventListener("pointermove", handleLineFocusMove, { passive: true });
+    window.addEventListener("touchmove", handleLineFocusMove, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", handleLineFocusMove);
+      window.removeEventListener("touchmove", handleLineFocusMove);
+    };
+  }, [lineFocus]);
+
+  // Drag sticky note listener (inside book or out to margins)
+  useEffect(() => {
+    if (!draggingStickyId) return;
+
+    const handlePointerMove = (e) => {
+      const { mouseX, mouseY, startX, startY, pageWidth, pageHeight } = dragStartPosRef.current;
+      const clientX = e.clientX ?? e.touches?.[0]?.clientX;
+      const clientY = e.clientY ?? e.touches?.[0]?.clientY;
+      if (typeof clientX !== "number" || typeof clientY !== "number") return;
+
+      const deltaX = ((clientX - mouseX) / pageWidth) * 100;
+      const deltaY = ((clientY - mouseY) / pageHeight) * 100;
+
+      const newX = startX + deltaX;
+      const newY = Math.max(1, Math.min(84, startY + deltaY));
+
+      let placement = "page";
+      if (newX < 0) placement = "margin-left";
+      else if (newX > 90) placement = "margin-right";
+      else placement = "page";
+
+      setStickyNotes((prev) =>
+        prev.map((n) =>
+          n.id === draggingStickyId
+            ? { ...n, x: newX, y: newY, placement }
+            : n
+        )
+      );
+    };
+
+    const handlePointerUp = () => {
+      setDraggingStickyId(null);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("touchend", handlePointerUp);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("touchend", handlePointerUp);
+    };
+  }, [draggingStickyId]);
+
+  const startDragSticky = (e, id) => {
+    e.stopPropagation();
+    const note = stickyNotes.find((n) => n.id === id);
+    if (!note || !pageBoxRef.current) return;
+    const pageRect = pageBoxRef.current.getBoundingClientRect();
+    dragStartPosRef.current = {
+      mouseX: e.clientX ?? e.touches?.[0]?.clientX,
+      mouseY: e.clientY ?? e.touches?.[0]?.clientY,
+      startX: note.x,
+      startY: note.y,
+      pageWidth: pageRect.width || 640,
+      pageHeight: pageRect.height || 800,
+    };
+    setDraggingStickyId(id);
+  };
+
+  const toggleStickyPlacement = (id) => {
+    setStickyNotes((prev) =>
+      prev.map((n) => {
+        if (n.id !== id) return n;
+        const isOutsideMargin = n.placement === "margin-right" || n.placement === "margin-left" || n.x >= 95 || n.x < 0;
+        if (isOutsideMargin) {
+          // Move onto book page
+          return { ...n, placement: "page", x: 25 };
+        } else {
+          // Move outside book to right margin
+          return { ...n, placement: "margin-right", x: 102 };
+        }
+      })
+    );
+  };
+
+  // Mutual Exclusivity Helpers: One active tool/mode turns off all others
+  const closeAllPopovers = () => {
+    setShowThemeControls(false);
+    setShowLightControls(false);
+    setShowNotebook(false);
+  };
+
+  const toggleThemeControls = () => {
+    setShowThemeControls((prev) => {
+      if (!prev) {
+        setShowLightControls(false);
+        setShowNotebook(false);
+        setLineFocus(false);
+        setActiveTool(null);
+        setSectionSelectActive(false);
+      }
+      return !prev;
+    });
+  };
+
+  const toggleLightControls = () => {
+    setShowLightControls((prev) => {
+      if (!prev) {
+        setShowThemeControls(false);
+        setShowNotebook(false);
+        setLineFocus(false);
+        setActiveTool(null);
+        setSectionSelectActive(false);
+      }
+      return !prev;
+    });
+  };
+
+  const toggleLineFocus = () => {
+    setLineFocus((prev) => {
+      const nextVal = !prev;
+      if (nextVal) {
+        setActiveTool(null);
+        setSectionSelectActive(false);
+        closeAllPopovers();
+      }
+      return nextVal;
+    });
+  };
+
+  const toggleHighlighter = () => {
+    if (activeTool === "highlight") {
+      setActiveTool(null);
+    } else {
+      setActiveTool("highlight");
+      setLineFocus(false);
+      setSectionSelectActive(false);
+      closeAllPopovers();
+    }
+  };
+
+  const selectHighlightColor = (colId) => {
+    setHighlightColor(colId);
+    setActiveTool("highlight");
+    setLineFocus(false);
+    setSectionSelectActive(false);
+    closeAllPopovers();
+  };
+
+  const toggleStickyTool = () => {
+    if (activeTool === "sticky") {
+      setActiveTool(null);
+    } else {
+      setActiveTool("sticky");
+      setLineFocus(false);
+      setSectionSelectActive(false);
+      closeAllPopovers();
+    }
+  };
+
+  const toggleSectionZoom = () => {
+    setSectionSelectActive((prev) => {
+      const nextVal = !prev;
+      if (nextVal) {
+        setActiveTool(null);
+        setLineFocus(false);
+        closeAllPopovers();
+      }
+      return nextVal;
+    });
+  };
+
+  const toggleNotebook = () => {
+    setShowNotebook((prev) => {
+      const nextVal = !prev;
+      if (nextVal) {
+        setActiveTool(null);
+        setLineFocus(false);
+        setSectionSelectActive(false);
+        setShowThemeControls(false);
+        setShowLightControls(false);
+      }
+      return nextVal;
+    });
+  };
 
   // Annotation helpers
   const toggleBookmark = () => {
@@ -984,13 +1243,10 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       >
         <div className="flex items-center gap-2 flex-wrap">
           {/* THEME SELECTOR BUTTON */}
-          <div className="relative">
+          <div ref={themeDropdownRef} className="relative">
             <button
               type="button"
-              onClick={() => {
-                setShowThemeControls((v) => !v);
-                setShowLightControls(false);
-              }}
+              onClick={toggleThemeControls}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 transition-all cursor-pointer"
             >
               <Palette size={13} />
@@ -1025,13 +1281,10 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           </div>
 
           {/* PAGE LIGHTS & EYE-CARE WARM LIGHT BUTTON */}
-          <div className="relative">
+          <div ref={lightDropdownRef} className="relative">
             <button
               type="button"
-              onClick={() => {
-                setShowLightControls((v) => !v);
-                setShowThemeControls(false);
-              }}
+              onClick={toggleLightControls}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/15 transition-all cursor-pointer ${
                 brightness !== 100 || warmLight > 0 ? "bg-amber-400 text-black font-bold" : "bg-white/10 hover:bg-white/20 text-white"
               }`}
@@ -1114,9 +1367,9 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
               {/* LINE FOCUS / READING RULER TOGGLE */}
               <button
                 type="button"
-                onClick={() => setLineFocus((v) => !v)}
+                onClick={toggleLineFocus}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/15 transition-all cursor-pointer ${
-                  lineFocus ? "bg-amber-400 text-black font-bold shadow-md" : "bg-white/10 hover:bg-white/20 text-white"
+                  lineFocus ? "bg-amber-400 text-black font-bold shadow-md ring-2 ring-amber-300" : "bg-white/10 hover:bg-white/20 text-white"
                 }`}
                 title="Line Focus / Reading Ruler: Highlights the active line as you read, softly dimming the rest"
               >
@@ -1128,16 +1381,13 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
               <div className="inline-flex items-center gap-1 bg-white/10 p-1 rounded-full border border-white/15">
                 <button
                   type="button"
-                  onClick={() => {
-                    setActiveTool(activeTool === "highlight" ? null : "highlight");
-                    setSectionSelectActive(false);
-                  }}
+                  onClick={toggleHighlighter}
                   className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                    activeTool === "highlight" ? "bg-amber-400 text-black shadow-sm" : "text-white hover:bg-white/10"
+                    activeTool === "highlight" ? "bg-amber-400 text-black shadow-sm ring-2 ring-amber-300" : "text-white hover:bg-white/10"
                   }`}
                 >
                   <Highlighter size={13} />
-                  <span>Highlighter</span>
+                  <span>Highlighter {activeTool === "highlight" ? "ON" : ""}</span>
                 </button>
 
                 {/* Color swatches */}
@@ -1145,10 +1395,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   <button
                     key={col.id}
                     type="button"
-                    onClick={() => {
-                      setHighlightColor(col.id);
-                      setActiveTool("highlight");
-                    }}
+                    onClick={() => selectHighlightColor(col.id)}
                     className={`w-5 h-5 rounded-full transition-transform cursor-pointer ${
                       highlightColor === col.id && activeTool === "highlight" ? "scale-125 ring-2 ring-white" : "hover:scale-110"
                     }`}
@@ -1162,17 +1409,14 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
               <div className="inline-flex items-center gap-1 bg-white/10 p-1 rounded-full border border-white/15">
                 <button
                   type="button"
-                  onClick={() => {
-                    setActiveTool(activeTool === "sticky" ? null : "sticky");
-                    setSectionSelectActive(false);
-                  }}
+                  onClick={toggleStickyTool}
                   className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                    activeTool === "sticky" ? "bg-[#F5F23B] text-black shadow-sm" : "text-white hover:bg-white/10"
+                    activeTool === "sticky" ? "bg-[#F5F23B] text-black shadow-sm ring-2 ring-yellow-200" : "text-white hover:bg-white/10"
                   }`}
-                  title="Click on page to drop a sticky note or code snippet"
+                  title="Click anywhere on book or in side margins to drop a sticky note or code snippet"
                 >
                   <StickyNote size={13} />
-                  <span>+ Sticky Note / Code</span>
+                  <span>+ Sticky Note / Code {activeTool === "sticky" ? "ACTIVE" : ""}</span>
                 </button>
 
                 <select
@@ -1193,12 +1437,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           {book.pdfUrl && (
             <button
               type="button"
-              onClick={() => {
-                setSectionSelectActive((a) => !a);
-                setActiveTool(null);
-                setSelectionRect(null);
-                areaStartRef.current = null;
-              }}
+              onClick={toggleSectionZoom}
               className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border border-white/15 transition-all cursor-pointer ${
                 sectionSelectActive ? "bg-amber-400 text-black font-bold" : "bg-white/10 hover:bg-white/20 text-white"
               }`}
@@ -1226,7 +1465,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
               <button
                 type="button"
-                onClick={() => setShowNotebook((v) => !v)}
+                onClick={toggleNotebook}
                 className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#F5F23B] hover:bg-[#eae729] text-black font-bold shadow-md transition-all cursor-pointer"
               >
                 <BookOpen size={13} />
@@ -1240,12 +1479,17 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       {/* HELPER BANNER FOR ACTIVE TOOLS */}
       {activeTool === "highlight" && (
         <div className="py-1 px-4 text-center text-xs font-bold bg-amber-400 text-black flex items-center justify-center gap-2">
-          <Highlighter size={13} /> Drag over any section (or click) to highlight in {HIGHLIGHT_COLORS[highlightColor].name}. Press Esc when done.
+          <Highlighter size={13} /> Drag or click to highlight multiple passages in {HIGHLIGHT_COLORS[highlightColor].name}. Click Highlighter or press Esc to stop.
         </div>
       )}
       {activeTool === "sticky" && (
         <div className="py-1 px-4 text-center text-xs font-bold bg-[#F5F23B] text-black flex items-center justify-center gap-2">
-          <StickyNote size={13} /> Click anywhere on the book page to pin your {stickyTag} note.
+          <StickyNote size={13} /> Click anywhere ON the book or OUTSIDE in the margins to drop your note. Drag by grip to reposition. Press Esc to cancel.
+        </div>
+      )}
+      {lineFocus && (
+        <div className="py-1 px-4 text-center text-xs font-bold bg-amber-400 text-black flex items-center justify-center gap-2">
+          <Sliders size={13} /> Line Focus Ruler is ACTIVE: Move your mouse or touch to illuminate reading lines. Click Line Focus or press Esc to exit.
         </div>
       )}
       {sectionSelectActive && book.pdfUrl && (
@@ -1269,7 +1513,12 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       )}
 
       {/* MAIN READING CANVAS VIEWPORT */}
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 overflow-auto relative">
+      <div
+        ref={readingDeskRef}
+        onPointerDown={handleDeskPointerDown}
+        className="flex-1 flex items-center justify-center p-4 sm:p-8 md:px-36 overflow-x-auto overflow-y-auto relative min-h-[600px]"
+        style={{ backgroundColor: currentTheme.outerBg }}
+      >
         <div
           ref={pageBoxRef}
           onPointerDown={handlePagePointerDown}
@@ -1277,7 +1526,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           onPointerUp={handlePagePointerUp}
           onPointerCancel={handlePagePointerUp}
           onDragStart={(e) => e.preventDefault()}
-          className={`no-select select-none relative rounded-xl shadow-2xl overflow-hidden flex flex-col items-center ${
+          className={`no-select select-none relative rounded-xl shadow-2xl flex flex-col items-center ${
             sectionSelectActive ? "cursor-crosshair" : activeTool === "highlight" ? "cursor-text" : activeTool === "sticky" ? "cursor-copy" : ""
           }`}
           style={{
@@ -1285,34 +1534,38 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             minHeight: 520,
             width: "100%",
             maxWidth: BASE_PDF_WIDTH + 80,
+            overflow: "visible", // CRITICAL: Allows sticky notes in margins & edges to stay completely unclipped
             ...fontBody,
             color: currentTheme.textColor,
             filter: `brightness(${brightness}%)`,
           }}
           onContextMenu={(e) => e.preventDefault()}
         >
-          {/* WARM NIGHT EYE-CARE LIGHT FILTER */}
-          {warmLight > 0 && (
-            <div
-              className="pointer-events-none absolute inset-0 z-40 transition-opacity"
-              style={{
-                backgroundColor: "rgba(255, 160, 20, 0.4)",
-                opacity: warmLight / 100,
-                mixBlendMode: "multiply",
-              }}
-            />
-          )}
+          {/* INNER CLIPPED CONTAINER FOR WATERMARK & NIGHT LIGHT TO PRESERVE ROUNDED CORNERS */}
+          <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none z-10">
+            {/* WARM NIGHT EYE-CARE LIGHT FILTER */}
+            {warmLight > 0 && (
+              <div
+                className="absolute inset-0 z-40 transition-opacity"
+                style={{
+                  backgroundColor: "rgba(255, 160, 20, 0.4)",
+                  opacity: warmLight / 100,
+                  mixBlendMode: "multiply",
+                }}
+              />
+            )}
 
-          {/* WATERMARK OVERLAY */}
-          <div
-            className="pointer-events-none absolute inset-0 overflow-hidden opacity-[0.08] flex flex-wrap content-start gap-12 p-6 z-30 select-none"
-            aria-hidden="true"
-          >
-            {Array.from({ length: 24 }).map((_, i) => (
-              <span key={i} className="text-xs font-bold tracking-wider whitespace-nowrap" style={{ transform: "rotate(-22deg)", color: currentTheme.textColor }}>
-                {watermarkText}
-              </span>
-            ))}
+            {/* WATERMARK OVERLAY */}
+            <div
+              className="absolute inset-0 overflow-hidden opacity-[0.08] flex flex-wrap content-start gap-12 p-6 z-30 select-none"
+              aria-hidden="true"
+            >
+              {Array.from({ length: 24 }).map((_, i) => (
+                <span key={i} className="text-xs font-bold tracking-wider whitespace-nowrap" style={{ transform: "rotate(-22deg)", color: currentTheme.textColor }}>
+                  {watermarkText}
+                </span>
+              ))}
+            </div>
           </div>
 
           {/* ACTIVE DRAG SELECTION RECTANGLE */}
@@ -1332,40 +1585,40 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
           {/* LINE FOCUS / READING RULER */}
           {lineFocus && (
-            <div className="pointer-events-none absolute inset-0 z-35 overflow-hidden">
+            <div className="pointer-events-none absolute inset-0 z-35 overflow-hidden rounded-xl">
               <div
                 style={{
                   position: "absolute",
                   top: 0,
                   left: 0,
                   right: 0,
-                  height: `${Math.max(0, lineFocusY - 24)}px`,
-                  backgroundColor: "rgba(0,0,0,0.48)",
-                  transition: "height 0.04s ease-out",
+                  height: `${Math.max(0, lineFocusY - 26)}px`,
+                  backgroundColor: "rgba(0,0,0,0.52)",
+                  transition: "height 0.02s linear",
                 }}
               />
               <div
                 style={{
                   position: "absolute",
-                  top: `${Math.max(0, lineFocusY - 24)}px`,
+                  top: `${Math.max(0, lineFocusY - 26)}px`,
                   left: 0,
                   right: 0,
-                  height: "48px",
-                  backgroundColor: "rgba(245, 158, 11, 0.14)",
-                  borderTop: "2px solid #F59E0B",
-                  borderBottom: "2px solid #F59E0B",
-                  boxShadow: "0 0 16px rgba(245, 158, 11, 0.35)",
-                  transition: "top 0.04s ease-out",
+                  height: "52px",
+                  backgroundColor: "rgba(245, 158, 11, 0.16)",
+                  borderTop: "2.5px solid #F59E0B",
+                  borderBottom: "2.5px solid #F59E0B",
+                  boxShadow: "0 0 20px rgba(245, 158, 11, 0.4)",
+                  transition: "top 0.02s linear",
                 }}
               />
               <div
                 style={{
                   position: "absolute",
-                  top: `${Math.max(0, lineFocusY + 24)}px`,
+                  top: `${Math.max(0, lineFocusY + 26)}px`,
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  backgroundColor: "rgba(0,0,0,0.48)",
+                  backgroundColor: "rgba(0,0,0,0.52)",
                 }}
               />
             </div>
@@ -1377,7 +1630,9 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             .map((h) => (
               <div
                 key={h.id}
-                className="absolute z-20 group/hl transition-all pointer-events-auto rounded-xs"
+                className={`absolute z-20 transition-all rounded-xs ${
+                  activeTool === "highlight" ? "pointer-events-none" : "pointer-events-auto group/hl"
+                }`}
                 style={{
                   left: `${h.x}%`,
                   top: `${h.y}%`,
@@ -1387,17 +1642,19 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   borderBottom: `2.5px solid ${HIGHLIGHT_COLORS[h.color]?.border || "#EAB308"}`,
                 }}
               >
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteHighlight(h.id);
-                  }}
-                  className="opacity-0 group-hover/hl:opacity-100 absolute -top-3 -right-3 p-1 rounded-full bg-rose-600 text-white shadow-md hover:scale-110 transition-all cursor-pointer z-30"
-                  title="Remove highlight"
-                >
-                  <X size={10} strokeWidth={2.5} />
-                </button>
+                {activeTool !== "highlight" && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteHighlight(h.id);
+                    }}
+                    className="opacity-0 group-hover/hl:opacity-100 absolute -top-3 -right-3 p-1 rounded-full bg-rose-600 text-white shadow-md hover:scale-110 transition-all cursor-pointer z-30"
+                    title="Remove highlight"
+                  >
+                    <X size={10} strokeWidth={2.5} />
+                  </button>
+                )}
               </div>
             ))}
 
@@ -1406,13 +1663,34 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             .filter((n) => n.pageNumber === currentPageDisplay)
             .map((n) => {
               const col = STICKY_COLORS[n.color] || STICKY_COLORS.yellow;
+              const isMarginRight = n.placement === "margin-right" || n.x >= 95;
+              const isMarginLeft = n.placement === "margin-left" || n.x < 0;
+              const isOutsideMargin = isMarginRight || isMarginLeft;
+
+              let styleLeft;
+              let styleRight;
+
+              if (isMarginRight) {
+                styleLeft = "calc(100% + 14px)";
+                styleRight = undefined;
+              } else if (isMarginLeft) {
+                styleLeft = undefined;
+                styleRight = "calc(100% + 14px)";
+              } else {
+                styleLeft = `${Math.max(2, Math.min(68, n.x))}%`;
+                styleRight = undefined;
+              }
+
               return (
                 <div
                   key={n.id}
-                  className="absolute z-45 pointer-events-auto transition-transform shadow-xl rounded-xl overflow-hidden"
+                  className={`absolute z-50 pointer-events-auto shadow-2xl rounded-xl transition-all ${
+                    isOutsideMargin ? "ring-2 ring-amber-400/70" : ""
+                  }`}
                   style={{
-                    left: `${n.x}%`,
-                    top: `${n.y}%`,
+                    left: styleLeft,
+                    right: styleRight,
+                    top: `${Math.max(1, Math.min(84, n.y))}%`,
                     width: n.isCollapsed ? "auto" : "220px",
                     backgroundColor: col.bg,
                     border: `1.5px solid ${col.border}`,
@@ -1429,21 +1707,40 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                     >
                       <span>📌</span>
                       <span className="truncate max-w-[100px]">{n.text || n.tag || "Note"}</span>
+                      {isOutsideMargin && <span className="text-[9px] bg-black/10 px-1 rounded">Margin</span>}
                     </button>
                   ) : (
                     <div className="p-2.5 space-y-2">
                       <div className="flex items-center justify-between gap-1 pb-1 border-b border-black/10">
-                        <select
-                          value={n.tag}
-                          onChange={(e) => updateStickyTag(n.id, e.target.value)}
-                          className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-black/10 outline-none cursor-pointer"
-                        >
-                          <option value="Note">Note</option>
-                          <option value="Code">Code</option>
-                          <option value="Formula">Formula</option>
-                          <option value="Exam">Exam Note</option>
-                        </select>
                         <div className="flex items-center gap-1">
+                          <span
+                            onPointerDown={(e) => startDragSticky(e, n.id)}
+                            className="cursor-grab active:cursor-grabbing text-black/40 hover:text-black p-0.5"
+                            title="Drag to reposition note (inside book or out to margins)"
+                          >
+                            <GripVertical size={12} />
+                          </span>
+                          <select
+                            value={n.tag}
+                            onChange={(e) => updateStickyTag(n.id, e.target.value)}
+                            className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-black/10 outline-none cursor-pointer"
+                          >
+                            <option value="Note">Note</option>
+                            <option value="Code">Code</option>
+                            <option value="Formula">Formula</option>
+                            <option value="Exam">Exam Note</option>
+                          </select>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => toggleStickyPlacement(n.id)}
+                            className="px-1.5 py-0.5 rounded bg-black/10 hover:bg-black/20 text-[10px] font-bold transition-all cursor-pointer"
+                            title={isOutsideMargin ? "Move onto book page" : "Move outside book to margin"}
+                          >
+                            {isOutsideMargin ? "📖 Onto Page" : "📋 To Margin"}
+                          </button>
                           <button
                             type="button"
                             onClick={() => toggleCollapseSticky(n.id)}
@@ -1468,14 +1765,21 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                         value={n.text}
                         onChange={(e) => updateStickyText(n.id, e.target.value)}
                         placeholder={n.tag === "Code" ? "Paste code snippet here..." : "Type study notes..."}
-                        className={`w-full bg-white/75 p-1.5 rounded-lg text-xs outline-none border border-black/10 resize-none ${
+                        className={`w-full bg-white/80 p-1.5 rounded-lg text-xs outline-none border border-black/10 resize-none ${
                           n.tag === "Code" ? "font-mono text-[11px]" : ""
                         }`}
                       />
 
                       <div className="flex items-center justify-between text-[10px] text-black/60 pt-0.5">
-                        <span className="truncate max-w-[110px]">{n.author}</span>
-                        <span>{n.createdAt}</span>
+                        <span className="truncate max-w-[100px]">{n.author}</span>
+                        <span className="flex items-center gap-1">
+                          {isOutsideMargin ? (
+                            <span className="text-[9px] bg-black/10 px-1 py-0.2 rounded font-semibold">Margin</span>
+                          ) : (
+                            <span className="text-[9px] bg-black/10 px-1 py-0.2 rounded font-semibold">On Page</span>
+                          )}
+                          <span>{n.createdAt}</span>
+                        </span>
                       </div>
                     </div>
                   )}
@@ -1632,7 +1936,12 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
       {/* PERSONAL STUDY NOTEBOOK SLIDE-OUT DRAWER */}
       {showNotebook && (
-        <div className="fixed inset-y-0 right-0 z-[130] w-full max-w-md bg-[#16181f]/95 backdrop-blur-xl border-l border-white/20 shadow-2xl flex flex-col text-white">
+        <>
+          <div
+            className="fixed inset-0 z-[125] bg-black/60 backdrop-blur-xs"
+            onClick={() => setShowNotebook(false)}
+          />
+          <div className="fixed inset-y-0 right-0 z-[130] w-full max-w-md bg-[#16181f]/95 backdrop-blur-xl border-l border-white/20 shadow-2xl flex flex-col text-white">
           <div className="p-4 border-b border-white/10 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <BookOpen size={16} className="text-[#F5F23B]" />
@@ -1842,6 +2151,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             </p>
           </div>
         </div>
+        </>
       )}
 
       {/* FOOTER CONTROLS: PREVIOUS / NEXT / PAGE JUMP */}
