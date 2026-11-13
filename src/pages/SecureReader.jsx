@@ -1265,14 +1265,39 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
   // Focus lock and screenshot blocker
   useEffect(() => {
-    const handleFocus = () => setIsFocused(true);
-    const handleBlur = () => setIsFocused(false);
+    let blurTimer = null;
+    const handleFocus = () => {
+      if (blurTimer) clearTimeout(blurTimer);
+      setIsFocused(true);
+    };
+
+    const handleBlur = () => {
+      if (blurTimer) clearTimeout(blurTimer);
+      blurTimer = setTimeout(() => {
+        // If focus shifted to an iframe inside our reader (the EPUB content),
+        // or if document is still visible, ignore blur so clicking on the book never triggers Reading Paused!
+        if (
+          document.activeElement?.tagName === "IFRAME" ||
+          (document.hasFocus && document.hasFocus()) ||
+          document.visibilityState === "visible"
+        ) {
+          setIsFocused(true);
+          return;
+        }
+        setIsFocused(false);
+      }, 150);
+    };
 
     window.addEventListener("focus", handleFocus);
     window.addEventListener("blur", handleBlur);
-    document.addEventListener("visibilitychange", () => {
-      setIsFocused(document.visibilityState === "visible");
-    });
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        setIsFocused(false);
+      } else {
+        setIsFocused(true);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     const blockContext = (e) => e.preventDefault();
     const blockCopy = (e) => e.preventDefault();
@@ -1343,12 +1368,14 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     document.addEventListener("keyup", applyScreenshotRestrictionAPI);
 
     return () => {
+      if (blurTimer) clearTimeout(blurTimer);
       document.removeEventListener("contextmenu", blockContext);
       document.removeEventListener("copy", blockCopy);
       document.removeEventListener("keydown", applyScreenshotRestrictionAPI);
       document.removeEventListener("keyup", applyScreenshotRestrictionAPI);
       window.removeEventListener("focus", handleFocus);
       window.removeEventListener("blur", handleBlur);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [next, prev, sectionCrop, handleCloseSectionZoom, sectionSelectActive, activeTool, lineFocus, showNotebook, showLightControls, showThemeControls, handleUndo, handleRedo]);
 
@@ -1801,7 +1828,10 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     >
       {/* SCREEN BLUR LOCK */}
       {!isFocused && (
-        <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black/90 backdrop-blur-md">
+        <div
+          onClick={() => setIsFocused(true)}
+          className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black/90 backdrop-blur-md cursor-pointer select-none"
+        >
           <ShieldAlert size={48} className="text-white mb-4 opacity-50" />
           <h2 className="text-xl font-bold text-white mb-2">Reading Paused</h2>
           <p className="text-gray-300">Click anywhere to resume secure reading.</p>
