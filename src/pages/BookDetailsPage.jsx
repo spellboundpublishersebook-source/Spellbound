@@ -226,7 +226,7 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
                 <Info className="text-[#111214] mt-0.5 shrink-0" size={18} />
                 <div>
                   <div className="text-[11px] text-slate-600 uppercase tracking-wider font-bold">Volume / Pages</div>
-                  <div className="font-semibold text-[#111214]">{isEpub ? `${book.epubData?.chapters?.length || 0} Chapters` : (book.totalPages || (book.pages ? book.pages.length : "N/A") + " pages")}</div>
+                  <div className="font-semibold text-[#111214]">{isEpub ? (book.totalPages ? `${book.totalPages} pages (${book.epubData?.chapters?.length || 0} Chapters)` : `${book.epubData?.chapters?.length || 0} Chapters`) : (book.totalPages || (book.pages ? book.pages.length : "N/A") + " pages")}</div>
                 </div>
               </div>
 

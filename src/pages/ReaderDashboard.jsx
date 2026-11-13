@@ -499,8 +499,8 @@ export default function ReaderDashboard({
     map.forEach((prog, bId) => {
       const bookObj = myBooksRaw.find((b) => b.id === bId);
       if (bookObj) {
+        const total = Number(bookObj.totalPages || prog.totalPages || 1);
         const lastPage = Number(prog.page || prog.lastPage || 1);
-        const total = Number(prog.totalPages || bookObj.totalPages || 1);
         const percent = Math.min(100, Math.max(1, Math.round((lastPage / Math.max(total, 1)) * 100)));
         result.push({
           book: bookObj,

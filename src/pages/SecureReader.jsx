@@ -219,23 +219,39 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
   // Robust resolution for EPUB data
   const resolvedEpubData = useMemo(() => {
-    if (book.epubData) return book.epubData;
+    let data = null;
     if (book.pages && typeof book.pages === "object" && !Array.isArray(book.pages) && (book.pages.type === "epub" || book.pages.format === "epub" || book.pages.chapters)) {
-      return book.pages;
-    }
-    if (typeof book.pages === "string" && book.pages.includes("epub")) {
+      data = book.pages;
+    } else if (book.epubData) {
+      data = book.epubData;
+    } else if (typeof book.pages === "string" && book.pages.includes("epub")) {
       try {
         const parsed = JSON.parse(book.pages);
-        if (parsed && typeof parsed === "object") return parsed;
+        if (parsed && typeof parsed === "object") data = parsed;
       } catch (_) {}
-    }
-    if (typeof book.description === "string" && book.description.includes("__EPUB_DATA__:")) {
+    } else if (typeof book.description === "string" && book.description.includes("__EPUB_DATA__:")) {
       try {
         const rawJson = book.description.split("__EPUB_DATA__:")[1].split("__CUSTOM_FILTERS__:")[0].trim();
-        return JSON.parse(rawJson);
+        data = JSON.parse(rawJson);
       } catch (_) {}
     }
-    return null;
+
+    if (data && book.pages && typeof book.pages === "object" && !Array.isArray(book.pages)) {
+      if (book.pages.coverPage?.pageCount && data.coverPage) {
+        data.coverPage.pageCount = book.pages.coverPage.pageCount;
+      }
+      if (book.pages.contentsPage?.pageCount && data.contentsPage) {
+        data.contentsPage.pageCount = book.pages.contentsPage.pageCount;
+      }
+      if (Array.isArray(book.pages.chapters) && Array.isArray(data.chapters)) {
+        data.chapters.forEach((c, idx) => {
+          if (book.pages.chapters[idx]?.pageCount && !c.pageCount) {
+            c.pageCount = book.pages.chapters[idx].pageCount;
+          }
+        });
+      }
+    }
+    return data;
   }, [book.epubData, book.pages, book.description]);
 
   const isEpub = Boolean(resolvedEpubData);
@@ -245,7 +261,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     if (!epubData) return [];
     const list = [];
     if (book.coverUrl) {
-      list.push({ id: "cover", title: "Cover Page", url: book.coverUrl, type: "image", pageCount: 1 });
+      list.push({ id: "cover", title: "Cover Page", url: book.coverUrl, type: "image", pageCount: epubData.coverPage?.pageCount || 1 });
     }
     if (epubData.firstPage?.url) {
       const url = epubData.firstPage.url;
@@ -253,9 +269,10 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       const isEpubFile = /\.epub$/i.test(url);
       list.push({
         id: "firstPage",
-        title: "First Page / Front Matter",
+        title: epubData.firstPage.fileName || "First Page / Front Matter",
         url,
-        type: isImg ? "image" : (isEpubFile ? "epub" : "pdf")
+        type: isImg ? "image" : (isEpubFile ? "epub" : "pdf"),
+        pageCount: epubData.firstPage.pageCount || 1
       });
     }
     if (epubData.contentsPage?.url) {
@@ -264,9 +281,10 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       const isEpubFile = /\.epub$/i.test(url);
       list.push({
         id: "contents",
-        title: "Contents Page",
+        title: epubData.contentsPage.fileName || "Contents Page",
         url,
-        type: isImg ? "image" : (isEpubFile ? "epub" : "pdf")
+        type: isImg ? "image" : (isEpubFile ? "epub" : "pdf"),
+        pageCount: epubData.contentsPage.pageCount || 12
       });
     }
     if (Array.isArray(epubData.chapters)) {
@@ -279,7 +297,8 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           id: chapId,
           title: chap.title || `Chapter ${chap.number || idx + 1}`,
           url: chap.url,
-          type: isImg ? "image" : (isEpubFile ? "epub" : "pdf")
+          type: isImg ? "image" : (isEpubFile ? "epub" : "pdf"),
+          pageCount: chap.pageCount || null
         });
       });
     }
@@ -287,6 +306,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   }, [epubData, book.coverUrl]);
 
   const [activeEpubSectionId, setActiveEpubSectionId] = useState(epubSections[0]?.id || "cover");
+  const targetLocalPageRef = useRef(null);
 
   const currentSectionIdx = useMemo(() => {
     if (!isEpub || !epubSections.length) return -1;
@@ -361,7 +381,9 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         setActiveEpubDoc(doc);
         setNumPdfPages(doc.totalPages);
 
-        const pNum = Math.min(Math.max(1, pdfPageNumber || 1), doc.totalPages);
+        const targetP = targetLocalPageRef.current !== null ? targetLocalPageRef.current : (pdfPageNumber || 1);
+        targetLocalPageRef.current = null;
+        const pNum = Math.min(Math.max(1, targetP), doc.totalPages);
         const pageResult = await doc.getPageHtml(pNum, {
           colorMode: epubColorMode,
           theme: currentTheme
@@ -560,34 +582,98 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     }
   }, [history]);
 
-  const sectionTotalPages = useMemo(() => {
+  const sectionRanges = useMemo(() => {
+    if (!isEpub || !epubSections.length) return [];
+
+    const bookTotal = Number(book.totalPages) || 0;
+    const allExplicit = epubSections.every(s => s.pageCount && Number(s.pageCount) > 0);
+
+    let resolvedCounts = [];
+    if (allExplicit) {
+      resolvedCounts = epubSections.map(s => Number(s.pageCount));
+    } else if (bookTotal > 0) {
+      const knownCount = epubSections.reduce((sum, s) => sum + (s.pageCount ? Number(s.pageCount) : (s.type === "image" ? 1 : 0)), 0);
+      const unknownSections = epubSections.filter(s => !s.pageCount && s.type !== "image");
+      const remainingPages = Math.max(unknownSections.length, bookTotal - knownCount);
+      const basePerSection = unknownSections.length > 0 ? Math.floor(remainingPages / unknownSections.length) : 0;
+      let remainder = unknownSections.length > 0 ? remainingPages % unknownSections.length : 0;
+
+      resolvedCounts = epubSections.map((s) => {
+        if (s.pageCount) return Number(s.pageCount);
+        if (s.type === "image") return 1;
+        const count = basePerSection + (remainder > 0 ? 1 : 0);
+        if (remainder > 0) remainder--;
+        return Math.max(1, count);
+      });
+    } else {
+      resolvedCounts = epubSections.map(s => s.pageCount ? Number(s.pageCount) : (s.type === "image" ? 1 : 25));
+    }
+
+    let acc = 0;
+    return epubSections.map((s, idx) => {
+      const count = resolvedCounts[idx] || (s.type === "image" ? 1 : 1);
+      const start = acc + 1;
+      const end = acc + count;
+      acc = end;
+      return {
+        id: s.id,
+        title: s.title,
+        type: s.type,
+        url: s.url,
+        start,
+        end,
+        count,
+        index: idx
+      };
+    });
+  }, [isEpub, epubSections, book.totalPages]);
+
+  const globalToLocal = useCallback((gPage) => {
+    if (!sectionRanges.length) return { sectionId: null, localPage: 1 };
+    const maxEnd = sectionRanges[sectionRanges.length - 1].end;
+    const target = Math.max(1, Math.min(gPage, maxEnd));
+    const range = sectionRanges.find(r => target >= r.start && target <= r.end) || sectionRanges[0];
+    const localPage = target - range.start + 1;
+    return { sectionId: range.id, localPage, range };
+  }, [sectionRanges]);
+
+  const localToGlobal = useCallback((sectionId, localPage) => {
+    if (!sectionRanges.length) return localPage || 1;
+    const range = sectionRanges.find(r => r.id === sectionId) || sectionRanges[0];
+    if (!range) return localPage || 1;
+    const validLocal = Math.max(1, Math.min(range.count, localPage || 1));
+    return range.start + validLocal - 1;
+  }, [sectionRanges]);
+
+  const totalPages = useMemo(() => {
     if (isEpub) {
-      if (currentEpubSection?.type === "image") return 1;
-      return numPdfPages || (activeEpubDoc ? activeEpubDoc.totalPages : 1);
+      if (sectionRanges.length > 0) {
+        return sectionRanges[sectionRanges.length - 1].end;
+      }
+      return Number(book.totalPages) || 1;
     }
     return activeDocumentUrl
-      ? (numPdfPages || book.totalPages || 0)
-      : (book.totalPages || (Array.isArray(book.pages) ? book.pages.length : 1));
-  }, [isEpub, currentEpubSection?.type, numPdfPages, activeEpubDoc, activeDocumentUrl, book.totalPages, book.pages]);
+      ? (numPdfPages || Number(book.totalPages) || 1)
+      : (Number(book.totalPages) || (Array.isArray(book.pages) ? book.pages.length : 1));
+  }, [isEpub, sectionRanges, book.totalPages, activeDocumentUrl, numPdfPages, book.pages]);
 
-  const totalPages = sectionTotalPages;
-  const currentPageDisplay = activeDocumentUrl || isEpub ? pdfPageNumber : (page + 1);
+  const currentGlobalPage = useMemo(() => {
+    if (!isEpub) {
+      return activeDocumentUrl ? pdfPageNumber : (page + 1);
+    }
+    return localToGlobal(activeEpubSectionId, pdfPageNumber);
+  }, [isEpub, activeDocumentUrl, pdfPageNumber, page, localToGlobal, activeEpubSectionId]);
+
+  const currentPageDisplay = currentGlobalPage;
 
   // Disable pagination buttons when at document boundaries
   const isPrevDisabled = useMemo(() => {
-    if (isEpub && epubSections.length > 0) {
-      return currentSectionIdx === 0 && (currentEpubSection?.type === "image" || pdfPageNumber <= 1);
-    }
-    return activeDocumentUrl ? pdfPageNumber === 1 : page === 0;
-  }, [isEpub, epubSections.length, currentSectionIdx, currentEpubSection?.type, pdfPageNumber, activeDocumentUrl, page]);
+    return currentPageDisplay <= 1;
+  }, [currentPageDisplay]);
 
   const isNextDisabled = useMemo(() => {
-    if (isEpub && epubSections.length > 0) {
-      const maxPages = currentEpubSection?.type === "image" ? 1 : (numPdfPages || (activeEpubDoc ? activeEpubDoc.totalPages : 1));
-      return currentSectionIdx === epubSections.length - 1 && pdfPageNumber >= maxPages;
-    }
-    return activeDocumentUrl ? pdfPageNumber === totalPages : page === (totalPages - 1);
-  }, [isEpub, epubSections.length, currentSectionIdx, currentEpubSection?.type, pdfPageNumber, numPdfPages, activeEpubDoc, activeDocumentUrl, totalPages, page]);
+    return currentPageDisplay >= totalPages;
+  }, [currentPageDisplay, totalPages]);
 
   // Resume page on mount (ONLY ONCE per book load, and ONLY for Student accounts with personal progress)
   useEffect(() => {
@@ -632,21 +718,37 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       }
     }
 
-    if (targetSection && epubSections.some(s => s.id === targetSection)) {
-      setActiveEpubSectionId(targetSection);
-    }
-
     if (targetPage && targetPage >= 1) {
-      const isTargetCover = (targetSection || activeEpubSectionId) === "cover";
-      const safePage = isTargetCover ? 1 : targetPage;
-      if (activeDocumentUrl || isEpub) setPdfPageNumber(safePage);
-      else setPage(safePage - 1);
-
-      if (safePage > 1) {
-        setResumedToast({ page: safePage });
+      if (isEpub) {
+        let resolvedGlobal = targetPage;
+        if (targetSection && sectionRanges.length > 0) {
+          const range = sectionRanges.find(r => r.id === targetSection);
+          if (range && targetPage <= range.count && targetPage < range.start) {
+            resolvedGlobal = range.start + targetPage - 1;
+          }
+        }
+        const { sectionId, localPage } = globalToLocal(resolvedGlobal);
+        if (sectionId) {
+          targetLocalPageRef.current = localPage;
+          setActiveEpubSectionId(sectionId);
+        }
+        setPdfPageNumber(localPage);
+        if (resolvedGlobal > 1) {
+          setResumedToast({ page: resolvedGlobal });
+        }
+      } else if (activeDocumentUrl) {
+        setPdfPageNumber(targetPage);
+        if (targetPage > 1) {
+          setResumedToast({ page: targetPage });
+        }
+      } else {
+        setPage(targetPage - 1);
+        if (targetPage > 1) {
+          setResumedToast({ page: targetPage });
+        }
       }
     }
-  }, [book.id, Boolean(activeDocumentUrl), isEpub, session?.type, studentKey]);
+  }, [book.id, Boolean(activeDocumentUrl), isEpub, session?.type, studentKey, initialPage, sectionRanges, globalToLocal]);
 
   // Auto-dismiss resumed toast after 5 seconds
   useEffect(() => {
@@ -1071,13 +1173,30 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     setJumpInput(currentPageDisplay.toString());
   }, [currentPageDisplay]);
 
+  const goToGlobalPage = useCallback((targetGlobal) => {
+    if (!checkPaceLimit()) return;
+    const maxP = totalPages || 1;
+    const clamped = Math.max(1, Math.min(targetGlobal, maxP));
+
+    if (!isEpub) {
+      if (activeDocumentUrl) setPdfPageNumber(clamped);
+      else setPage(clamped - 1);
+      return;
+    }
+
+    const { sectionId, localPage } = globalToLocal(clamped);
+    if (sectionId && sectionId !== activeEpubSectionId) {
+      targetLocalPageRef.current = localPage;
+      setActiveEpubSectionId(sectionId);
+    }
+    setPdfPageNumber(localPage);
+  }, [checkPaceLimit, totalPages, isEpub, activeDocumentUrl, globalToLocal, activeEpubSectionId]);
+
   const handleJump = () => {
     let p = parseInt(jumpInput, 10);
     const maxP = totalPages || 1;
     if (!isNaN(p) && p >= 1 && p <= maxP) {
-      if (!checkPaceLimit()) return;
-      if (activeDocumentUrl || isEpub) setPdfPageNumber(p);
-      else setPage(p - 1);
+      goToGlobalPage(p);
     } else {
       setJumpInput(currentPageDisplay.toString());
     }
@@ -1085,72 +1204,15 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
   const next = useCallback(() => {
     if (!checkPaceLimit()) return;
-
-    if (isEpub && epubSections.length > 0) {
-      const isImageSec = currentEpubSection?.type === "image";
-      const maxPages = isImageSec ? 1 : (numPdfPages || (activeEpubDoc ? activeEpubDoc.totalPages : 1));
-
-      // Advance page if more pages exist in this section
-      if (!isImageSec && pdfPageNumber < maxPages) {
-        setPdfPageNumber((p) => p + 1);
-        return;
-      }
-
-      // Transition to next section if available
-      if (currentSectionIdx < epubSections.length - 1) {
-        const nextSec = epubSections[currentSectionIdx + 1];
-        setActiveEpubSectionId(nextSec.id);
-        setPdfPageNumber(1);
-        setPage(0);
-        setNumPdfPages(null);
-        setJumpInput("1");
-        return;
-      }
-
-      // Already on the last page of the last section
-      return;
-    }
-
-    if (activeDocumentUrl) {
-      setPdfPageNumber((p) => Math.min(p + 1, totalPages));
-    } else {
-      setPage((p) => Math.min(p + 1, totalPages - 1));
-    }
-  }, [checkPaceLimit, isEpub, epubSections, currentEpubSection, currentSectionIdx, numPdfPages, activeEpubDoc, pdfPageNumber, activeDocumentUrl, totalPages]);
+    if (currentPageDisplay >= totalPages) return;
+    goToGlobalPage(currentPageDisplay + 1);
+  }, [checkPaceLimit, currentPageDisplay, totalPages, goToGlobalPage]);
 
   const prev = useCallback(() => {
     if (!checkPaceLimit()) return;
-
-    if (isEpub && epubSections.length > 0) {
-      const isImageSec = currentEpubSection?.type === "image";
-
-      // Step back within current section if after page 1
-      if (!isImageSec && pdfPageNumber > 1) {
-        setPdfPageNumber((p) => p - 1);
-        return;
-      }
-
-      // Transition to previous section if available
-      if (currentSectionIdx > 0) {
-        const prevSec = epubSections[currentSectionIdx - 1];
-        setActiveEpubSectionId(prevSec.id);
-        setPdfPageNumber(1);
-        setPage(0);
-        setNumPdfPages(null);
-        setJumpInput("1");
-        return;
-      }
-
-      // Already on page 1 of the first section
-      return;
-    }
-
-    if (activeDocumentUrl) {
-      setPdfPageNumber((p) => Math.max(p - 1, 1));
-    } else {
-      setPage((p) => Math.max(p - 1, 0));
-    }
-  }, [checkPaceLimit, isEpub, epubSections, currentEpubSection, currentSectionIdx, pdfPageNumber, activeDocumentUrl]);
+    if (currentPageDisplay <= 1) return;
+    goToGlobalPage(currentPageDisplay - 1);
+  }, [checkPaceLimit, currentPageDisplay, goToGlobalPage]);
 
   // Focus lock and screenshot blocker
   useEffect(() => {
@@ -1599,8 +1661,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             <button
               type="button"
               onClick={() => {
-                if (activeDocumentUrl) setPdfPageNumber(1);
-                else setPage(0);
+                goToGlobalPage(1);
                 setResumedToast(null);
               }}
               className="px-2.5 py-0.5 rounded-full bg-white/20 hover:bg-[#F5F23B] hover:text-[#111214] text-[11px] font-bold transition-all cursor-pointer"
@@ -1668,11 +1729,18 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             <select
               value={activeEpubSectionId}
               onChange={(e) => {
-                setActiveEpubSectionId(e.target.value);
+                const targetSecId = e.target.value;
+                const range = sectionRanges.find(r => r.id === targetSecId);
+                targetLocalPageRef.current = 1;
+                setActiveEpubSectionId(targetSecId);
                 setPdfPageNumber(1);
                 setPage(0);
                 setNumPdfPages(null);
-                setJumpInput("1");
+                if (range) {
+                  setJumpInput(range.start.toString());
+                } else {
+                  setJumpInput("1");
+                }
               }}
               className="px-3 py-1.5 rounded-xl bg-black/60 border border-amber-400/30 text-xs font-bold text-amber-300 outline-none cursor-pointer max-w-[170px] sm:max-w-xs truncate shadow-sm hover:border-amber-400/60 transition-all"
             >
@@ -2734,8 +2802,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                             <button
                               type="button"
                               onClick={() => {
-                                if (activeDocumentUrl) setPdfPageNumber(n.pageNumber);
-                                else setPage(n.pageNumber - 1);
+                                goToGlobalPage(n.pageNumber);
                               }}
                               className="text-[11px] text-amber-300 hover:underline cursor-pointer"
                             >
@@ -2789,8 +2856,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                           <button
                             type="button"
                             onClick={() => {
-                              if (activeDocumentUrl) setPdfPageNumber(h.pageNumber);
-                              else setPage(h.pageNumber - 1);
+                              goToGlobalPage(h.pageNumber);
                             }}
                             className="text-[11px] text-amber-300 hover:underline cursor-pointer"
                           >
@@ -2831,8 +2897,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                         <button
                           type="button"
                           onClick={() => {
-                            if (activeDocumentUrl) setPdfPageNumber(bm);
-                            else setPage(bm - 1);
+                            goToGlobalPage(bm);
                           }}
                           className="text-[11px] text-amber-300 hover:underline cursor-pointer"
                         >
@@ -2903,7 +2968,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         {/* Center: Continuous Progress Scrubber / Slider (Image 2 style) */}
         <div className="flex-1 max-w-xs sm:max-w-md mx-2 sm:mx-6 flex items-center gap-2.5">
           <span className="text-[11px] font-bold text-white/50 uppercase tracking-wider hidden lg:inline whitespace-nowrap">
-            Section:
+            Page:
           </span>
           <div className="relative flex-1 flex items-center">
             <input
@@ -2914,12 +2979,11 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
               onChange={(e) => {
                 const val = parseInt(e.target.value, 10);
                 if (!isNaN(val) && val >= 1 && val <= (totalPages || 1)) {
-                  if (activeDocumentUrl || isEpub) setPdfPageNumber(val);
-                  else setPage(val - 1);
+                  goToGlobalPage(val);
                 }
               }}
               className="w-full h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-amber-400 hover:accent-yellow-300 transition-all focus:outline-none"
-              title={`Drag to scrub page within ${currentEpubSection?.title || "section"}`}
+              title={`Drag to scrub page (1 to ${totalPages || 1})`}
             />
           </div>
           <span className="text-xs font-bold text-amber-300 whitespace-nowrap shrink-0">
