@@ -245,6 +245,61 @@ export default function App() {
 
     // --- REAL-TIME SUBSCRIPTIONS ---
     const channel = supabase.channel('global-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const dbBook = payload.new;
+          let epubData = null;
+          if (dbBook.pages && typeof dbBook.pages === 'object' && !Array.isArray(dbBook.pages) && (dbBook.pages.type === 'epub' || dbBook.pages.format === 'epub')) {
+            epubData = dbBook.pages;
+          } else if (dbBook.description && dbBook.description.includes("\n\n__EPUB_DATA__:")) {
+            try {
+              epubData = JSON.parse(dbBook.description.split("\n\n__EPUB_DATA__:")[1]);
+            } catch (e) {}
+          }
+          const newB = {
+            id: dbBook.id, title: dbBook.title, author: dbBook.author, genre: dbBook.genre, pubType: dbBook.pubtype,
+            publisher: dbBook.publisher, price: dbBook.price, color: dbBook.color,
+            firstPublish: dbBook.firstpublish, copyright: dbBook.copyright,
+            printIsbn: dbBook.printisbn, onlineIsbn: dbBook.onlineisbn, description: dbBook.description,
+            totalPages: dbBook.totalpages, pages: dbBook.pages || ["This book has no content pages yet."],
+            epubData,
+            pdfUrl: dbBook.pdfurl, coverUrl: dbBook.coverurl
+          };
+          setBooks(prev => prev.some(b => b.id === newB.id) ? prev : [newB, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          const dbBook = payload.new;
+          let epubData = null;
+          if (dbBook.pages && typeof dbBook.pages === 'object' && !Array.isArray(dbBook.pages) && (dbBook.pages.type === 'epub' || dbBook.pages.format === 'epub')) {
+            epubData = dbBook.pages;
+          } else if (dbBook.description && dbBook.description.includes("\n\n__EPUB_DATA__:")) {
+            try {
+              epubData = JSON.parse(dbBook.description.split("\n\n__EPUB_DATA__:")[1]);
+            } catch (e) {}
+          }
+          setBooks(prev => prev.map(b => b.id === dbBook.id ? {
+            ...b,
+            title: dbBook.title !== undefined ? dbBook.title : b.title,
+            author: dbBook.author !== undefined ? dbBook.author : b.author,
+            genre: dbBook.genre !== undefined ? dbBook.genre : b.genre,
+            pubType: dbBook.pubtype !== undefined ? dbBook.pubtype : b.pubType,
+            publisher: dbBook.publisher !== undefined ? dbBook.publisher : b.publisher,
+            price: dbBook.price !== undefined ? dbBook.price : b.price,
+            color: dbBook.color !== undefined ? dbBook.color : b.color,
+            firstPublish: dbBook.firstpublish !== undefined ? dbBook.firstpublish : b.firstPublish,
+            copyright: dbBook.copyright !== undefined ? dbBook.copyright : b.copyright,
+            printIsbn: dbBook.printisbn !== undefined ? dbBook.printisbn : b.printIsbn,
+            onlineIsbn: dbBook.onlineisbn !== undefined ? dbBook.onlineisbn : b.onlineIsbn,
+            description: dbBook.description !== undefined ? dbBook.description : b.description,
+            totalPages: dbBook.totalpages !== undefined ? dbBook.totalpages : b.totalPages,
+            pages: dbBook.pages !== undefined ? dbBook.pages : b.pages,
+            epubData: epubData || b.epubData,
+            pdfUrl: dbBook.pdfurl !== undefined ? dbBook.pdfurl : b.pdfUrl,
+            coverUrl: dbBook.coverurl !== undefined ? dbBook.coverurl : b.coverUrl
+          } : b));
+        } else if (payload.eventType === 'DELETE') {
+          setBooks(prev => prev.filter(b => b.id !== payload.old.id));
+        }
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'subscribers' }, (payload) => {
         if (payload.eventType === 'INSERT') setSubscribers(prev => [...prev, payload.new]);
         else if (payload.eventType === 'DELETE') setSubscribers(prev => prev.filter(s => s.id !== payload.old.id));
@@ -264,6 +319,7 @@ export default function App() {
           }]);
         } else if (payload.eventType === 'UPDATE') {
           const updatedBookIds = payload.new.bookids || [];
+          const isOfflineOrRevoked = payload.new.status === "offline" || payload.new.status === "revoked" || daysUntil(payload.new.enddate) < 0;
           setReaders(prev => prev.map(r => r.id === payload.new.id ? {
             ...payload.new,
             loginId: payload.new.login_id,
@@ -278,6 +334,10 @@ export default function App() {
           setSession(prev => {
             if (!prev || prev.role !== "reader") return prev;
             if (prev.id === payload.new.id || prev.id === payload.new.login_id || prev.loginId === payload.new.login_id || (prev.email && prev.email === payload.new.login_id)) {
+              if (isOfflineOrRevoked) {
+                alert("Your account access has expired or been suspended.");
+                return null;
+              }
               return {
                 ...prev,
                 bookIds: updatedBookIds.length ? updatedBookIds : "all"
@@ -287,6 +347,14 @@ export default function App() {
           });
         } else if (payload.eventType === 'DELETE') {
           setReaders(prev => prev.filter(r => r.id !== payload.old.id));
+          setSession(prev => {
+            if (!prev || prev.role !== "reader") return prev;
+            if (prev.id === payload.old.id || prev.id === payload.old.login_id || prev.loginId === payload.old.login_id) {
+              alert("Your account has been removed.");
+              return null;
+            }
+            return prev;
+          });
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'trial_requests' }, (payload) => {
@@ -311,6 +379,8 @@ export default function App() {
         } else if (payload.eventType === 'UPDATE') {
           const updatedBookIds = payload.new.bookids || [];
           const updatedDepts = Array.isArray(payload.new.departments) ? payload.new.departments : [];
+          const isSuspendedOrExpired = payload.new.type === "offline" || daysUntil(payload.new.enddate) < 0;
+
           setLicenses(prev => prev.map(l => l.id === payload.new.id ? {
             ...payload.new,
             bookIds: updatedBookIds,
@@ -321,6 +391,24 @@ export default function App() {
           setSession(prev => {
             if (!prev || prev.role !== "reader") return prev;
             if (prev.id === payload.new.id || prev.institutionId === payload.new.id) {
+              if (isSuspendedOrExpired) {
+                alert("Your institution's access has been temporarily suspended or expired.");
+                return null;
+              }
+              // If department, check if still exists
+              if (prev.type === "department" && !updatedDepts.some(d => d.id === prev.deptId || d.loginId === prev.id)) {
+                alert("This department is no longer active.");
+                return null;
+              }
+              // If student, check if still exists
+              if (prev.type === "student") {
+                const targetDept = updatedDepts.find(d => d.id === prev.deptId);
+                const stuExists = targetDept && Array.isArray(targetDept.students) && targetDept.students.some(s => s.studentId === prev.studentId || s.id === prev.studentId);
+                if (!stuExists) {
+                  alert("Your student profile has been removed.");
+                  return null;
+                }
+              }
               return {
                 ...prev,
                 bookIds: updatedBookIds,
@@ -331,6 +419,14 @@ export default function App() {
           });
         } else if (payload.eventType === 'DELETE') {
           setLicenses(prev => prev.filter(l => l.id !== payload.old.id));
+          setSession(prev => {
+            if (!prev || prev.role !== "reader") return prev;
+            if (prev.id === payload.old.id || prev.institutionId === payload.old.id) {
+              alert("Your institution license has been removed.");
+              return null;
+            }
+            return prev;
+          });
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reading_sessions' }, () => {
@@ -344,23 +440,59 @@ export default function App() {
     };
   }, []);
 
-  // Auto-sync session book access with the latest licenses and readers in database
+  // Auto-sync session book access, validity, and departments with latest database state
   useEffect(() => {
     if (!session || session.role !== "reader") return;
 
-    // Institution / Department / Student profile
+    // Institution / Department / Student profile under license
     const licId = session.institutionId || (session.type === "license" ? session.id : null);
     if (licId && licenses.length > 0) {
       const lic = licenses.find(l => l.id === licId);
-      if (lic) {
-        const latestBookIds = Array.isArray(lic.bookIds) ? lic.bookIds : [];
-        const currentBookIds = Array.isArray(session.bookIds) ? session.bookIds : [];
-        const isDifferent = latestBookIds.length !== currentBookIds.length ||
-                            latestBookIds.some(id => !currentBookIds.includes(id)) ||
-                            currentBookIds.some(id => !latestBookIds.includes(id));
-        if (isDifferent) {
-          setSession(prev => prev ? ({ ...prev, bookIds: latestBookIds, departments: lic.departments || prev.departments }) : null);
+      if (!lic) {
+        alert("Your institution license is no longer available.");
+        handleLogout();
+        return;
+      }
+      if (lic.type === "offline") {
+        alert("Your institution's access has been temporarily suspended.");
+        handleLogout();
+        return;
+      }
+      if (daysUntil(lic.endDate) < 0) {
+        alert("Your institution license has expired.");
+        handleLogout();
+        return;
+      }
+
+      const depts = Array.isArray(lic.departments) ? lic.departments : [];
+      if (session.type === "department") {
+        const deptExists = depts.some(d => d.id === session.deptId || d.loginId === session.id);
+        if (!deptExists) {
+          alert("This department is no longer available.");
+          handleLogout();
+          return;
         }
+      }
+
+      if (session.type === "student") {
+        const dept = depts.find(d => d.id === session.deptId);
+        const stuExists = dept && Array.isArray(dept.students) && dept.students.some(s => s.studentId === session.studentId || s.id === session.studentId);
+        if (!stuExists) {
+          alert("Your student profile has been removed.");
+          handleLogout();
+          return;
+        }
+      }
+
+      const latestBookIds = Array.isArray(lic.bookIds) ? lic.bookIds : [];
+      const currentBookIds = Array.isArray(session.bookIds) ? session.bookIds : [];
+      const isBooksDiff = latestBookIds.length !== currentBookIds.length ||
+                          latestBookIds.some(id => !currentBookIds.includes(id)) ||
+                          currentBookIds.some(id => !latestBookIds.includes(id));
+      const isDeptsDiff = JSON.stringify(session.departments || []) !== JSON.stringify(depts);
+
+      if (isBooksDiff || isDeptsDiff) {
+        setSession(prev => prev ? ({ ...prev, bookIds: latestBookIds, departments: depts }) : null);
       }
       return;
     }
@@ -368,14 +500,28 @@ export default function App() {
     // Individual reader profile
     if (readers.length > 0) {
       const r = readers.find(x => x.id === session.id || x.loginId === session.id || (session.email && x.email === session.email));
-      if (r) {
-        const latestBookIds = r.bookIds?.length ? r.bookIds : "all";
-        if (JSON.stringify(session.bookIds) !== JSON.stringify(latestBookIds)) {
-          setSession(prev => prev ? ({ ...prev, bookIds: latestBookIds }) : null);
-        }
+      if (!r) {
+        alert("Your reader account is no longer available.");
+        handleLogout();
+        return;
+      }
+      if (r.status === "offline") {
+        alert("Your account has been temporarily suspended.");
+        handleLogout();
+        return;
+      }
+      if (r.status === "revoked" || daysUntil(r.endDate) < 0) {
+        alert("Your access period has expired.");
+        handleLogout();
+        return;
+      }
+
+      const latestBookIds = r.bookIds?.length ? r.bookIds : "all";
+      if (JSON.stringify(session.bookIds) !== JSON.stringify(latestBookIds)) {
+        setSession(prev => prev ? ({ ...prev, bookIds: latestBookIds }) : null);
       }
     }
-  }, [licenses, readers, session?.id, session?.institutionId, session?.type, session?.bookIds]);
+  }, [licenses, readers, session?.id, session?.institutionId, session?.type, session?.deptId, session?.studentId, session?.bookIds, session?.departments]);
 
 
   function handleLogin(tab, id, password) {
@@ -1007,6 +1153,10 @@ export default function App() {
       if (error) { console.error(error); alert("Database error: " + error.message); return; }
     } catch(e) { console.error(e); }
     setLicenses((prev) => prev.map((l) => (l.id === id ? { ...l, endDate: today() } : l)));
+    if (session && (session.id === id || session.institutionId === id)) {
+      alert("Your institution license has expired or was revoked.");
+      handleLogout();
+    }
   }
 
   async function handleDeleteLicense(id) {
@@ -1026,6 +1176,10 @@ export default function App() {
     }
     setLicenses((prev) => prev.filter((l) => l.id !== id));
     setActiveReadingSessions((prev) => prev.filter((s) => s.license_id !== id));
+    if (session && (session.id === id || session.institutionId === id)) {
+      alert("Your institution license has been removed.");
+      handleLogout();
+    }
     return true;
   }
 
@@ -1036,6 +1190,10 @@ export default function App() {
       if (error) { console.error(error); alert("Database error: " + error.message); return; }
     } catch(e) { console.error(e); }
     setLicenses((prev) => prev.map((l) => (l.id === id ? { ...l, type: newType } : l)));
+    if (isOffline && session && (session.id === id || session.institutionId === id)) {
+      alert("Your institution's access has been temporarily suspended.");
+      handleLogout();
+    }
   }
 
   async function handleCreateReader(readerData) {
@@ -1098,6 +1256,11 @@ export default function App() {
       const { error } = await supabase.from('readers').update({ status: newStatus }).eq('id', readerId);
       if (error) { console.error(error); alert("Database error: " + error.message); return; }
       setReaders(prev => prev.map(r => r.id === readerId ? { ...r, status: newStatus } : r));
+      const targetReader = readers.find(r => r.id === readerId);
+      if (isOffline && session && (session.id === readerId || session.loginId === readerId || (targetReader && session.id === targetReader.loginId))) {
+        alert("Your account has been temporarily suspended.");
+        handleLogout();
+      }
     } catch (e) {
       console.error("Error toggling reader status:", e);
       alert("Database error: " + e.message);
@@ -1109,6 +1272,11 @@ export default function App() {
       const { error } = await supabase.from('readers').update({ enddate: today(), status: "revoked" }).eq('id', readerId);
       if (error) { console.error(error); alert("Database error: " + error.message); return; }
       setReaders(prev => prev.map(r => r.id === readerId ? { ...r, endDate: today(), status: "revoked" } : r));
+      const targetReader = readers.find(r => r.id === readerId);
+      if (session && (session.id === readerId || session.loginId === readerId || (targetReader && session.id === targetReader.loginId))) {
+        alert("Your reader account has expired.");
+        handleLogout();
+      }
     } catch (e) {
       console.error("Error revoking reader:", e);
       alert("Database error: " + e.message);
@@ -1132,6 +1300,10 @@ export default function App() {
       return false;
     }
     setReaders(prev => prev.filter(r => r.id !== readerId));
+    if (session && (session.id === readerId || session.loginId === readerId || (reader && session.id === reader.loginId))) {
+      alert("Your reader account has been removed.");
+      handleLogout();
+    }
     return true;
   }
 
