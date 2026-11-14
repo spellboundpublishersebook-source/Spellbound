@@ -5,9 +5,11 @@ import {
   StickyNote, Bookmark, BookMarked, Maximize, Minimize, Minus, Maximize2, Minimize2, Clock, Sliders, 
   Palette, Trash2, Check, Copy, ChevronDown, Sparkles, Code, FileText, 
   Download, Eye, List, BookOpen, Layers, Building2, GripVertical,
-  Undo2, Redo2, GraduationCap, Play, Pause, SkipBack, SkipForward, Square, Headphones
+  Undo2, Redo2, GraduationCap, Play, Pause, SkipBack, SkipForward, Square, Headphones,
+  PanelLeft, PanelLeftClose, PanelLeftOpen
 } from "lucide-react";
 import { palette, fontDisplay, fontBody } from "../theme";
+import { BrandEmblem3D } from "../components/AdminGlassIcons";
 import { supabase } from "../supabaseClient";
 import Button from "../components/Button";
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -258,126 +260,154 @@ function formatSpeechUnits(lines, mode) {
 function getCuratedVoices(allVoices) {
   if (!allVoices || allVoices.length === 0) return [];
 
-  // Exclude legacy robotic joke voices
+  // Exclude legacy robotic joke/novelty synth voices
   const blacklist = [
     "albert", "bad news", "bahh", "bells", "boing", "bubbles", "cellos",
     "deranged", "fred", "good news", "hysterical", "junior", "kathy",
-    "pipe organ", "princess", "ralph", "trinoids", "whisper", "zarvox"
+    "pipe organ", "princess", "ralph", "trinoids", "whisper", "zarvox", "wobble"
   ];
 
   const validVoices = allVoices.filter((v) => {
     const nameLower = (v.name || "").toLowerCase();
-    const langLower = (v.lang || "").toLowerCase();
+    const langLower = (v.lang || "").toLowerCase().replace(/_/g, "-");
     if (blacklist.some((bad) => nameLower.includes(bad))) return false;
     return langLower.startsWith("en") || langLower.startsWith("hi");
   });
 
-  // 1. Indian English voices (en-IN, Rishi, Veena, Neerja, Prabhat, Ravi, Lekha, etc.)
-  const indianVoices = validVoices.filter(
-    (v) =>
-      v.lang.toLowerCase().replace(/_/g, "-").includes("en-in") ||
-      v.lang.toLowerCase().replace(/_/g, "-").includes("hi-in") ||
-      v.name.toLowerCase().includes("india") ||
-      v.name.toLowerCase().includes("rishi") ||
-      v.name.toLowerCase().includes("veena") ||
-      v.name.toLowerCase().includes("neerja") ||
-      v.name.toLowerCase().includes("prabhat") ||
-      v.name.toLowerCase().includes("ravi") ||
-      v.name.toLowerCase().includes("lekha")
-  );
-
-  // 2. Clear Natural Female
-  const femaleNatural = validVoices.filter(
-    (v) =>
-      !indianVoices.includes(v) &&
-      (v.name.toLowerCase().includes("natural") ||
-        v.name.toLowerCase().includes("google") ||
-        v.name.toLowerCase().includes("samantha") ||
-        v.name.toLowerCase().includes("jenny") ||
-        v.name.toLowerCase().includes("karen") ||
-        v.name.toLowerCase().includes("zira"))
-  );
-
-  // 3. Clear Natural Male
-  const maleNatural = validVoices.filter(
-    (v) =>
-      !indianVoices.includes(v) &&
-      !femaleNatural.includes(v) &&
-      (v.name.toLowerCase().includes("daniel") ||
-        v.name.toLowerCase().includes("guy") ||
-        v.name.toLowerCase().includes("david") ||
-        v.name.toLowerCase().includes("george") ||
-        v.name.toLowerCase().includes("oliver"))
-  );
-
-  // 4. Other natural English voices
-  const otherNatural = validVoices.filter(
-    (v) =>
-      !indianVoices.includes(v) &&
-      !femaleNatural.includes(v) &&
-      !maleNatural.includes(v) &&
-      (v.name.toLowerCase().includes("natural") || v.name.toLowerCase().includes("google"))
-  );
-
   const curated = [];
+  const seenURIs = new Set();
 
-  // Best Indian voice first!
-  if (indianVoices.length > 0) {
-    const bestIndian =
-      indianVoices.find((v) => v.name.toLowerCase().includes("natural") || v.name.toLowerCase().includes("google") || v.name.toLowerCase().includes("neerja") || v.name.toLowerCase().includes("rishi")) ||
-      indianVoices[0];
+  function addVoice(v, label) {
+    if (!v || seenURIs.has(v.voiceURI)) return;
+    seenURIs.add(v.voiceURI);
     curated.push({
-      voiceURI: bestIndian.voiceURI,
-      label: `🇮🇳 Indian English (${bestIndian.name.replace(/Google|Microsoft|Apple/gi, "").trim()})`,
-      voice: bestIndian,
-    });
-    const secondIndian = indianVoices.find((v) => v.voiceURI !== bestIndian.voiceURI);
-    if (secondIndian) {
-      curated.push({
-        voiceURI: secondIndian.voiceURI,
-        label: `🇮🇳 Indian English (${secondIndian.name.replace(/Google|Microsoft|Apple/gi, "").trim()})`,
-        voice: secondIndian,
-      });
-    }
-  }
-
-  // Clear Natural Female
-  if (femaleNatural.length > 0) {
-    curated.push({
-      voiceURI: femaleNatural[0].voiceURI,
-      label: `👩 Natural Female (${femaleNatural[0].name.replace(/Google|Microsoft|Apple/gi, "").trim()})`,
-      voice: femaleNatural[0],
+      voiceURI: v.voiceURI,
+      label,
+      voice: v,
     });
   }
 
-  // Clear Natural Male
-  if (maleNatural.length > 0) {
-    curated.push({
-      voiceURI: maleNatural[0].voiceURI,
-      label: `👨 Natural Male (${maleNatural[0].name.replace(/Google|Microsoft|Apple/gi, "").trim()})`,
-      voice: maleNatural[0],
+  // 1. Indian English / Hindi voices (Priority 1 for Indian readers)
+  const indianVoices = validVoices.filter((v) => {
+    const l = (v.lang || "").toLowerCase().replace(/_/g, "-");
+    const n = (v.name || "").toLowerCase();
+    return (
+      l.includes("en-in") ||
+      l.includes("hi-in") ||
+      n.includes("india") ||
+      n.includes("rishi") ||
+      n.includes("veena") ||
+      n.includes("neerja") ||
+      n.includes("prabhat") ||
+      n.includes("ravi") ||
+      n.includes("lekha") ||
+      n.includes("heera")
+    );
+  });
+
+  // Sort Indian voices: natural/online first
+  indianVoices.sort((a, b) => {
+    const aNat = a.name.toLowerCase().includes("natural") || a.name.toLowerCase().includes("online");
+    const bNat = b.name.toLowerCase().includes("natural") || b.name.toLowerCase().includes("online");
+    return bNat - aNat;
+  });
+
+  indianVoices.forEach((v) => {
+    const n = v.name.toLowerCase();
+    const clean = v.name.replace(/Google|Microsoft|Apple|Desktop|Online \(Natural\)|Online/gi, "").trim();
+    const isFemale = n.includes("female") || n.includes("neerja") || n.includes("veena") || n.includes("lekha") || n.includes("heera") || n.includes("swara");
+    const isMale = n.includes("male") || n.includes("prabhat") || n.includes("rishi") || n.includes("ravi") || n.includes("madhur");
+    const genderTag = isFemale ? "Female - Natural" : isMale ? "Male - Natural" : "Natural Clear";
+    const flag = v.lang.toLowerCase().includes("hi") ? "🇮🇳 Hindi" : "🇮🇳 Indian English";
+    addVoice(v, `${flag} (${genderTag} • ${clean || "Clear"})`);
+  });
+
+  // 2. High Quality US Natural Voices
+  const usVoices = validVoices.filter((v) => {
+    const l = (v.lang || "").toLowerCase().replace(/_/g, "-");
+    return (l.includes("en-us") || l === "en") && !indianVoices.includes(v);
+  });
+
+  // US Natural Female (Jenny, Aria, Samantha, Ava, Zira, etc.)
+  const usFemale = usVoices.filter((v) => {
+    const n = v.name.toLowerCase();
+    return (
+      n.includes("jenny") ||
+      n.includes("aria") ||
+      n.includes("samantha") ||
+      n.includes("ava") ||
+      n.includes("allison") ||
+      n.includes("zira") ||
+      (n.includes("natural") && n.includes("female")) ||
+      (n.includes("google") && !n.includes("male"))
+    );
+  });
+  usFemale.slice(0, 2).forEach((v) => {
+    const clean = v.name.replace(/Google|Microsoft|Apple|Desktop|Online \(Natural\)|Online/gi, "").trim();
+    addVoice(v, `🇺🇸 US English (Natural Female • ${clean || "Jenny"})`);
+  });
+
+  // US Natural Male (Guy, Christopher, Alex, David, etc.)
+  const usMale = usVoices.filter((v) => {
+    const n = v.name.toLowerCase();
+    return (
+      n.includes("guy") ||
+      n.includes("christopher") ||
+      n.includes("alex") ||
+      n.includes("david") ||
+      (n.includes("natural") && n.includes("male")) ||
+      (n.includes("google") && n.includes("male"))
+    );
+  });
+  usMale.slice(0, 2).forEach((v) => {
+    const clean = v.name.replace(/Google|Microsoft|Apple|Desktop|Online \(Natural\)|Online/gi, "").trim();
+    addVoice(v, `🇺🇸 US English (Natural Male • ${clean || "Guy"})`);
+  });
+
+  // 3. British English (UK BBC / Academic)
+  const ukVoices = validVoices.filter((v) => {
+    const l = (v.lang || "").toLowerCase().replace(/_/g, "-");
+    return l.includes("en-gb") && !indianVoices.includes(v);
+  });
+  const ukFemale = ukVoices.filter((v) => {
+    const n = v.name.toLowerCase();
+    return n.includes("sonia") || n.includes("libby") || n.includes("serena") || n.includes("fiona") || n.includes("hazel") || (n.includes("google") && !n.includes("male"));
+  });
+  ukFemale.slice(0, 1).forEach((v) => {
+    const clean = v.name.replace(/Google|Microsoft|Apple|Desktop|Online \(Natural\)|Online/gi, "").trim();
+    addVoice(v, `🇬🇧 British English (BBC Female • ${clean || "Sonia"})`);
+  });
+
+  const ukMale = ukVoices.filter((v) => {
+    const n = v.name.toLowerCase();
+    return n.includes("ryan") || n.includes("george") || n.includes("daniel") || n.includes("oliver") || (n.includes("google") && n.includes("male"));
+  });
+  ukMale.slice(0, 1).forEach((v) => {
+    const clean = v.name.replace(/Google|Microsoft|Apple|Desktop|Online \(Natural\)|Online/gi, "").trim();
+    addVoice(v, `🇬🇧 British English (Academic Male • ${clean || "Ryan"})`);
+  });
+
+  // 4. Australian / Other Natural English
+  const auVoices = validVoices.filter((v) => {
+    const l = (v.lang || "").toLowerCase().replace(/_/g, "-");
+    const n = v.name.toLowerCase();
+    return l.includes("en-au") || l.includes("en-ie") || n.includes("natasha") || n.includes("karen") || n.includes("moira");
+  });
+  auVoices.slice(0, 1).forEach((v) => {
+    const clean = v.name.replace(/Google|Microsoft|Apple|Desktop|Online \(Natural\)|Online/gi, "").trim();
+    addVoice(v, `🇦🇺 Australian English (Natural • ${clean || "Natasha"})`);
+  });
+
+  // 5. Fallback if few voices found
+  if (curated.length < 3) {
+    validVoices.forEach((v) => {
+      if (curated.length >= 8) return;
+      const clean = v.name.replace(/Google|Microsoft|Apple|Desktop|Online \(Natural\)|Online/gi, "").trim();
+      addVoice(v, `🔊 Natural Voice (${clean || v.lang})`);
     });
   }
 
-  // UK English or other natural
-  if (otherNatural.length > 0 && curated.length < 5) {
-    curated.push({
-      voiceURI: otherNatural[0].voiceURI,
-      label: `🇬🇧 British English (${otherNatural[0].name.replace(/Google|Microsoft|Apple/gi, "").trim()})`,
-      voice: otherNatural[0],
-    });
-  }
-
-  // Fallback if no curated voices matched
-  if (curated.length === 0 && validVoices.length > 0) {
-    curated.push({
-      voiceURI: validVoices[0].voiceURI,
-      label: `🔊 Clear Device Voice (${validVoices[0].name.replace(/Google|Microsoft|Apple/gi, "").trim()})`,
-      voice: validVoices[0],
-    });
-  }
-
-  return curated.slice(0, 5);
+  return curated.slice(0, 10);
 }
 
 export default function SecureReader({ book, session, onBack, onSaveStudentCustomizations, initialPage = null }) {
@@ -465,6 +495,39 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const [highlights, setHighlights] = useState([]);
   const [stickyNotes, setStickyNotes] = useState([]);
   const [bookmarks, setBookmarks] = useState([]);
+
+  // Left Navigation Rail state (styled identically to 2nd Admin Dashboard)
+  const [railExpanded, setRailExpanded] = useState(() => {
+    try {
+      return localStorage.getItem("reader_rail_expanded") === "true";
+    } catch (e) {
+      return false;
+    }
+  });
+  const [railMinimized, setRailMinimized] = useState(() => {
+    try {
+      return localStorage.getItem("reader_rail_minimized") === "true";
+    } catch (e) {
+      return false;
+    }
+  });
+  const [activeRailPopover, setActiveRailPopover] = useState(null); // null | 'theme' | 'lights' | 'epubStyle' | 'highlighter' | 'sticky'
+
+  const toggleRailExpanded = () => {
+    setRailExpanded((prev) => {
+      const next = !prev;
+      try { localStorage.setItem("reader_rail_expanded", String(next)); } catch (e) {}
+      return next;
+    });
+  };
+
+  const toggleRailMinimized = () => {
+    setRailMinimized((prev) => {
+      const next = !prev;
+      try { localStorage.setItem("reader_rail_minimized", String(next)); } catch (e) {}
+      return next;
+    });
+  };
 
   // Toolbars & Side Drawers
   const [showLightControls, setShowLightControls] = useState(false);
@@ -1956,6 +2019,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           else if (activeTool) setActiveTool(null);
           else if (lineFocus) setLineFocus(false);
           else if (showNotebook) setShowNotebook(false);
+          else if (activeRailPopover) setActiveRailPopover(null);
           else if (showLightControls) setShowLightControls(false);
           else if (showThemeControls) setShowThemeControls(false);
         }
@@ -2556,12 +2620,25 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         className="relative z-30 flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-2.5 border-b border-white/10 backdrop-blur-xl shadow-xs"
         style={{ backgroundColor: currentTheme.headerBg, color: palette.cream }}
       >
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <button
             onClick={onBack}
             className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 transition-all cursor-pointer shrink-0 shadow-xs"
           >
             <ArrowLeft size={14} /> Library
+          </button>
+          <button
+            type="button"
+            onClick={toggleRailMinimized}
+            className={`flex items-center gap-1.5 text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded-xl border transition-all cursor-pointer shrink-0 shadow-xs ${
+              !railMinimized
+                ? "bg-amber-400 text-black border-amber-300 font-bold shadow-amber-400/20"
+                : "bg-white/10 hover:bg-white/20 active:scale-95 text-white border-white/15"
+            }`}
+            title={railMinimized ? "Show Tools Rail" : "Hide Tools Rail"}
+          >
+            <PanelLeft size={14} />
+            <span className="hidden sm:inline">Tools</span>
           </button>
           <div className="min-w-0">
             <div className="text-xs sm:text-sm font-extrabold truncate max-w-[220px] sm:max-w-md tracking-tight" style={fontDisplay}>
@@ -2671,405 +2748,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         </div>
       </div>
 
-      {/* SECOND ROW: CUSTOMIZATION TOOLBAR (Modern Glass grouped layout) */}
-      <div
-        className={`relative flex flex-wrap items-center justify-between gap-2.5 px-4 sm:px-6 py-2 border-b border-white/10 text-xs font-semibold backdrop-blur-xl shadow-xs ${
-          showThemeControls || showEpubColorMenu || showLightControls ? 'z-[160]' : 'z-40'
-        }`}
-        style={{ backgroundColor: currentTheme.toolbarBg, color: palette.cream }}
-      >
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* THEME SELECTOR BUTTON */}
-          <div ref={themeDropdownRef} className={`relative ${showThemeControls ? 'z-[180]' : ''}`}>
-            <button
-              type="button"
-              onClick={toggleThemeControls}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/8 hover:bg-white/15 active:scale-95 border border-white/15 text-white/90 hover:text-white transition-all cursor-pointer shadow-xs"
-            >
-              <Palette size={13} className="text-amber-300" />
-              <span className="w-2.5 h-2.5 rounded-full border border-white/40 shadow-xs" style={{ backgroundColor: currentTheme.pageBg }} />
-              <span>Theme: {currentTheme.name}</span>
-              <ChevronDown size={12} className="text-white/60" />
-            </button>
 
-            {showThemeControls && (
-              <>
-                <div
-                  className="fixed inset-0 z-[190]"
-                  onClick={() => setShowThemeControls(false)}
-                />
-                <div className="absolute left-0 top-full mt-2 z-[200] w-64 rounded-2xl reader-dropdown-noisy p-2.5 space-y-1 text-xs">
-                  <div className="text-[10px] uppercase font-bold text-zinc-400 px-2 py-1 tracking-wider border-b border-white/10 mb-1">Reading Themes</div>
-                  {Object.values(READING_THEMES).map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => {
-                        setThemeKey(t.id);
-                        setShowThemeControls(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left font-semibold transition-colors cursor-pointer ${
-                        themeKey === t.id ? "bg-amber-400 text-black font-bold shadow-md" : "hover:bg-white/15 text-white"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="w-3.5 h-3.5 rounded-full border border-white/30 shadow-xs" style={{ backgroundColor: t.pageBg }} />
-                        <span>{t.name}</span>
-                      </div>
-                      {themeKey === t.id && <Check size={13} className="text-black stroke-[2.5]" />}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* EPUB CUSTOM PALETTE / STYLE SELECTOR (FOR E-BOOKS) */}
-          {isEpub && (
-            <div ref={epubColorMenuRef} className={`relative ${showEpubColorMenu ? 'z-[180]' : ''}`}>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowEpubColorMenu(!showEpubColorMenu);
-                  setShowThemeControls(false);
-                  setShowLightControls(false);
-                }}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all cursor-pointer shadow-xs ${
-                  epubColorMode !== "auto"
-                    ? "bg-amber-400 text-black border-amber-300 font-bold"
-                    : "bg-white/8 hover:bg-white/15 active:scale-95 border-white/15 text-white/90 hover:text-white"
-                }`}
-                title="Change e-Book color theme or auto-match background"
-              >
-                <Sparkles size={13} className={epubColorMode !== "auto" ? "text-black" : "text-amber-300"} />
-                <span>e-Book Style:</span>
-                <span className={`font-extrabold capitalize ${epubColorMode !== "auto" ? "text-black" : "text-amber-300"}`}>
-                  {EPUB_COLOR_MODES.find(m => m.id === epubColorMode)?.name.split(" ")[0] || "Auto"}
-                </span>
-                <ChevronDown size={12} className="opacity-70" />
-              </button>
-
-              {showEpubColorMenu && (
-                <>
-                  <div
-                    className="fixed inset-0 z-[190]"
-                    onClick={() => setShowEpubColorMenu(false)}
-                  />
-                  <div className="absolute left-0 top-full mt-2 z-[200] w-64 rounded-2xl reader-dropdown-noisy p-2.5 space-y-1 text-xs">
-                    <div className="text-[10px] uppercase font-bold text-zinc-400 px-2 py-1 tracking-wider border-b border-white/10 flex items-center justify-between mb-1">
-                      <span>e-Book Style</span>
-                      <span className="text-[9px] text-amber-300 font-normal">Auto / Custom</span>
-                    </div>
-                    {EPUB_COLOR_MODES.map((mode) => (
-                      <button
-                        key={mode.id}
-                        type="button"
-                        onClick={() => {
-                          setEpubColorMode(mode.id);
-                          setShowEpubColorMenu(false);
-                        }}
-                        className={`w-full flex items-start gap-2.5 px-2.5 py-2 rounded-xl text-left transition-colors cursor-pointer ${
-                          epubColorMode === mode.id
-                            ? "bg-amber-400 text-black font-bold shadow-md"
-                            : "hover:bg-white/15 text-white"
-                        }`}
-                      >
-                        <div className="mt-0.5">
-                          <Check size={13} className={epubColorMode === mode.id ? "opacity-100 text-black stroke-[2.5]" : "opacity-0"} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-bold text-xs">{mode.name}</div>
-                          <div className={`text-[10px] leading-tight mt-0.5 ${epubColorMode === mode.id ? "text-black/80 font-medium" : "text-white/70"}`}>
-                            {mode.desc}
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* PAGE LIGHTS & EYE-CARE WARM LIGHT BUTTON */}
-          <div ref={lightDropdownRef} className={`relative ${showLightControls ? 'z-[180]' : ''}`}>
-            <button
-              type="button"
-              onClick={toggleLightControls}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all cursor-pointer shadow-xs ${
-                brightness !== 100 || warmLight > 0
-                  ? "bg-amber-400 text-black border-amber-300 font-bold shadow-amber-400/20"
-                  : "bg-white/8 hover:bg-white/15 active:scale-95 border-white/15 text-white/90 hover:text-white"
-              }`}
-            >
-              <Sun size={13} className={brightness !== 100 || warmLight > 0 ? "text-black" : "text-amber-300"} />
-              <span>Page Lights</span>
-              <ChevronDown size={12} className="opacity-70" />
-            </button>
-
-            {showLightControls && (
-              <>
-                <div
-                  className="fixed inset-0 z-[190]"
-                  onClick={() => setShowLightControls(false)}
-                />
-                <div className="absolute left-0 top-full mt-2 z-[200] w-64 rounded-2xl reader-dropdown-noisy p-4 space-y-3.5 text-xs text-white">
-                  <div className="flex items-center justify-between pb-1 border-b border-white/10 font-bold">
-                    <span>Page Light Controls</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBrightness(100);
-                        setWarmLight(0);
-                      }}
-                      className="text-[10px] text-amber-300 hover:underline cursor-pointer"
-                    >
-                      Reset
-                    </button>
-                  </div>
-
-                  {/* Brightness slider */}
-                  <div>
-                    <div className="flex items-center justify-between text-[11px] mb-1">
-                      <span className="flex items-center gap-1"><Sun size={12} /> Brightness</span>
-                      <span className="font-bold">{brightness}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="50"
-                      max="140"
-                      value={brightness}
-                      onChange={(e) => setBrightness(Number(e.target.value))}
-                      className="w-full accent-amber-400 cursor-pointer"
-                    />
-                  </div>
-
-                  {/* Warm Eye-Care night light */}
-                  <div>
-                    <div className="flex items-center justify-between text-[11px] mb-1">
-                      <span className="flex items-center gap-1 text-amber-300"><Moon size={12} /> Warm Night Light</span>
-                      <span className="font-bold">{warmLight}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="70"
-                      value={warmLight}
-                      onChange={(e) => setWarmLight(Number(e.target.value))}
-                      className="w-full accent-amber-500 cursor-pointer"
-                    />
-                    <div className="text-[10px] text-zinc-400 mt-1">
-                      Soft amber eye-protection filter for fatigue-free night study.
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="h-4 w-px bg-white/15 hidden sm:block" />
-
-          {/* PERSONAL STUDY TOOLS (ONLY AVAILABLE ON STUDENT PROFILES) */}
-          {!isStudentProfile ? (
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-900/50 border border-blue-400/30 text-xs text-blue-200">
-              <Building2 size={13} className="text-blue-300 shrink-0" />
-              <span className="font-semibold">Dept View:</span>
-              <span className="text-blue-100 text-[11px] hidden sm:inline">Personal highlights, sticky notes & study notebook locked.</span>
-              <button
-                type="button"
-                onClick={onBack}
-                className="px-2.5 py-0.5 rounded-lg bg-[#F5F23B] text-black font-bold text-[11px] hover:bg-yellow-300 transition-all cursor-pointer shrink-0"
-              >
-                Switch to Student ID
-              </button>
-            </div>
-          ) : (
-            <>
-              {/* LINE FOCUS / READING RULER TOGGLE */}
-              <button
-                type="button"
-                onClick={toggleLineFocus}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all cursor-pointer shadow-xs ${
-                  lineFocus
-                    ? "bg-amber-400 text-black border-amber-300 font-bold shadow-amber-400/25"
-                    : "bg-white/8 hover:bg-white/15 active:scale-95 border-white/15 text-white/90 hover:text-white"
-                }`}
-                title="Line Focus / Reading Ruler: Highlights the active line as you read, softly dimming the rest"
-              >
-                <Sliders size={13} className={lineFocus ? "text-black" : "text-amber-300"} />
-                <span>Line Focus</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold ${lineFocus ? "bg-black/20 text-black" : "bg-white/10 text-white/70"}`}>
-                  {lineFocus ? "ON" : "OFF"}
-                </span>
-              </button>
-
-              <div className="h-4 w-px bg-white/15 hidden sm:block" />
-
-              {/* HIGHLIGHTER TOOL (Single-use per click) */}
-              <div className="inline-flex items-center gap-1 bg-white/8 p-1 rounded-xl border border-white/15 shadow-xs">
-                <button
-                  type="button"
-                  onClick={toggleHighlighter}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    activeTool === "highlight"
-                      ? "bg-amber-400 text-black shadow-sm ring-2 ring-amber-300"
-                      : "text-white/90 hover:text-white hover:bg-white/10"
-                  }`}
-                  title="Click to turn on highlighter for one passage (automatically turns off after highlighting)"
-                >
-                  <Highlighter size={13} />
-                  <span>Highlighter {activeTool === "highlight" ? "ACTIVE" : ""}</span>
-                </button>
-
-                {/* Color swatches */}
-                <div className="flex items-center gap-1 pl-1 border-l border-white/15">
-                  {Object.values(HIGHLIGHT_COLORS).map((col) => (
-                    <button
-                      key={col.id}
-                      type="button"
-                      onClick={() => selectHighlightColor(col.id)}
-                      className={`w-4.5 h-4.5 rounded-full transition-transform cursor-pointer ${
-                        highlightColor === col.id && activeTool === "highlight"
-                          ? "scale-125 ring-2 ring-white shadow-sm"
-                          : "hover:scale-115 opacity-85 hover:opacity-100"
-                      }`}
-                      style={{ backgroundColor: col.border }}
-                      title={`Highlight with ${col.name} (1-time use)`}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* STICKY NOTE / CODE TOOL */}
-              <div className="inline-flex items-center gap-1 bg-white/8 p-1 rounded-xl border border-white/15 shadow-xs">
-                <button
-                  type="button"
-                  onClick={toggleStickyTool}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    activeTool === "sticky"
-                      ? "bg-[#F5F23B] text-black shadow-sm ring-2 ring-yellow-200"
-                      : "text-white/90 hover:text-white hover:bg-white/10"
-                  }`}
-                  title="Click anywhere on book or in side margins to drop a sticky note or code snippet"
-                >
-                  <StickyNote size={13} />
-                  <span>+ Sticky Note {activeTool === "sticky" ? "ACTIVE" : ""}</span>
-                </button>
-
-                {/* Sticky color swatches */}
-                <div className="flex items-center gap-1 pl-1 border-l border-white/15">
-                  {Object.entries(STICKY_COLORS).map(([cKey, cVal]) => (
-                    <button
-                      key={cKey}
-                      type="button"
-                      onClick={() => setStickyColor(cKey)}
-                      className={`w-4 h-4 rounded-full transition-transform cursor-pointer border ${
-                        stickyColor === cKey
-                          ? "scale-125 ring-2 ring-white border-white shadow-sm"
-                          : "border-white/30 hover:scale-115 opacity-85 hover:opacity-100"
-                      }`}
-                      style={{ backgroundColor: cVal.border }}
-                      title={`New note color: ${cVal.label}`}
-                    />
-                  ))}
-                </div>
-
-                <select
-                  value={stickyTag}
-                  onChange={(e) => setStickyTag(e.target.value)}
-                  className="bg-black/50 hover:bg-black/70 text-[11px] font-bold text-white px-2 py-0.5 rounded-md outline-none cursor-pointer border border-white/10"
-                >
-                  <option value="Note">Note</option>
-                  <option value="Code">Code</option>
-                  <option value="Formula">Formula</option>
-                  <option value="Exam">Exam</option>
-                </select>
-              </div>
-
-              {/* UNDO / REDO CONTROLS */}
-              <div className="inline-flex items-center gap-0.5 bg-white/8 p-1 rounded-xl border border-white/15 shadow-xs">
-                <button
-                  type="button"
-                  onClick={handleUndo}
-                  disabled={historyIndex <= 0}
-                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
-                    historyIndex > 0
-                      ? "text-white hover:bg-white/15 cursor-pointer active:scale-95"
-                      : "text-white/30 cursor-not-allowed"
-                  }`}
-                  title="Undo last annotation (Ctrl+Z / Cmd+Z)"
-                >
-                  <Undo2 size={13} />
-                  <span className="hidden md:inline">Undo</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRedo}
-                  disabled={historyIndex < 0 || historyIndex >= history.length - 1}
-                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
-                    historyIndex >= 0 && historyIndex < history.length - 1
-                      ? "text-white hover:bg-white/15 cursor-pointer active:scale-95"
-                      : "text-white/30 cursor-not-allowed"
-                  }`}
-                  title="Redo annotation (Ctrl+Y / Cmd+Shift+Z)"
-                >
-                  <Redo2 size={13} />
-                  <span className="hidden md:inline">Redo</span>
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* SECTION ZOOM BUTTON (for PDFs) */}
-          {book.pdfUrl && (
-            <button
-              type="button"
-              onClick={toggleSectionZoom}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all cursor-pointer shadow-xs ${
-                sectionSelectActive
-                  ? "bg-amber-400 text-black border-amber-300 font-bold shadow-amber-400/25"
-                  : "bg-white/8 hover:bg-white/15 active:scale-95 border-white/15 text-white/90 hover:text-white"
-              }`}
-              title="Select and zoom into a specific diagram or section"
-            >
-              <ScanSearch size={13} />
-              <span>{sectionSelectActive ? "Selecting..." : "Zoom Section"}</span>
-            </button>
-          )}
-        </div>
-
-        {/* RIGHT GROUP: BOOKMARK + PERSONAL STUDY NOTEBOOK DRAWER TOGGLE */}
-        <div className="flex items-center gap-2">
-          {isStudentProfile && (
-            <>
-              <button
-                type="button"
-                onClick={toggleBookmark}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all cursor-pointer shadow-xs ${
-                  isBookmarked
-                    ? "bg-amber-400 text-black border-amber-300 font-bold shadow-amber-400/25"
-                    : "bg-white/8 hover:bg-white/15 active:scale-95 border-white/15 text-white/90 hover:text-white"
-                }`}
-              >
-                {isBookmarked ? <BookMarked size={13} /> : <Bookmark size={13} />}
-                <span>{isBookmarked ? "Bookmarked" : "Bookmark"}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={toggleNotebook}
-                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 text-black font-extrabold shadow-md shadow-amber-400/20 active:scale-95 transition-all cursor-pointer"
-              >
-                <BookOpen size={13} />
-                <span>Study Notebook</span>
-                <span className="bg-black/15 text-black text-[10px] px-1.5 py-0.2 rounded-full font-black">
-                  {totalNotesCount}
-                </span>
-              </button>
-            </>
-          )}
-        </div>
-      </div>
 
       {/* HELPER BANNER FOR ACTIVE TOOLS */}
       {activeTool === "highlight" && (
@@ -3147,38 +2826,795 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         </div>
       )}
 
-      {/* MAIN READING CANVAS VIEWPORT */}
-      <div
-        ref={readingDeskRef}
-        onPointerDown={handleDeskPointerDown}
-        className="flex-1 flex items-center justify-center p-4 sm:p-8 md:px-24 lg:px-36 overflow-x-auto overflow-y-auto relative z-0 min-h-[600px]"
-        style={{ backgroundColor: currentTheme.outerBg }}
-      >
-        {/* Floating Left Page Turn Button (Image 2 style) */}
-        {!sectionCrop && (
+      {/* READER BODY: LEFT GLASS NAVIGATION RAIL + READING DESK */}
+      <div className="flex-1 flex flex-row min-h-0 relative overflow-hidden">
+        {/* LEFT GLASS NAVIGATION RAIL (Styled identical to 2nd Admin Dashboard) */}
+        {!railMinimized && (
+          <aside
+            aria-label="Reader navigation rail"
+            className={`relative z-40 hidden sm:flex flex-col justify-between shrink-0 my-3 ml-3 py-3 px-2 rounded-2xl bg-[#0c1017]/92 border border-white/15 shadow-[0_12px_28px_-14px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.15)] backdrop-blur-2xl transition-all duration-300 select-none overflow-y-auto overflow-x-hidden ${
+              railExpanded ? "w-56" : "w-[68px]"
+            }`}
+          >
+            <div className="flex flex-col items-center gap-3">
+              {/* Header: Brand Emblem + Title */}
+              <div className={`w-full flex items-center ${railExpanded ? "justify-between px-2" : "justify-center"} pt-1 pb-1`}>
+                <div className="flex items-center gap-2.5">
+                  <BrandEmblem3D size={28} />
+                  {railExpanded && (
+                    <span className="font-bold text-xs tracking-tight text-white/90 truncate" style={fontDisplay}>
+                      Reader Tools
+                    </span>
+                  )}
+                </div>
+                {railExpanded && (
+                  <button
+                    type="button"
+                    onClick={toggleRailMinimized}
+                    className="p-1 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-all cursor-pointer"
+                    title="Minimize Tools"
+                  >
+                    <PanelLeftClose size={15} />
+                  </button>
+                )}
+              </div>
+
+              {/* Navigation Tabs List */}
+              <nav role="tablist" aria-label="Reader tools" className="w-full flex flex-col gap-1.5">
+                {/* 1. THEME SELECTOR */}
+                <div className="relative w-full">
+                  <button
+                    type="button"
+                    onClick={() => setActiveRailPopover(activeRailPopover === "theme" ? null : "theme")}
+                    title={`Theme: ${currentTheme.name}`}
+                    className={`group relative flex items-center gap-3 w-full rounded-2xl transition-all duration-200 cursor-pointer focus:outline-none ${
+                      railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
+                    } ${
+                      activeRailPopover === "theme"
+                        ? "bg-amber-400 text-[#111214] font-bold shadow-md scale-[1.02]"
+                        : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    <span className="shrink-0 transition-transform duration-200 group-hover:scale-110">
+                      <Palette size={20} className={activeRailPopover === "theme" ? "text-black" : "text-amber-300"} />
+                    </span>
+                    {railExpanded ? (
+                      <>
+                        <span className="text-xs font-bold truncate">Theme</span>
+                        <span
+                          className="ml-auto w-3.5 h-3.5 rounded-full border border-white/40 shadow-xs shrink-0"
+                          style={{ backgroundColor: currentTheme.pageBg }}
+                          title={currentTheme.name}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <span
+                          className="absolute bottom-1.5 right-1.5 w-2 h-2 rounded-full border border-black/40"
+                          style={{ backgroundColor: currentTheme.pageBg }}
+                        />
+                        <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#0c1017] text-white text-xs font-semibold shadow-xl border border-white/15">
+                          Theme: {currentTheme.name}
+                        </span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* THEME FLYOUT POPOVER */}
+                  {activeRailPopover === "theme" && (
+                    <>
+                      <div className="fixed inset-0 z-[190]" onClick={() => setActiveRailPopover(null)} />
+                      <div className="absolute left-full ml-3 top-0 z-[220] w-64 rounded-2xl bg-[#0e121a]/95 border border-white/15 p-2.5 shadow-2xl backdrop-blur-2xl text-xs space-y-1">
+                        <div className="text-[10px] uppercase font-bold text-amber-300 px-2 py-1 tracking-wider border-b border-white/10 mb-1 flex items-center justify-between">
+                          <span>Reading Themes</span>
+                          <span className="text-white/40 text-[9px]">5 Styles</span>
+                        </div>
+                        {Object.values(READING_THEMES).map((t) => (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => {
+                              setThemeKey(t.id);
+                              setActiveRailPopover(null);
+                            }}
+                            className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left font-semibold transition-all cursor-pointer ${
+                              themeKey === t.id
+                                ? "bg-amber-400 text-black font-bold shadow-md"
+                                : "hover:bg-white/15 text-white"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="w-3.5 h-3.5 rounded-full border border-white/30 shadow-xs shrink-0" style={{ backgroundColor: t.pageBg }} />
+                              <span>{t.name}</span>
+                            </div>
+                            {themeKey === t.id && <Check size={13} className="text-black stroke-[2.5]" />}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* 2. PAGE LIGHTS & WARM EYE-CARE */}
+                <div className="relative w-full">
+                  <button
+                    type="button"
+                    onClick={() => setActiveRailPopover(activeRailPopover === "lights" ? null : "lights")}
+                    title={`Page Lights (${brightness}% Brightness, ${warmLight}% Warm Night Light)`}
+                    className={`group relative flex items-center gap-3 w-full rounded-2xl transition-all duration-200 cursor-pointer focus:outline-none ${
+                      railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
+                    } ${
+                      activeRailPopover === "lights" || brightness !== 100 || warmLight > 0
+                        ? "bg-amber-400 text-[#111214] font-bold shadow-md scale-[1.02]"
+                        : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    {(brightness !== 100 || warmLight > 0) && (
+                      <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-black/70" />
+                    )}
+                    <span className="shrink-0 transition-transform duration-200 group-hover:scale-110">
+                      <Sun size={20} className={activeRailPopover === "lights" || brightness !== 100 || warmLight > 0 ? "text-black" : "text-amber-300"} />
+                    </span>
+                    {railExpanded ? (
+                      <>
+                        <span className="text-xs font-bold truncate">Page Lights</span>
+                        {(brightness !== 100 || warmLight > 0) && (
+                          <span className="ml-auto text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-black/15 text-black">
+                            {brightness}%
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#0c1017] text-white text-xs font-semibold shadow-xl border border-white/15">
+                        Page Lights ({brightness}%)
+                      </span>
+                    )}
+                  </button>
+
+                  {/* PAGE LIGHTS FLYOUT POPOVER */}
+                  {activeRailPopover === "lights" && (
+                    <>
+                      <div className="fixed inset-0 z-[190]" onClick={() => setActiveRailPopover(null)} />
+                      <div className="absolute left-full ml-3 top-0 z-[220] w-64 rounded-2xl bg-[#0e121a]/95 border border-white/15 p-4 shadow-2xl backdrop-blur-2xl text-xs space-y-3.5 text-white">
+                        <div className="flex items-center justify-between pb-1 border-b border-white/10 font-bold">
+                          <span className="text-amber-300">Page Light Controls</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBrightness(100);
+                              setWarmLight(0);
+                            }}
+                            className="text-[10px] text-amber-300 hover:underline cursor-pointer"
+                          >
+                            Reset
+                          </button>
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between text-[11px] mb-1">
+                            <span className="flex items-center gap-1"><Sun size={12} /> Brightness</span>
+                            <span className="font-bold">{brightness}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="50"
+                            max="140"
+                            value={brightness}
+                            onChange={(e) => setBrightness(Number(e.target.value))}
+                            className="w-full accent-amber-400 cursor-pointer"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between text-[11px] mb-1">
+                            <span className="flex items-center gap-1 text-amber-300"><Moon size={12} /> Warm Night Light</span>
+                            <span className="font-bold">{warmLight}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max="70"
+                            value={warmLight}
+                            onChange={(e) => setWarmLight(Number(e.target.value))}
+                            className="w-full accent-amber-500 cursor-pointer"
+                          />
+                          <div className="text-[10px] text-zinc-400 mt-1 leading-tight">
+                            Soft amber eye-protection filter for fatigue-free night study.
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* 3. EPUB COLOR / STYLE (if EPUB) */}
+                {isEpub && (
+                  <div className="relative w-full">
+                    <button
+                      type="button"
+                      onClick={() => setActiveRailPopover(activeRailPopover === "epubStyle" ? null : "epubStyle")}
+                      title="e-Book Style"
+                      className={`group relative flex items-center gap-3 w-full rounded-2xl transition-all duration-200 cursor-pointer focus:outline-none ${
+                        railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
+                      } ${
+                        activeRailPopover === "epubStyle" || epubColorMode !== "auto"
+                          ? "bg-amber-400 text-[#111214] font-bold shadow-md scale-[1.02]"
+                          : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      <span className="shrink-0 transition-transform duration-200 group-hover:scale-110">
+                        <Sparkles size={20} className={activeRailPopover === "epubStyle" || epubColorMode !== "auto" ? "text-black" : "text-amber-300"} />
+                      </span>
+                      {railExpanded ? (
+                        <>
+                          <span className="text-xs font-bold truncate">e-Book Style</span>
+                          <span className="ml-auto text-[10px] font-extrabold capitalize opacity-80">
+                            {epubColorMode}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#0c1017] text-white text-xs font-semibold shadow-xl border border-white/15">
+                          e-Book Style: {epubColorMode}
+                        </span>
+                      )}
+                    </button>
+
+                    {activeRailPopover === "epubStyle" && (
+                      <>
+                        <div className="fixed inset-0 z-[190]" onClick={() => setActiveRailPopover(null)} />
+                        <div className="absolute left-full ml-3 top-0 z-[220] w-64 rounded-2xl bg-[#0e121a]/95 border border-white/15 p-2.5 shadow-2xl backdrop-blur-2xl text-xs space-y-1">
+                          <div className="text-[10px] uppercase font-bold text-amber-300 px-2 py-1 tracking-wider border-b border-white/10 flex items-center justify-between mb-1">
+                            <span>e-Book Style</span>
+                            <span className="text-[9px] text-zinc-400 font-normal">Auto / Custom</span>
+                          </div>
+                          {EPUB_COLOR_MODES.map((mode) => (
+                            <button
+                              key={mode.id}
+                              type="button"
+                              onClick={() => {
+                                setEpubColorMode(mode.id);
+                                setActiveRailPopover(null);
+                              }}
+                              className={`w-full flex items-start gap-2.5 px-2.5 py-2 rounded-xl text-left transition-all cursor-pointer ${
+                                epubColorMode === mode.id
+                                  ? "bg-amber-400 text-black font-bold shadow-md"
+                                  : "hover:bg-white/15 text-white"
+                              }`}
+                            >
+                              <div className="mt-0.5">
+                                <Check size={13} className={epubColorMode === mode.id ? "opacity-100 text-black stroke-[2.5]" : "opacity-0"} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-bold text-xs">{mode.name}</div>
+                                <div className={`text-[10px] leading-tight mt-0.5 ${epubColorMode === mode.id ? "text-black/80 font-medium" : "text-white/70"}`}>
+                                  {mode.desc}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* 4. VOICE READER */}
+                <div className="relative w-full">
+                  <button
+                    type="button"
+                    onClick={toggleVoiceReader}
+                    title="Voice Reader (Listen Aloud Line-by-Line & Page-by-Page)"
+                    className={`group relative flex items-center gap-3 w-full rounded-2xl transition-all duration-200 cursor-pointer focus:outline-none ${
+                      railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
+                    } ${
+                      isVoiceActive
+                        ? "bg-amber-400 text-[#111214] font-bold shadow-md scale-[1.02]"
+                        : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    {isVoiceActive && (
+                      <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-black/70" />
+                    )}
+                    <span className="shrink-0 transition-transform duration-200 group-hover:scale-110 relative">
+                      <Headphones size={20} className={isVoiceActive ? "text-black" : "text-amber-300"} />
+                      {isVoicePlaying && (
+                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                      )}
+                    </span>
+                    {railExpanded ? (
+                      <>
+                        <span className="text-xs font-bold truncate">Voice Reader</span>
+                        {isVoicePlaying ? (
+                          <span className="ml-auto text-[10px] font-black text-emerald-950 bg-emerald-400/80 px-1.5 py-0.5 rounded flex items-center gap-1">
+                            Live
+                          </span>
+                        ) : isVoicePaused ? (
+                          <span className="ml-auto text-[10px] font-bold text-black/70 bg-black/15 px-1.5 py-0.5 rounded">
+                            Paused
+                          </span>
+                        ) : null}
+                      </>
+                    ) : (
+                      <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#0c1017] text-white text-xs font-semibold shadow-xl border border-white/15">
+                        Voice Reader {isVoicePlaying ? "(Playing)" : isVoicePaused ? "(Paused)" : ""}
+                      </span>
+                    )}
+                  </button>
+                </div>
+
+                {/* 5. LINE FOCUS */}
+                <div className="relative w-full">
+                  <button
+                    type="button"
+                    onClick={toggleLineFocus}
+                    title="Line Focus Ruler (Illuminates reading lines)"
+                    className={`group relative flex items-center gap-3 w-full rounded-2xl transition-all duration-200 cursor-pointer focus:outline-none ${
+                      railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
+                    } ${
+                      lineFocus
+                        ? "bg-amber-400 text-[#111214] font-bold shadow-md scale-[1.02]"
+                        : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    {lineFocus && (
+                      <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-black/70" />
+                    )}
+                    <span className="shrink-0 transition-transform duration-200 group-hover:scale-110">
+                      <Sliders size={20} className={lineFocus ? "text-black" : "text-amber-300"} />
+                    </span>
+                    {railExpanded ? (
+                      <>
+                        <span className="text-xs font-bold truncate">Line Focus</span>
+                        <span className={`ml-auto text-[10px] font-extrabold px-1.5 py-0.5 rounded ${lineFocus ? "bg-black/20 text-black" : "bg-white/10 text-white/50"}`}>
+                          {lineFocus ? "ON" : "OFF"}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#0c1017] text-white text-xs font-semibold shadow-xl border border-white/15">
+                        Line Focus: {lineFocus ? "ON" : "OFF"}
+                      </span>
+                    )}
+                  </button>
+                </div>
+
+                {/* 6. HIGHLIGHTER */}
+                <div className="relative w-full">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (activeTool === "highlight") {
+                        setActiveTool(null);
+                      } else {
+                        setActiveRailPopover(activeRailPopover === "highlighter" ? null : "highlighter");
+                      }
+                    }}
+                    title={`Highlighter (${HIGHLIGHT_COLORS[highlightColor].name})`}
+                    className={`group relative flex items-center gap-3 w-full rounded-2xl transition-all duration-200 cursor-pointer focus:outline-none ${
+                      railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
+                    } ${
+                      activeTool === "highlight" || activeRailPopover === "highlighter"
+                        ? "bg-amber-400 text-[#111214] font-bold shadow-md scale-[1.02]"
+                        : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    {activeTool === "highlight" && (
+                      <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-black/70" />
+                    )}
+                    <span className="shrink-0 transition-transform duration-200 group-hover:scale-110">
+                      <Highlighter size={20} className={activeTool === "highlight" || activeRailPopover === "highlighter" ? "text-black" : "text-amber-300"} />
+                    </span>
+                    {railExpanded ? (
+                      <>
+                        <span className="text-xs font-bold truncate">Highlighter</span>
+                        <span
+                          className="ml-auto w-3.5 h-3.5 rounded-full border border-white/50 shadow-xs shrink-0"
+                          style={{ backgroundColor: HIGHLIGHT_COLORS[highlightColor].border }}
+                          title={HIGHLIGHT_COLORS[highlightColor].name}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <span
+                          className="absolute bottom-1.5 right-1.5 w-2 h-2 rounded-full border border-black/40"
+                          style={{ backgroundColor: HIGHLIGHT_COLORS[highlightColor].border }}
+                        />
+                        <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#0c1017] text-white text-xs font-semibold shadow-xl border border-white/15">
+                          Highlighter {activeTool === "highlight" ? "(Active)" : `(${HIGHLIGHT_COLORS[highlightColor].name})`}
+                        </span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* HIGHLIGHTER COLOR PALETTE FLYOUT */}
+                  {activeRailPopover === "highlighter" && (
+                    <>
+                      <div className="fixed inset-0 z-[190]" onClick={() => setActiveRailPopover(null)} />
+                      <div className="absolute left-full ml-3 top-0 z-[220] w-52 rounded-2xl bg-[#0e121a]/95 border border-white/15 p-3 shadow-2xl backdrop-blur-2xl text-xs space-y-2 text-white">
+                        <div className="text-[10px] uppercase font-bold text-amber-300 tracking-wider border-b border-white/10 pb-1 flex items-center justify-between">
+                          <span>Highlight Color</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              toggleHighlighter();
+                              setActiveRailPopover(null);
+                            }}
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              activeTool === "highlight" ? "bg-amber-400 text-black" : "bg-white/10 text-white"
+                            }`}
+                          >
+                            {activeTool === "highlight" ? "TURN OFF" : "ACTIVE"}
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-5 gap-2 pt-1">
+                          {Object.values(HIGHLIGHT_COLORS).map((col) => (
+                            <button
+                              key={col.id}
+                              type="button"
+                              onClick={() => {
+                                selectHighlightColor(col.id);
+                                setActiveTool("highlight");
+                                setActiveRailPopover(null);
+                              }}
+                              className={`w-7 h-7 rounded-full transition-transform cursor-pointer flex items-center justify-center ${
+                                highlightColor === col.id
+                                  ? "ring-2 ring-white scale-110 shadow-md"
+                                  : "hover:scale-105 opacity-80 hover:opacity-100"
+                              }`}
+                              style={{ backgroundColor: col.border }}
+                              title={`Highlight with ${col.name}`}
+                            >
+                              {highlightColor === col.id && <Check size={12} className="text-black stroke-[3]" />}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-white/50 leading-tight pt-1">
+                          Select color and drag across text to highlight.
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* 7. STICKY NOTE */}
+                <div className="relative w-full">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (activeTool === "sticky") {
+                        setActiveTool(null);
+                      } else {
+                        setActiveRailPopover(activeRailPopover === "sticky" ? null : "sticky");
+                      }
+                    }}
+                    title={`Sticky Note (${STICKY_COLORS[stickyColor].label})`}
+                    className={`group relative flex items-center gap-3 w-full rounded-2xl transition-all duration-200 cursor-pointer focus:outline-none ${
+                      railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
+                    } ${
+                      activeTool === "sticky" || activeRailPopover === "sticky"
+                        ? "bg-amber-400 text-[#111214] font-bold shadow-md scale-[1.02]"
+                        : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    {activeTool === "sticky" && (
+                      <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-black/70" />
+                    )}
+                    <span className="shrink-0 transition-transform duration-200 group-hover:scale-110">
+                      <StickyNote size={20} className={activeTool === "sticky" || activeRailPopover === "sticky" ? "text-black" : "text-amber-300"} />
+                    </span>
+                    {railExpanded ? (
+                      <>
+                        <span className="text-xs font-bold truncate">+ Sticky Note</span>
+                        <span
+                          className="ml-auto w-3.5 h-3.5 rounded-full border border-white/50 shadow-xs shrink-0"
+                          style={{ backgroundColor: STICKY_COLORS[stickyColor].border }}
+                          title={STICKY_COLORS[stickyColor].label}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <span
+                          className="absolute bottom-1.5 right-1.5 w-2 h-2 rounded-full border border-black/40"
+                          style={{ backgroundColor: STICKY_COLORS[stickyColor].border }}
+                        />
+                        <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#0c1017] text-white text-xs font-semibold shadow-xl border border-white/15">
+                          + Sticky Note {activeTool === "sticky" ? "(Active)" : ""}
+                        </span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* STICKY NOTE CONFIG FLYOUT */}
+                  {activeRailPopover === "sticky" && (
+                    <>
+                      <div className="fixed inset-0 z-[190]" onClick={() => setActiveRailPopover(null)} />
+                      <div className="absolute left-full ml-3 top-0 z-[220] w-60 rounded-2xl bg-[#0e121a]/95 border border-white/15 p-3.5 shadow-2xl backdrop-blur-2xl text-xs space-y-3 text-white">
+                        <div className="text-[10px] uppercase font-bold text-amber-300 tracking-wider border-b border-white/10 pb-1 flex items-center justify-between">
+                          <span>New Sticky Note</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              toggleStickyTool();
+                              setActiveRailPopover(null);
+                            }}
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              activeTool === "sticky" ? "bg-amber-400 text-black" : "bg-white/10 text-white"
+                            }`}
+                          >
+                            {activeTool === "sticky" ? "TURN OFF" : "DROP NOTE"}
+                          </button>
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-white/60 block mb-1">Color</label>
+                          <div className="grid grid-cols-5 gap-2">
+                            {Object.entries(STICKY_COLORS).map(([cKey, cVal]) => (
+                              <button
+                                key={cKey}
+                                type="button"
+                                onClick={() => {
+                                  setStickyColor(cKey);
+                                  setActiveTool("sticky");
+                                  setActiveRailPopover(null);
+                                }}
+                                className={`w-7 h-7 rounded-full border transition-transform cursor-pointer flex items-center justify-center ${
+                                  stickyColor === cKey
+                                    ? "ring-2 ring-white scale-110 shadow-md border-white"
+                                    : "border-white/30 hover:scale-105 opacity-80 hover:opacity-100"
+                                }`}
+                                style={{ backgroundColor: cVal.border }}
+                                title={cVal.label}
+                              >
+                                {stickyColor === cKey && <Check size={12} className="text-black stroke-[3]" />}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-white/60 block mb-1">Category Tag</label>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {["Note", "Code", "Formula", "Exam"].map((tag) => (
+                              <button
+                                key={tag}
+                                type="button"
+                                onClick={() => {
+                                  setStickyTag(tag);
+                                  setActiveTool("sticky");
+                                  setActiveRailPopover(null);
+                                }}
+                                className={`px-2 py-1 rounded-lg text-left font-semibold text-xs transition-all cursor-pointer ${
+                                  stickyTag === tag
+                                    ? "bg-amber-400 text-black font-bold"
+                                    : "bg-white/10 hover:bg-white/15 text-white"
+                                }`}
+                              >
+                                {tag}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-white/50 leading-tight">
+                          Click anywhere on the book page or in margins to place note.
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* 8. STUDY NOTEBOOK */}
+                {isStudentProfile && (
+                  <div className="relative w-full">
+                    <button
+                      type="button"
+                      onClick={toggleNotebook}
+                      title={`Study Notebook (${totalNotesCount} notes & highlights)`}
+                      className={`group relative flex items-center gap-3 w-full rounded-2xl transition-all duration-200 cursor-pointer focus:outline-none ${
+                        railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
+                      } ${
+                        showNotebook
+                          ? "bg-amber-400 text-[#111214] font-bold shadow-md scale-[1.02]"
+                          : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      <span className="shrink-0 transition-transform duration-200 group-hover:scale-110">
+                        <BookOpen size={20} className={showNotebook ? "text-black" : "text-amber-300"} />
+                      </span>
+                      {railExpanded ? (
+                        <>
+                          <span className="text-xs font-bold truncate">Study Notebook</span>
+                          <span className="ml-auto bg-amber-400 text-black text-[10px] px-1.5 py-0.5 rounded-full font-black shadow-xs">
+                            {totalNotesCount}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          {totalNotesCount > 0 && (
+                            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-amber-400 text-black text-[10px] font-black flex items-center justify-center shadow-sm">
+                              {totalNotesCount}
+                            </span>
+                          )}
+                          <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#0c1017] text-white text-xs font-semibold shadow-xl border border-white/15">
+                            Study Notebook ({totalNotesCount})
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* 9. BOOKMARK */}
+                {isStudentProfile && (
+                  <div className="relative w-full">
+                    <button
+                      type="button"
+                      onClick={toggleBookmark}
+                      title={isBookmarked ? "Bookmarked (Click to remove)" : "Bookmark Page"}
+                      className={`group relative flex items-center gap-3 w-full rounded-2xl transition-all duration-200 cursor-pointer focus:outline-none ${
+                        railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
+                      } ${
+                        isBookmarked
+                          ? "bg-amber-400 text-[#111214] font-bold shadow-md scale-[1.02]"
+                          : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      {isBookmarked && (
+                        <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-black/70" />
+                      )}
+                      <span className="shrink-0 transition-transform duration-200 group-hover:scale-110">
+                        {isBookmarked ? (
+                          <BookMarked size={20} className="text-black" />
+                        ) : (
+                          <Bookmark size={20} className="text-amber-300" />
+                        )}
+                      </span>
+                      {railExpanded ? (
+                        <span className="text-xs font-bold truncate">
+                          {isBookmarked ? "Bookmarked" : "Bookmark"}
+                        </span>
+                      ) : (
+                        <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#0c1017] text-white text-xs font-semibold shadow-xl border border-white/15">
+                          {isBookmarked ? "Bookmarked" : "Bookmark Page"}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* 10. ZOOM SECTION (PDF) */}
+                {book.pdfUrl && (
+                  <div className="relative w-full">
+                    <button
+                      type="button"
+                      onClick={toggleSectionZoom}
+                      title="Zoom Section (Select and magnify diagram or area)"
+                      className={`group relative flex items-center gap-3 w-full rounded-2xl transition-all duration-200 cursor-pointer focus:outline-none ${
+                        railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
+                      } ${
+                        sectionSelectActive
+                          ? "bg-amber-400 text-[#111214] font-bold shadow-md scale-[1.02]"
+                          : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      <span className="shrink-0 transition-transform duration-200 group-hover:scale-110">
+                        <ScanSearch size={20} className={sectionSelectActive ? "text-black" : "text-amber-300"} />
+                      </span>
+                      {railExpanded ? (
+                        <span className="text-xs font-bold truncate">
+                          {sectionSelectActive ? "Selecting..." : "Zoom Section"}
+                        </span>
+                      ) : (
+                        <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#0c1017] text-white text-xs font-semibold shadow-xl border border-white/15">
+                          Zoom Section
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* 11. UNDO / REDO */}
+                <div className={`w-full flex items-center ${railExpanded ? "justify-between px-1 gap-2" : "justify-center gap-1"} py-1`}>
+                  <button
+                    type="button"
+                    onClick={handleUndo}
+                    disabled={historyIndex <= 0}
+                    title="Undo annotation (Ctrl+Z)"
+                    className={`p-2 rounded-xl transition-all flex items-center justify-center ${
+                      historyIndex > 0
+                        ? "text-zinc-200 hover:bg-white/15 hover:text-white cursor-pointer active:scale-95"
+                        : "text-zinc-600 cursor-not-allowed"
+                    }`}
+                  >
+                    <Undo2 size={16} />
+                    {railExpanded && <span className="ml-1.5 text-xs font-semibold">Undo</span>}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRedo}
+                    disabled={historyIndex < 0 || historyIndex >= history.length - 1}
+                    title="Redo annotation (Ctrl+Y)"
+                    className={`p-2 rounded-xl transition-all flex items-center justify-center ${
+                      historyIndex >= 0 && historyIndex < history.length - 1
+                        ? "text-zinc-200 hover:bg-white/15 hover:text-white cursor-pointer active:scale-95"
+                        : "text-zinc-600 cursor-not-allowed"
+                    }`}
+                  >
+                    <Redo2 size={16} />
+                    {railExpanded && <span className="ml-1.5 text-xs font-semibold">Redo</span>}
+                  </button>
+                </div>
+              </nav>
+            </div>
+
+            {/* Bottom Rail Controls: Compact/Expand + Minimize */}
+            <div className="flex flex-col items-center gap-1.5 pt-3 border-t border-white/10">
+              <button
+                type="button"
+                onClick={toggleRailExpanded}
+                aria-label={railExpanded ? "Compact sidebar rail" : "Expand sidebar labels"}
+                className={`w-full flex items-center ${
+                  railExpanded ? "justify-between px-3" : "justify-center"
+                } py-2 rounded-xl text-xs font-semibold text-zinc-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer`}
+              >
+                <PanelLeft size={16} />
+                {railExpanded && <span>Compact Rail</span>}
+              </button>
+
+              <button
+                type="button"
+                onClick={toggleRailMinimized}
+                aria-label="Hide sidebar for full-screen reading"
+                className={`w-full flex items-center ${
+                  railExpanded ? "justify-between px-3" : "justify-center"
+                } py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer`}
+              >
+                <PanelLeftClose size={16} />
+                {railExpanded && <span>Hide Rail</span>}
+              </button>
+            </div>
+          </aside>
+        )}
+
+        {/* MINIMIZED FLOATING RESTORE PILL (Shown when rail is minimized) */}
+        {railMinimized && (
           <button
             type="button"
-            onClick={prev}
-            disabled={isPrevDisabled}
-            aria-label="Previous Page"
-            className="hidden lg:flex fixed left-5 top-1/2 -translate-y-1/2 z-30 w-12 h-12 items-center justify-center rounded-full bg-black/40 hover:bg-black/80 text-white border border-white/20 shadow-2xl backdrop-blur-md transition-all active:scale-90 disabled:opacity-0 disabled:pointer-events-none cursor-pointer group hover:border-amber-400/60"
+            onClick={toggleRailMinimized}
+            className="fixed left-3 top-20 z-40 flex items-center gap-2 px-3 py-2 rounded-2xl bg-[#0c1017]/92 hover:bg-[#0c1017] text-white border border-white/20 shadow-2xl backdrop-blur-xl transition-all cursor-pointer group hover:scale-105 hover:border-amber-400/60"
+            title="Open Reader Tools Rail"
           >
-            <ChevronLeft size={28} className="group-hover:-translate-x-0.5 transition-transform" />
+            <PanelLeftOpen size={16} className="text-amber-300 group-hover:rotate-12 transition-transform" />
+            <span className="text-xs font-bold">Tools</span>
           </button>
         )}
 
-        {/* Floating Right Page Turn Button (Image 2 style) */}
-        {!sectionCrop && (
-          <button
-            type="button"
-            onClick={next}
-            disabled={isNextDisabled}
-            aria-label="Next Page"
-            className="hidden lg:flex fixed right-5 top-1/2 -translate-y-1/2 z-30 w-12 h-12 items-center justify-center rounded-full bg-black/40 hover:bg-black/80 text-white border border-white/20 shadow-2xl backdrop-blur-md transition-all active:scale-90 disabled:opacity-0 disabled:pointer-events-none cursor-pointer group hover:border-amber-400/60"
-          >
-            <ChevronRight size={28} className="group-hover:translate-x-0.5 transition-transform" />
-          </button>
-        )}
+        {/* MAIN READING CANVAS VIEWPORT */}
+        <div
+          ref={readingDeskRef}
+          onPointerDown={handleDeskPointerDown}
+          className="flex-1 flex items-center justify-center p-4 sm:p-8 md:px-16 lg:px-20 overflow-x-auto overflow-y-auto relative z-0 min-h-[600px]"
+          style={{ backgroundColor: currentTheme.outerBg }}
+        >
+          {/* Floating Left Page Turn Button (Image 2 style) */}
+          {!sectionCrop && (
+            <button
+              type="button"
+              onClick={prev}
+              disabled={isPrevDisabled}
+              aria-label="Previous Page"
+              className="hidden lg:flex absolute left-4 top-1/2 -translate-y-1/2 z-30 w-12 h-12 items-center justify-center rounded-full bg-black/40 hover:bg-black/80 text-white border border-white/20 shadow-2xl backdrop-blur-md transition-all active:scale-90 disabled:opacity-0 disabled:pointer-events-none cursor-pointer group hover:border-amber-400/60"
+            >
+              <ChevronLeft size={28} className="group-hover:-translate-x-0.5 transition-transform" />
+            </button>
+          )}
+
+          {/* Floating Right Page Turn Button (Image 2 style) */}
+          {!sectionCrop && (
+            <button
+              type="button"
+              onClick={next}
+              disabled={isNextDisabled}
+              aria-label="Next Page"
+              className="hidden lg:flex absolute right-4 top-1/2 -translate-y-1/2 z-30 w-12 h-12 items-center justify-center rounded-full bg-black/40 hover:bg-black/80 text-white border border-white/20 shadow-2xl backdrop-blur-md transition-all active:scale-90 disabled:opacity-0 disabled:pointer-events-none cursor-pointer group hover:border-amber-400/60"
+            >
+              <ChevronRight size={28} className="group-hover:translate-x-0.5 transition-transform" />
+            </button>
+          )}
 
         <div
           ref={pageBoxRef}
@@ -3779,6 +4215,8 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           </div>
         </div>
       )}
+      </div>
+      {/* End of READER BODY */}
 
       {/* PERSONAL STUDY NOTEBOOK SLIDE-OUT DRAWER */}
       {showNotebook && (
@@ -4089,7 +4527,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           className={`fixed z-50 animate-in fade-in slide-in-from-left-4 duration-200 select-none pointer-events-auto ${
             isVoiceExpanded
               ? "bottom-16 left-1/2 -translate-x-1/2 w-full max-w-xl px-3 sm:px-4"
-              : "left-3 sm:left-6 bottom-16 sm:bottom-18 w-[290px] sm:w-[320px]"
+              : `${!railMinimized ? (railExpanded ? "sm:left-64" : "sm:left-24") : "sm:left-6"} left-3 bottom-16 sm:bottom-18 w-[290px] sm:w-[320px]`
           }`}
         >
           {isVoiceMinimized ? (
