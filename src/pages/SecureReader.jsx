@@ -1520,9 +1520,6 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     let heartbeatInterval;
     async function initSession() {
       try {
-        const fiveMinsAgo = new Date(Date.now() - 5 * 60000).toISOString();
-        await supabase.from("reading_sessions").delete().lt("last_active", fiveMinsAgo);
-
         const mySessionId = localStorage.getItem("reader_session_id") || `sess_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
         localStorage.setItem("reader_session_id", mySessionId);
 
@@ -1542,7 +1539,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
         heartbeatInterval = setInterval(() => {
           supabase.from("reading_sessions").update({ last_active: new Date().toISOString() }).eq("id", mySessionId);
-        }, 45000);
+        }, 60000);
       } catch (err) {
         console.warn("Session tracking non-blocking notice:", err);
       }
@@ -1956,8 +1953,12 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     }
   }, []);
 
-  // Extract lines whenever the page or document changes
+  // Extract speech lines ONLY when Voice Reader is active (prevents main-thread lag on standard page turns)
   useEffect(() => {
+    if (!isVoiceActive) {
+      if (pageSpeechUnits.length > 0) setPageSpeechUnits([]);
+      return;
+    }
     let isCancelled = false;
 
     async function loadPageUnits() {
@@ -2007,7 +2008,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     return () => {
       isCancelled = true;
     };
-  }, [currentPageDisplay, pdfPageNumber, activeDocumentUrl, isEpub, activeEpubPageHtml, page, book.pages, speechUnitMode]);
+  }, [isVoiceActive, currentPageDisplay, pdfPageNumber, activeDocumentUrl, isEpub, activeEpubPageHtml, page, book.pages, speechUnitMode]);
 
   // Component unmount cleanup
   useEffect(() => {
@@ -2155,9 +2156,10 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     return () => document.removeEventListener("pointerdown", handleOutsideClick);
   }, [showThemeControls, showLightControls, showEpubColorMenu]);
 
-  // Window-level smooth pointer tracking for Line Focus reading ruler
+  // Window-level smooth pointer tracking for Line Focus reading ruler (60fps rAF throttle)
   useEffect(() => {
     if (!lineFocus) return;
+    let animFrame = null;
     const handleLineFocusMove = (e) => {
       if (!pageBoxRef.current) return;
       const rect = pageBoxRef.current.getBoundingClientRect();
@@ -2165,13 +2167,17 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         const clientY = e.clientY ?? e.touches?.[0]?.clientY;
         if (typeof clientY === "number") {
           const relY = clientY - rect.top;
-          setLineFocusY(Math.max(20, Math.min(rect.height - 20, relY)));
+          if (animFrame) cancelAnimationFrame(animFrame);
+          animFrame = requestAnimationFrame(() => {
+            setLineFocusY(Math.max(20, Math.min(rect.height - 20, relY)));
+          });
         }
       }
     };
     window.addEventListener("pointermove", handleLineFocusMove, { passive: true });
     window.addEventListener("touchmove", handleLineFocusMove, { passive: true });
     return () => {
+      if (animFrame) cancelAnimationFrame(animFrame);
       window.removeEventListener("pointermove", handleLineFocusMove);
       window.removeEventListener("touchmove", handleLineFocusMove);
     };

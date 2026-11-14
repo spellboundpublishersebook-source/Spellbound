@@ -143,7 +143,29 @@ export default function App() {
   async function fetchAllData() {
     try {
       await fetchSettingsFromDB();
-      const { data: booksData, error: booksError } = await supabase.from('books').select('*');
+      
+      const [
+        { data: booksData, error: booksError },
+        { data: licData },
+        { data: uplData },
+        { data: triData },
+        { data: readData },
+        { data: subData },
+        { data: admData },
+        { data: tplData },
+        { data: authData }
+      ] = await Promise.all([
+        supabase.from('books').select('*'),
+        supabase.from('licenses').select('*'),
+        supabase.from('uploaders').select('*'),
+        supabase.from('trial_requests').select('*'),
+        supabase.from('readers').select('*'),
+        supabase.from('subscribers').select('*'),
+        supabase.from('admins').select('*'),
+        supabase.from('email_templates').select('*'),
+        supabase.from('featured_authors').select('*')
+      ]);
+
       if (booksError) throw booksError;
       
       if (booksData && booksData.length > 0) {
@@ -175,7 +197,6 @@ export default function App() {
         }));
       }
 
-      const { data: licData } = await supabase.from('licenses').select('*');
       if (licData && licData.length > 0) {
         setLicenses(licData.map(l => ({
           ...l,
@@ -186,15 +207,12 @@ export default function App() {
         })));
       }
 
-      const { data: uplData } = await supabase.from('uploaders').select('*');
       if (uplData && uplData.length > 0) setUploaders(uplData);
 
-      const { data: triData } = await supabase.from('trial_requests').select('*');
       if (triData && triData.length > 0) {
         setTrialRequests(triData.map(t => ({ ...t, requestedAt: t.requestedat, expiresAt: t.expiresat })));
       }
 
-      const { data: readData } = await supabase.from('readers').select('*');
       if (readData && readData.length > 0) {
         setReaders(readData.map(r => ({
           ...r,
@@ -209,24 +227,15 @@ export default function App() {
         })));
       }
 
-      const { data: subData } = await supabase.from('subscribers').select('*');
       if (subData && subData.length > 0) setSubscribers(subData);
 
-      const { data: admData } = await supabase.from('admins').select('*');
       if (admData && admData.length > 0) setAdmins(admData);
 
-      const { data: tplData } = await supabase.from('email_templates').select('*');
       if (tplData && tplData.length > 0) setEmailTemplates(tplData);
 
-      const { data: authData } = await supabase.from('featured_authors').select('*');
       if (authData && authData.length > 0) {
         setFeaturedAuthors(authData.map(a => ({ ...a, photoUrl: a.photo_url })));
       }
-
-      // Fetch active reading sessions (last 15 minutes) for traffic spike telemetry
-      const fifteenMinsAgo = new Date(Date.now() - 15 * 60000).toISOString();
-      const { data: sessData } = await supabase.from('reading_sessions').select('*').gte('last_active', fifteenMinsAgo);
-      if (sessData) setActiveReadingSessions(sessData);
 
       setDbStatus("connected");
     } catch (err) {
@@ -241,8 +250,11 @@ export default function App() {
 
   useEffect(() => {
     fetchAllData();
+  }, []);
 
-    if (!supabase) return;
+  // Telemetry polling ONLY for Admin users (saves DB from 10k concurrent student requests)
+  useEffect(() => {
+    if (!supabase || session?.role !== "admin") return;
 
     const fetchActiveSessions = async () => {
       try {
@@ -253,7 +265,13 @@ export default function App() {
         console.warn("Telemetry refresh error:", err);
       }
     };
+    fetchActiveSessions();
     const sessionInterval = setInterval(fetchActiveSessions, 30000);
+    return () => clearInterval(sessionInterval);
+  }, [session?.role]);
+
+  useEffect(() => {
+    if (!supabase) return;
 
     // --- REAL-TIME SUBSCRIPTIONS ---
     const channel = supabase.channel('global-changes')
@@ -453,13 +471,9 @@ export default function App() {
           });
         }
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'reading_sessions' }, () => {
-        fetchActiveSessions();
-      })
       .subscribe();
 
     return () => {
-      clearInterval(sessionInterval);
       supabase.removeChannel(channel);
     };
   }, []);
