@@ -427,6 +427,9 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const [isVoicePaused, setIsVoicePaused] = useState(false);
   const [isVoiceMinimized, setIsVoiceMinimized] = useState(false);
   const [isVoiceExpanded, setIsVoiceExpanded] = useState(false); // Small compact window by default, expand on click
+  const [voicePosition, setVoicePosition] = useState(null); // { x: number, y: number } in px from viewport
+  const voiceDragRef = useRef({ isDragging: false });
+  const voiceWidgetRef = useRef(null);
   const [voiceRate, setVoiceRate] = useState(1.0); // 0.75, 1.0, 1.25, 1.5
   const [voicePitch, setVoicePitch] = useState(1.0);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState("");
@@ -1835,6 +1838,54 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       }
     }
   }, [isVoiceActive, closeVoiceReader, pageSpeechUnits, speakCurrentUnit, currentSpeechIndex]);
+
+  // Draggable Voice Reader Widget Handlers
+  const handleVoiceDragStart = useCallback((e) => {
+    if (e.button !== undefined && e.button !== 0 && e.pointerType === "mouse") return;
+    if (e.target.closest("button") || e.target.closest("select") || e.target.closest("input")) {
+      return;
+    }
+
+    const el = voiceWidgetRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+
+    voiceDragRef.current = {
+      isDragging: true,
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      initialX: rect.left,
+      initialY: rect.top,
+      width: rect.width,
+      height: rect.height,
+    };
+
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (_) {}
+  }, []);
+
+  const handleVoiceDragMove = useCallback((e) => {
+    if (!voiceDragRef.current.isDragging) return;
+    const { startX, startY, initialX, initialY, width, height } = voiceDragRef.current;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+
+    const pad = 10;
+    const newX = Math.max(pad, Math.min(window.innerWidth - width - pad, initialX + dx));
+    const newY = Math.max(pad, Math.min(window.innerHeight - height - pad, initialY + dy));
+
+    setVoicePosition({ x: newX, y: newY });
+  }, []);
+
+  const handleVoiceDragEnd = useCallback((e) => {
+    if (!voiceDragRef.current.isDragging) return;
+    voiceDragRef.current.isDragging = false;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch (_) {}
+  }, []);
 
   // Load and cache browser system voices (curated for natural clarity and Indian English)
   useEffect(() => {
@@ -4672,18 +4723,43 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       {/* FLOATING VOICE / AUDIO READER WIDGET (Compact Left-Side Window) */}
       {isVoiceActive && (
         <div
-          className={`fixed z-50 animate-in fade-in slide-in-from-left-4 duration-200 select-none pointer-events-auto ${
-            isVoiceExpanded
-              ? "bottom-16 left-1/2 -translate-x-1/2 w-full max-w-xl px-3 sm:px-4"
-              : `${!railMinimized ? (railExpanded ? "sm:left-64" : "sm:left-24") : "sm:left-6"} left-3 bottom-16 sm:bottom-18 w-[290px] sm:w-[320px]`
+          ref={voiceWidgetRef}
+          className={`fixed z-50 select-none pointer-events-auto transition-shadow ${
+            voicePosition
+              ? ""
+              : isVoiceExpanded
+                ? "bottom-16 left-1/2 -translate-x-1/2 w-full max-w-xl px-3 sm:px-4"
+                : isVoiceMinimized
+                  ? `${!railMinimized ? (railExpanded ? "sm:left-64" : "sm:left-24") : "sm:left-6"} left-3 bottom-16 sm:bottom-18`
+                  : `${!railMinimized ? (railExpanded ? "sm:left-64" : "sm:left-24") : "sm:left-6"} left-3 bottom-16 sm:bottom-18 w-[310px] sm:w-[350px]`
           }`}
+          style={
+            voicePosition
+              ? {
+                  left: `${voicePosition.x}px`,
+                  top: `${voicePosition.y}px`,
+                  right: "auto",
+                  bottom: "auto",
+                  transform: "none",
+                  width: isVoiceMinimized ? "auto" : isVoiceExpanded ? "min(580px, 92vw)" : "min(350px, 90vw)",
+                }
+              : undefined
+          }
         >
           {isVoiceMinimized ? (
             /* MINIMIZED FLOATING PILL */
-            <div className="flex items-center justify-between gap-2.5 px-3.5 py-1.5 rounded-full bg-black/95 backdrop-blur-2xl border border-amber-400/50 shadow-2xl text-xs text-white">
+            <div
+              onPointerDown={handleVoiceDragStart}
+              onPointerMove={handleVoiceDragMove}
+              onPointerUp={handleVoiceDragEnd}
+              onPointerCancel={handleVoiceDragEnd}
+              className="flex items-center justify-between gap-2.5 px-3 py-1.5 rounded-full bg-black/95 backdrop-blur-2xl border border-amber-400/50 shadow-2xl text-xs text-white cursor-grab active:cursor-grabbing select-none hover:border-amber-400 transition-colors"
+              title="Drag to reposition window • Click expand to restore"
+            >
               <div className="flex items-center gap-1.5">
+                <GripVertical size={13} className="text-white/40 hover:text-white transition-colors shrink-0" />
                 <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                <Headphones size={13} className="text-amber-400" />
+                <Headphones size={13} className="text-amber-400 shrink-0" />
                 <span className="font-bold text-amber-300 text-[11px]">
                   {pageSpeechUnits.length > 0
                     ? `L${currentSpeechIndex + 1}/${pageSpeechUnits.length}`
@@ -4692,7 +4768,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                 <span className="text-white/40 text-[10px]">• P{currentPageDisplay}</span>
               </div>
 
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1" onPointerDown={(e) => e.stopPropagation()}>
                 <button
                   type="button"
                   onClick={toggleVoicePlayPause}
@@ -4704,16 +4780,16 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                 <button
                   type="button"
                   onClick={() => setIsVoiceMinimized(false)}
-                  className="p-1 rounded hover:bg-white/10 text-white/70 hover:text-white cursor-pointer"
-                  title="Show window"
+                  className="p-1 rounded-md hover:bg-white/15 text-white/70 hover:text-white cursor-pointer"
+                  title="Restore full controls"
                 >
                   <Maximize2 size={12} />
                 </button>
                 <button
                   type="button"
                   onClick={closeVoiceReader}
-                  className="p-1 rounded hover:bg-white/10 text-rose-400 hover:text-rose-300 cursor-pointer"
-                  title="Close"
+                  className="p-1 rounded-md hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 cursor-pointer"
+                  title="Close voice reader"
                 >
                   <X size={12} />
                 </button>
@@ -4722,10 +4798,18 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           ) : isVoiceExpanded ? (
             /* FULL EXPANDED STUDIO VIEW */
             <div className="rounded-2xl bg-black/95 backdrop-blur-2xl border border-amber-400/50 shadow-2xl p-4 text-white space-y-3">
-              {/* Header */}
-              <div className="flex items-center justify-between border-b border-white/10 pb-2">
+              {/* Header with Drag Handle */}
+              <div
+                onPointerDown={handleVoiceDragStart}
+                onPointerMove={handleVoiceDragMove}
+                onPointerUp={handleVoiceDragEnd}
+                onPointerCancel={handleVoiceDragEnd}
+                className="flex items-center justify-between border-b border-white/10 pb-2 cursor-grab active:cursor-grabbing select-none"
+                title="Drag to reposition window"
+              >
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-amber-400 text-black flex items-center justify-center font-bold">
+                  <GripVertical size={16} className="text-amber-400/60 hover:text-amber-400 transition-colors shrink-0" />
+                  <div className="w-6 h-6 rounded-lg bg-amber-400 text-black flex items-center justify-center font-bold shrink-0">
                     <Headphones size={13} />
                   </div>
                   <div>
@@ -4738,7 +4822,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5" onPointerDown={(e) => e.stopPropagation()}>
                   <button
                     type="button"
                     onClick={() => setSpeechUnitMode((m) => (m === "line" ? "sentence" : "line"))}
@@ -4757,19 +4841,27 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIsVoiceExpanded(false)}
-                    className="p-1 rounded-lg hover:bg-white/15 text-amber-300 hover:text-white cursor-pointer"
-                    title="Compact left window"
+                    onClick={() => setIsVoiceMinimized(true)}
+                    className="p-1 rounded-md hover:bg-white/15 text-white/70 hover:text-amber-300 transition-colors cursor-pointer"
+                    title="Minimize to floating pill"
                   >
-                    <Minimize2 size={14} />
+                    <Minus size={13} strokeWidth={2.5} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsVoiceExpanded(false)}
+                    className="p-1 rounded-md hover:bg-white/15 text-amber-300 hover:text-white transition-colors cursor-pointer"
+                    title="Compact view"
+                  >
+                    <Minimize2 size={13} />
                   </button>
                   <button
                     type="button"
                     onClick={closeVoiceReader}
-                    className="p-1 rounded-lg hover:bg-rose-500/20 text-white/70 hover:text-rose-300 cursor-pointer"
-                    title="Close"
+                    className="p-1 rounded-md hover:bg-rose-500/20 text-white/70 hover:text-rose-300 transition-colors cursor-pointer"
+                    title="Close voice reader"
                   >
-                    <X size={14} />
+                    <X size={13} />
                   </button>
                 </div>
               </div>
@@ -4825,7 +4917,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                 </div>
 
                 <div className="flex items-center gap-1">
-                  {[0.75, 1.0, 1.25, 1.5].map((rate) => (
+                  {[0.75, 1.0, 1.25, 1.5, 2.0].map((rate) => (
                     <button
                       key={rate}
                       type="button"
@@ -4841,10 +4933,18 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           ) : (
             /* COMPACT LEFT-SIDE WINDOW (Admin-dashboard style) */
             <div className="rounded-2xl bg-black/95 backdrop-blur-2xl border border-amber-400/40 shadow-2xl p-3 text-white space-y-2.5">
-              {/* Window Header */}
-              <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
+              {/* Window Header with Drag Handle */}
+              <div
+                onPointerDown={handleVoiceDragStart}
+                onPointerMove={handleVoiceDragMove}
+                onPointerUp={handleVoiceDragEnd}
+                onPointerCancel={handleVoiceDragEnd}
+                className="flex items-center justify-between border-b border-white/10 pb-1.5 cursor-grab active:cursor-grabbing select-none"
+                title="Drag to reposition window"
+              >
                 <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 rounded-md bg-amber-400 text-black flex items-center justify-center font-bold">
+                  <GripVertical size={14} className="text-amber-400/60 hover:text-amber-400 transition-colors shrink-0" />
+                  <div className="w-5 h-5 rounded-md bg-amber-400 text-black flex items-center justify-center font-bold shrink-0">
                     <Headphones size={11} />
                   </div>
                   <div>
@@ -4857,7 +4957,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1" onPointerDown={(e) => e.stopPropagation()}>
                   <button
                     type="button"
                     onClick={() => setAutoAdvancePage((a) => !a)}
@@ -4870,8 +4970,16 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   </button>
                   <button
                     type="button"
+                    onClick={() => setIsVoiceMinimized(true)}
+                    className="p-1 rounded-md hover:bg-white/15 text-white/70 hover:text-amber-300 transition-colors cursor-pointer"
+                    title="Minimize to floating pill"
+                  >
+                    <Minus size={13} strokeWidth={2.5} />
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setIsVoiceExpanded(true)}
-                    className="p-1 rounded hover:bg-white/15 text-white/70 hover:text-white cursor-pointer"
+                    className="p-1 rounded-md hover:bg-white/15 text-white/70 hover:text-white transition-colors cursor-pointer"
                     title="Expand full view"
                   >
                     <Maximize2 size={12} />
@@ -4879,7 +4987,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   <button
                     type="button"
                     onClick={closeVoiceReader}
-                    className="p-1 rounded hover:bg-rose-500/20 text-white/70 hover:text-rose-300 cursor-pointer"
+                    className="p-1 rounded-md hover:bg-rose-500/20 text-white/70 hover:text-rose-300 transition-colors cursor-pointer"
                     title="Close voice reader"
                   >
                     <X size={12} />
@@ -4969,7 +5077,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
                 {/* Speed buttons */}
                 <div className="flex items-center gap-1">
-                  {[0.75, 1.0, 1.25, 1.5].map((rate) => (
+                  {[0.75, 1.0, 1.25, 1.5, 2.0].map((rate) => (
                     <button
                       key={rate}
                       type="button"
