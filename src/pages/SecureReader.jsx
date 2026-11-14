@@ -17,9 +17,10 @@ import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import BookLoader from "../components/BookLoader";
 import { loadEpubDocument } from "../utils/epubLoader";
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
-// Set up pdf.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+// Set up local pdf.js worker (eliminates external CDN latency)
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 const BASE_PDF_WIDTH = 640;
 const MIN_SECTION_ZOOM = 0.75;
@@ -475,9 +476,6 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const [paceWarning, setPaceWarning] = useState(false);
   const pageTurnsRef = useRef([]);
 
-  // CDN Signed URLs
-  const [cdnPdfUrl, setCdnPdfUrl] = useState(null);
-  const [isLoadingPdfUrl, setIsLoadingPdfUrl] = useState(false);
 
   // ==========================================
   // STUDENT CUSTOMIZATION STATES
@@ -702,10 +700,10 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const currentTheme = READING_THEMES[themeKey] || READING_THEMES.cleanLight || READING_THEMES.cream;
   const isDarkDesk = themeKey === "midnight" || themeKey === "pitchDark";
 
-  // Active document URL
+  // Active document URL - loads directly with zero signed-URL latency or stream restarts
   const activeDocumentUrl = isEpub
     ? (currentEpubSection?.type === "pdf" ? currentEpubSection.url : null)
-    : (cdnPdfUrl || book.pdfUrl);
+    : book.pdfUrl;
 
   // Load and cache unpacked EPUB chapter whenever section changes
   useEffect(() => {
@@ -1471,47 +1469,6 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       });
     }
   };
-
-  // CDN Signed URL resolution for PDFs
-  useEffect(() => {
-    let isMounted = true;
-    async function resolveSignedCdnUrl() {
-      if (!book.pdfUrl) {
-        setCdnPdfUrl(null);
-        return;
-      }
-      try {
-        let storagePath = null;
-        if (book.pdfUrl.includes("/storage/v1/object/public/pdfs/")) {
-          storagePath = book.pdfUrl.split("/storage/v1/object/public/pdfs/")[1]?.split("?")[0];
-        } else if (book.pdfUrl.includes("/pdfs/")) {
-          storagePath = book.pdfUrl.split("/pdfs/")[1]?.split("?")[0];
-        }
-
-        if (storagePath) {
-          setIsLoadingPdfUrl(true);
-          const decodedPath = decodeURIComponent(storagePath);
-          const { data, error } = await supabase.storage.from("pdfs").createSignedUrl(decodedPath, 7200);
-
-          if (!error && data?.signedUrl && isMounted) {
-            setCdnPdfUrl(data.signedUrl);
-            setIsLoadingPdfUrl(false);
-            return;
-          }
-        }
-      } catch (err) {
-        console.warn("Could not generate signed CDN URL, falling back to direct URL:", err);
-      }
-
-      if (isMounted) {
-        setCdnPdfUrl(book.pdfUrl);
-        setIsLoadingPdfUrl(false);
-      }
-    }
-
-    resolveSignedCdnUrl();
-    return () => { isMounted = false; };
-  }, [book.pdfUrl]);
 
   // Telemetry session tracking
   useEffect(() => {
@@ -3938,7 +3895,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   <div className="py-20 px-8 flex items-center justify-center">
                     <BookLoader
                       book={book}
-                      message={isLoadingPdfUrl ? "Establishing secure CDN edge connection..." : "Loading secure document..."}
+                      message="Loading secure document..."
                       size="md"
                     />
                   </div>

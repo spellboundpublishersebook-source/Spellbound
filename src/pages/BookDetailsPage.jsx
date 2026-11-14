@@ -12,7 +12,6 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
     window.scrollTo(0, 0);
   }, [book?.id]);
   const [showCite, setShowCite] = useState(false);
-  const [openingReader, setOpeningReader] = useState(false);
   const [targetPage, setTargetPage] = useState(null);
 
   const isEpub = Boolean(book?.epubData || (book?.pages && typeof book.pages === 'object' && !Array.isArray(book.pages)));
@@ -50,24 +49,11 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
   if (!book) return null;
 
   const handleOpenReader = (pageToOpen = null) => {
-    setOpeningReader(true);
-    setTimeout(() => {
-      onNavigate("reading", book.id, pageToOpen || targetPage);
-    }, 650);
+    onNavigate("reading", book.id, pageToOpen || targetPage);
   };
 
   return (
     <div className="admin-glass-backdrop min-h-screen text-[#111214] pb-14" style={fontBody}>
-      {/* Fullscreen Book Loading Animation when opening reader */}
-      {openingReader && (
-        <BookLoader 
-          fullScreen 
-          dark 
-          book={book} 
-          message="Opening Secure Reader..." 
-          subMessage="Decrypting and preparing digital edition..." 
-        />
-      )}
 
       {/* Header / Breadcrumb */}
       <div className="bg-white/70 backdrop-blur-xl border-b border-white/80 py-3.5 px-6">
