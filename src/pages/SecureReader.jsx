@@ -286,9 +286,14 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const isVoicePlayingRef = useRef(false);
   const shouldAutoPlayNextPageRef = useRef(false);
   const speechTimeoutRef = useRef(null);
+  const utteranceIdRef = useRef(0);
+  const selectedVoiceURIRef = useRef("");
+  const voiceRateRef = useRef(1.0);
 
   isVoiceActiveRef.current = isVoiceActive;
   isVoicePlayingRef.current = isVoicePlaying;
+  selectedVoiceURIRef.current = selectedVoiceURI;
+  voiceRateRef.current = voiceRate;
   const hasInitializedRef = useRef(false);
   const bookIdRef = useRef(book.id);
   if (bookIdRef.current !== book.id) {
@@ -1408,17 +1413,43 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   // ==========================================
   // VOICE PLAYBACK ENGINE (Line-by-line & Page-by-page)
   // ==========================================
-  const stopVoice = useCallback(() => {
+  const closeVoiceReader = useCallback(() => {
+    utteranceIdRef.current++;
+    isVoiceActiveRef.current = false;
+    isVoicePlayingRef.current = false;
+    shouldAutoPlayNextPageRef.current = false;
     if (speechTimeoutRef.current) {
       clearTimeout(speechTimeoutRef.current);
       speechTimeoutRef.current = null;
     }
     if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
+      try {
+        window.speechSynthesis.cancel();
+      } catch (_) {}
     }
     activeUtteranceRef.current = null;
     setIsVoicePlaying(false);
     setIsVoicePaused(false);
+    setIsVoiceActive(false);
+  }, []);
+
+  const stopVoice = useCallback(() => {
+    utteranceIdRef.current++;
+    isVoicePlayingRef.current = false;
+    shouldAutoPlayNextPageRef.current = false;
+    if (speechTimeoutRef.current) {
+      clearTimeout(speechTimeoutRef.current);
+      speechTimeoutRef.current = null;
+    }
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch (_) {}
+    }
+    activeUtteranceRef.current = null;
+    setIsVoicePlaying(false);
+    setIsVoicePaused(false);
+    setCurrentSpeechIndex(0);
   }, []);
 
   const handleVoicePageEnd = useCallback(() => {
@@ -1430,7 +1461,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     }
   }, [autoAdvancePage, currentPageDisplay, totalPages, next, stopVoice]);
 
-  const speakCurrentUnit = useCallback((unitIndex, unitsList = pageSpeechUnits) => {
+  const speakCurrentUnit = useCallback((unitIndex, unitsList = pageSpeechUnits, overrideVoiceURI = null, overrideRate = null) => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
 
     if (speechTimeoutRef.current) {
@@ -1449,43 +1480,56 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     if (!textToSpeak || !textToSpeak.trim()) {
       if (safeIndex < unitsList.length - 1) {
         setCurrentSpeechIndex(safeIndex + 1);
-        speakCurrentUnit(safeIndex + 1, unitsList);
+        speakCurrentUnit(safeIndex + 1, unitsList, overrideVoiceURI, overrideRate);
       } else {
         handleVoicePageEnd();
       }
       return;
     }
 
-    window.speechSynthesis.cancel();
+    const currentId = ++utteranceIdRef.current;
+
+    try {
+      window.speechSynthesis.cancel();
+    } catch (_) {}
 
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
     activeUtteranceRef.current = utterance; // Keep ref to prevent Chrome GC pause bug
 
-    utterance.rate = voiceRate;
+    const effectiveRate = overrideRate !== null ? overrideRate : (voiceRateRef.current || voiceRate || 1.0);
+    const effectiveVoiceURI = overrideVoiceURI || selectedVoiceURIRef.current || selectedVoiceURI;
+
+    utterance.rate = effectiveRate;
     utterance.pitch = voicePitch;
 
-    if (selectedVoiceURI && availableVoices.length > 0) {
-      const matched = availableVoices.find((v) => v.voiceURI === selectedVoiceURI);
+    if (effectiveVoiceURI && availableVoices.length > 0) {
+      const matched = availableVoices.find((v) => v.voiceURI === effectiveVoiceURI);
       if (matched) utterance.voice = matched;
     }
 
     utterance.onstart = () => {
+      if (currentId !== utteranceIdRef.current || !isVoiceActiveRef.current) {
+        try { window.speechSynthesis.cancel(); } catch (_) {}
+        return;
+      }
+      isVoicePlayingRef.current = true;
       setIsVoicePlaying(true);
       setIsVoicePaused(false);
     };
 
     utterance.onend = () => {
       activeUtteranceRef.current = null;
-      if (!isVoiceActiveRef.current) return;
+      if (currentId !== utteranceIdRef.current) return;
+      if (!isVoiceActiveRef.current || !isVoicePlayingRef.current) return;
 
       if (safeIndex < unitsList.length - 1) {
         const nextIndex = safeIndex + 1;
         setCurrentSpeechIndex(nextIndex);
         speechTimeoutRef.current = setTimeout(() => {
-          if (isVoiceActiveRef.current && isVoicePlayingRef.current) {
+          if (isVoiceActiveRef.current && isVoicePlayingRef.current && currentId === utteranceIdRef.current) {
             speakCurrentUnit(nextIndex, unitsList);
           }
-        }, 180);
+        }, 150);
       } else {
         handleVoicePageEnd();
       }
@@ -1493,23 +1537,35 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
     utterance.onerror = (e) => {
       activeUtteranceRef.current = null;
+      if (currentId !== utteranceIdRef.current) return;
       if (e.error === "canceled" || e.error === "interrupted") return;
       console.warn("Speech synthesis notice:", e);
+      isVoicePlayingRef.current = false;
       setIsVoicePlaying(false);
     };
 
-    window.speechSynthesis.speak(utterance);
+    isVoicePlayingRef.current = true;
     setIsVoicePlaying(true);
     setIsVoicePaused(false);
+
+    try {
+      window.speechSynthesis.speak(utterance);
+    } catch (err) {
+      console.warn("Speech synthesis speak error:", err);
+    }
   }, [pageSpeechUnits, voiceRate, voicePitch, selectedVoiceURI, availableVoices, stopVoice, handleVoicePageEnd]);
 
   const pauseVoice = useCallback(() => {
+    utteranceIdRef.current++;
+    isVoicePlayingRef.current = false;
     if (speechTimeoutRef.current) {
       clearTimeout(speechTimeoutRef.current);
       speechTimeoutRef.current = null;
     }
     if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
+      try {
+        window.speechSynthesis.cancel();
+      } catch (_) {}
     }
     activeUtteranceRef.current = null;
     setIsVoicePlaying(false);
@@ -1517,6 +1573,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   }, []);
 
   const resumeVoice = useCallback(() => {
+    isVoicePlayingRef.current = true;
     speakCurrentUnit(currentSpeechIndex, pageSpeechUnits);
   }, [speakCurrentUnit, currentSpeechIndex, pageSpeechUnits]);
 
@@ -1554,11 +1611,29 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     }
   }, [currentSpeechIndex, pageSpeechUnits.length, isVoicePlaying, isVoicePaused, speakCurrentUnit, pageSpeechUnits, currentPageDisplay, totalPages, next]);
 
+  const handleVoiceChange = useCallback((newVoiceURI) => {
+    selectedVoiceURIRef.current = newVoiceURI;
+    setSelectedVoiceURI(newVoiceURI);
+    // Instant live voice switch:
+    if (isVoicePlayingRef.current) {
+      speakCurrentUnit(currentSpeechIndex, pageSpeechUnits, newVoiceURI, voiceRateRef.current);
+    }
+  }, [speakCurrentUnit, currentSpeechIndex, pageSpeechUnits]);
+
+  const handleRateChange = useCallback((newRate) => {
+    voiceRateRef.current = newRate;
+    setVoiceRate(newRate);
+    // Instant live speed switch:
+    if (isVoicePlayingRef.current) {
+      speakCurrentUnit(currentSpeechIndex, pageSpeechUnits, selectedVoiceURIRef.current, newRate);
+    }
+  }, [speakCurrentUnit, currentSpeechIndex, pageSpeechUnits]);
+
   const toggleVoiceReader = useCallback(() => {
     if (isVoiceActive) {
-      stopVoice();
-      setIsVoiceActive(false);
+      closeVoiceReader();
     } else {
+      isVoiceActiveRef.current = true;
       setIsVoiceActive(true);
       setIsVoiceMinimized(false);
       if (pageSpeechUnits.length > 0) {
@@ -1567,7 +1642,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         shouldAutoPlayNextPageRef.current = true;
       }
     }
-  }, [isVoiceActive, stopVoice, pageSpeechUnits, speakCurrentUnit, currentSpeechIndex]);
+  }, [isVoiceActive, closeVoiceReader, pageSpeechUnits, speakCurrentUnit, currentSpeechIndex]);
 
   // Load and cache browser system voices
   useEffect(() => {
@@ -3933,7 +4008,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                 </button>
                 <button
                   type="button"
-                  onClick={stopVoice}
+                  onClick={closeVoiceReader}
                   className="p-1 rounded-lg hover:bg-white/10 active:scale-95 text-rose-400 hover:text-rose-300 cursor-pointer"
                   title="Stop and close"
                 >
@@ -4016,7 +4091,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   {/* Close button */}
                   <button
                     type="button"
-                    onClick={stopVoice}
+                    onClick={closeVoiceReader}
                     className="p-1 rounded-lg hover:bg-rose-500/20 text-white/70 hover:text-rose-300 transition-colors cursor-pointer"
                     title="Close voice reader"
                   >
@@ -4050,12 +4125,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                 <div className="flex items-center gap-1.5 max-w-[160px] sm:max-w-[200px]">
                   <select
                     value={selectedVoiceURI}
-                    onChange={(e) => {
-                      setSelectedVoiceURI(e.target.value);
-                      if (isVoicePlaying) {
-                        setTimeout(() => speakCurrentUnit(currentSpeechIndex, pageSpeechUnits), 50);
-                      }
-                    }}
+                    onChange={(e) => handleVoiceChange(e.target.value)}
                     className="w-full text-[11px] font-medium bg-white/10 hover:bg-white/15 border border-white/15 rounded-xl px-2 py-1 text-white outline-none cursor-pointer truncate"
                     title="Select Voice"
                   >
@@ -4129,12 +4199,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                     <button
                       key={rate}
                       type="button"
-                      onClick={() => {
-                        setVoiceRate(rate);
-                        if (isVoicePlaying) {
-                          setTimeout(() => speakCurrentUnit(currentSpeechIndex, pageSpeechUnits), 50);
-                        }
-                      }}
+                      onClick={() => handleRateChange(rate)}
                       className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
                         voiceRate === rate
                           ? "bg-amber-400 text-black shadow-xs"
