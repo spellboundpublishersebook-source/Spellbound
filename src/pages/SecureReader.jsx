@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { 
   ChevronLeft, ChevronRight, ArrowLeft, ShieldAlert, Volume2, VolumeX, Volume1,
   ZoomIn, ZoomOut, RotateCcw, ScanSearch, X, Sun, Moon, Highlighter, 
-  StickyNote, Bookmark, BookMarked, Maximize, Minimize, Minus, Maximize2, Clock, Sliders, 
+  StickyNote, Bookmark, BookMarked, Maximize, Minimize, Minus, Maximize2, Minimize2, Clock, Sliders, 
   Palette, Trash2, Check, Copy, ChevronDown, Sparkles, Code, FileText, 
   Download, Eye, List, BookOpen, Layers, Building2, GripVertical,
   Undo2, Redo2, GraduationCap, Play, Pause, SkipBack, SkipForward, Square, Headphones
@@ -254,6 +254,132 @@ function formatSpeechUnits(lines, mode) {
   return lines.map((l) => l.trim()).filter((l) => l.length > 0);
 }
 
+// Curate modern, clear, human-like voices (prioritizing Indian English and clean natural voices)
+function getCuratedVoices(allVoices) {
+  if (!allVoices || allVoices.length === 0) return [];
+
+  // Exclude legacy robotic joke voices
+  const blacklist = [
+    "albert", "bad news", "bahh", "bells", "boing", "bubbles", "cellos",
+    "deranged", "fred", "good news", "hysterical", "junior", "kathy",
+    "pipe organ", "princess", "ralph", "trinoids", "whisper", "zarvox"
+  ];
+
+  const validVoices = allVoices.filter((v) => {
+    const nameLower = (v.name || "").toLowerCase();
+    const langLower = (v.lang || "").toLowerCase();
+    if (blacklist.some((bad) => nameLower.includes(bad))) return false;
+    return langLower.startsWith("en") || langLower.startsWith("hi");
+  });
+
+  // 1. Indian English voices (en-IN, Rishi, Veena, Neerja, Prabhat, Ravi, Lekha, etc.)
+  const indianVoices = validVoices.filter(
+    (v) =>
+      v.lang.toLowerCase().replace(/_/g, "-").includes("en-in") ||
+      v.lang.toLowerCase().replace(/_/g, "-").includes("hi-in") ||
+      v.name.toLowerCase().includes("india") ||
+      v.name.toLowerCase().includes("rishi") ||
+      v.name.toLowerCase().includes("veena") ||
+      v.name.toLowerCase().includes("neerja") ||
+      v.name.toLowerCase().includes("prabhat") ||
+      v.name.toLowerCase().includes("ravi") ||
+      v.name.toLowerCase().includes("lekha")
+  );
+
+  // 2. Clear Natural Female
+  const femaleNatural = validVoices.filter(
+    (v) =>
+      !indianVoices.includes(v) &&
+      (v.name.toLowerCase().includes("natural") ||
+        v.name.toLowerCase().includes("google") ||
+        v.name.toLowerCase().includes("samantha") ||
+        v.name.toLowerCase().includes("jenny") ||
+        v.name.toLowerCase().includes("karen") ||
+        v.name.toLowerCase().includes("zira"))
+  );
+
+  // 3. Clear Natural Male
+  const maleNatural = validVoices.filter(
+    (v) =>
+      !indianVoices.includes(v) &&
+      !femaleNatural.includes(v) &&
+      (v.name.toLowerCase().includes("daniel") ||
+        v.name.toLowerCase().includes("guy") ||
+        v.name.toLowerCase().includes("david") ||
+        v.name.toLowerCase().includes("george") ||
+        v.name.toLowerCase().includes("oliver"))
+  );
+
+  // 4. Other natural English voices
+  const otherNatural = validVoices.filter(
+    (v) =>
+      !indianVoices.includes(v) &&
+      !femaleNatural.includes(v) &&
+      !maleNatural.includes(v) &&
+      (v.name.toLowerCase().includes("natural") || v.name.toLowerCase().includes("google"))
+  );
+
+  const curated = [];
+
+  // Best Indian voice first!
+  if (indianVoices.length > 0) {
+    const bestIndian =
+      indianVoices.find((v) => v.name.toLowerCase().includes("natural") || v.name.toLowerCase().includes("google") || v.name.toLowerCase().includes("neerja") || v.name.toLowerCase().includes("rishi")) ||
+      indianVoices[0];
+    curated.push({
+      voiceURI: bestIndian.voiceURI,
+      label: `🇮🇳 Indian English (${bestIndian.name.replace(/Google|Microsoft|Apple/gi, "").trim()})`,
+      voice: bestIndian,
+    });
+    const secondIndian = indianVoices.find((v) => v.voiceURI !== bestIndian.voiceURI);
+    if (secondIndian) {
+      curated.push({
+        voiceURI: secondIndian.voiceURI,
+        label: `🇮🇳 Indian English (${secondIndian.name.replace(/Google|Microsoft|Apple/gi, "").trim()})`,
+        voice: secondIndian,
+      });
+    }
+  }
+
+  // Clear Natural Female
+  if (femaleNatural.length > 0) {
+    curated.push({
+      voiceURI: femaleNatural[0].voiceURI,
+      label: `👩 Natural Female (${femaleNatural[0].name.replace(/Google|Microsoft|Apple/gi, "").trim()})`,
+      voice: femaleNatural[0],
+    });
+  }
+
+  // Clear Natural Male
+  if (maleNatural.length > 0) {
+    curated.push({
+      voiceURI: maleNatural[0].voiceURI,
+      label: `👨 Natural Male (${maleNatural[0].name.replace(/Google|Microsoft|Apple/gi, "").trim()})`,
+      voice: maleNatural[0],
+    });
+  }
+
+  // UK English or other natural
+  if (otherNatural.length > 0 && curated.length < 5) {
+    curated.push({
+      voiceURI: otherNatural[0].voiceURI,
+      label: `🇬🇧 British English (${otherNatural[0].name.replace(/Google|Microsoft|Apple/gi, "").trim()})`,
+      voice: otherNatural[0],
+    });
+  }
+
+  // Fallback if no curated voices matched
+  if (curated.length === 0 && validVoices.length > 0) {
+    curated.push({
+      voiceURI: validVoices[0].voiceURI,
+      label: `🔊 Clear Device Voice (${validVoices[0].name.replace(/Google|Microsoft|Apple/gi, "").trim()})`,
+      voice: validVoices[0],
+    });
+  }
+
+  return curated.slice(0, 5);
+}
+
 export default function SecureReader({ book, session, onBack, onSaveStudentCustomizations, initialPage = null }) {
   const [page, setPage] = useState(0); // For text pages
   const [pdfPageNumber, setPdfPageNumber] = useState(1);
@@ -270,10 +396,12 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const [isVoicePlaying, setIsVoicePlaying] = useState(false);
   const [isVoicePaused, setIsVoicePaused] = useState(false);
   const [isVoiceMinimized, setIsVoiceMinimized] = useState(false);
-  const [voiceRate, setVoiceRate] = useState(1.0); // 0.75, 1.0, 1.25, 1.5, 2.0
+  const [isVoiceExpanded, setIsVoiceExpanded] = useState(false); // Small compact window by default, expand on click
+  const [voiceRate, setVoiceRate] = useState(1.0); // 0.75, 1.0, 1.25, 1.5
   const [voicePitch, setVoicePitch] = useState(1.0);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState("");
   const [availableVoices, setAvailableVoices] = useState([]);
+  const [curatedVoices, setCuratedVoices] = useState([]);
   const [autoAdvancePage, setAutoAdvancePage] = useState(true);
   const [speechUnitMode, setSpeechUnitMode] = useState("line"); // "line" or "sentence"
   const [pageSpeechUnits, setPageSpeechUnits] = useState([]);
@@ -1644,22 +1772,25 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     }
   }, [isVoiceActive, closeVoiceReader, pageSpeechUnits, speakCurrentUnit, currentSpeechIndex]);
 
-  // Load and cache browser system voices
+  // Load and cache browser system voices (curated for natural clarity and Indian English)
   useEffect(() => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
 
     const populateVoices = () => {
       try {
-        const voices = window.speechSynthesis.getVoices() || [];
-        if (voices.length > 0) {
-          setAvailableVoices(voices);
-          if (!selectedVoiceURI) {
-            const best =
-              voices.find((v) => v.lang.startsWith("en") && (v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Premium") || v.name.includes("Enhanced") || v.name.includes("Samantha") || v.name.includes("Daniel") || v.name.includes("Karen"))) ||
-              voices.find((v) => v.lang.startsWith("en")) ||
-              voices.find((v) => v.default) ||
-              voices[0];
-            if (best) setSelectedVoiceURI(best.voiceURI);
+        const rawVoices = window.speechSynthesis.getVoices() || [];
+        if (rawVoices.length > 0) {
+          setAvailableVoices(rawVoices);
+          const curated = getCuratedVoices(rawVoices);
+          setCuratedVoices(curated);
+
+          if (curated.length > 0) {
+            const currentValid = curated.some((c) => c.voiceURI === selectedVoiceURIRef.current);
+            if (!currentValid || !selectedVoiceURIRef.current) {
+              const defaultVoice = curated[0];
+              selectedVoiceURIRef.current = defaultVoice.voiceURI;
+              setSelectedVoiceURI(defaultVoice.voiceURI);
+            }
           }
         }
       } catch (_) {}
@@ -1669,7 +1800,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     if (window.speechSynthesis.onvoiceschanged !== undefined) {
       window.speechSynthesis.onvoiceschanged = populateVoices;
     }
-  }, [selectedVoiceURI]);
+  }, []);
 
   // Extract lines whenever the page or document changes
   useEffect(() => {
@@ -3952,258 +4083,315 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         </div>
       </div>
 
-      {/* FLOATING VOICE / AUDIO READER CONSOLE (100% Free & Unlimited) */}
+      {/* FLOATING VOICE / AUDIO READER WIDGET (Compact Left-Side Window) */}
       {isVoiceActive && (
         <div
-          className="fixed bottom-16 left-1/2 -translate-x-1/2 w-full max-w-2xl px-3 sm:px-4 z-50 animate-in fade-in slide-in-from-bottom-4 duration-200 select-none pointer-events-auto"
+          className={`fixed z-50 animate-in fade-in slide-in-from-left-4 duration-200 select-none pointer-events-auto ${
+            isVoiceExpanded
+              ? "bottom-16 left-1/2 -translate-x-1/2 w-full max-w-xl px-3 sm:px-4"
+              : "left-3 sm:left-6 bottom-16 sm:bottom-18 w-[290px] sm:w-[320px]"
+          }`}
         >
           {isVoiceMinimized ? (
             /* MINIMIZED FLOATING PILL */
-            <div className="flex items-center justify-between gap-3 px-4 py-2 rounded-full bg-black/95 backdrop-blur-2xl border border-amber-400/50 shadow-2xl text-xs text-white">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-                <Headphones size={14} className="text-amber-400" />
-                <span className="font-bold text-amber-300">
+            <div className="flex items-center justify-between gap-2.5 px-3.5 py-1.5 rounded-full bg-black/95 backdrop-blur-2xl border border-amber-400/50 shadow-2xl text-xs text-white">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                <Headphones size={13} className="text-amber-400" />
+                <span className="font-bold text-amber-300 text-[11px]">
                   {pageSpeechUnits.length > 0
-                    ? `Line ${currentSpeechIndex + 1}/${pageSpeechUnits.length}`
-                    : isExtractingText
-                    ? "Loading..."
+                    ? `L${currentSpeechIndex + 1}/${pageSpeechUnits.length}`
                     : "Ready"}
                 </span>
-                <span className="text-white/40">• Page {currentPageDisplay}</span>
+                <span className="text-white/40 text-[10px]">• P{currentPageDisplay}</span>
               </div>
 
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={stepPrevLine}
-                  className="p-1 rounded-lg hover:bg-white/10 active:scale-95 text-white/80 hover:text-white cursor-pointer"
-                  title="Previous line"
-                >
-                  <SkipBack size={13} />
-                </button>
+              <div className="flex items-center gap-1">
                 <button
                   type="button"
                   onClick={toggleVoicePlayPause}
-                  className="p-1.5 rounded-full bg-amber-400 text-black hover:bg-yellow-300 active:scale-90 font-bold transition-all cursor-pointer shadow-sm"
+                  className="p-1 rounded-full bg-amber-400 text-black hover:bg-yellow-300 font-bold cursor-pointer"
                   title={isVoicePlaying ? "Pause" : "Play"}
                 >
-                  {isVoicePlaying ? <Pause size={12} /> : <Play size={12} className="ml-0.5" />}
-                </button>
-                <button
-                  type="button"
-                  onClick={stepNextLine}
-                  className="p-1 rounded-lg hover:bg-white/10 active:scale-95 text-white/80 hover:text-white cursor-pointer"
-                  title="Next line"
-                >
-                  <SkipForward size={13} />
+                  {isVoicePlaying ? <Pause size={11} className="fill-black" /> : <Play size={11} className="fill-black ml-0.5" />}
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsVoiceMinimized(false)}
-                  className="p-1 rounded-lg hover:bg-white/10 active:scale-95 text-amber-300 hover:text-white cursor-pointer ml-1"
-                  title="Expand audio console"
+                  className="p-1 rounded hover:bg-white/10 text-white/70 hover:text-white cursor-pointer"
+                  title="Show window"
                 >
-                  <Maximize2 size={13} />
+                  <Maximize2 size={12} />
                 </button>
                 <button
                   type="button"
                   onClick={closeVoiceReader}
-                  className="p-1 rounded-lg hover:bg-white/10 active:scale-95 text-rose-400 hover:text-rose-300 cursor-pointer"
-                  title="Stop and close"
+                  className="p-1 rounded hover:bg-white/10 text-rose-400 hover:text-rose-300 cursor-pointer"
+                  title="Close"
                 >
-                  <X size={13} />
+                  <X size={12} />
                 </button>
               </div>
             </div>
-          ) : (
-            /* FULL LUXURY STUDIO PLAYER */
-            <div className="rounded-2xl bg-black/95 backdrop-blur-2xl border border-amber-400/40 shadow-2xl p-3.5 sm:p-4 text-white space-y-3">
-              {/* Header Row */}
-              <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2.5">
+          ) : isVoiceExpanded ? (
+            /* FULL EXPANDED STUDIO VIEW */
+            <div className="rounded-2xl bg-black/95 backdrop-blur-2xl border border-amber-400/50 shadow-2xl p-4 text-white space-y-3">
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-white/10 pb-2">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400 to-yellow-500 text-black flex items-center justify-center font-bold shadow-md">
-                    <Headphones size={15} />
+                  <div className="w-6 h-6 rounded-lg bg-amber-400 text-black flex items-center justify-center font-bold">
+                    <Headphones size={13} />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-amber-300 tracking-wide uppercase">
-                        AI Voice Reader
-                      </span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-white/70 font-semibold">
-                        Free & Unlimited
-                      </span>
-                    </div>
+                    <span className="text-xs font-bold text-amber-300 uppercase tracking-wide">
+                      AI Voice Reader (Full View)
+                    </span>
                     <div className="text-[11px] text-white/60">
-                      {isExtractingText ? (
-                        <span className="text-amber-400 animate-pulse">Extracting text from page...</span>
-                      ) : pageSpeechUnits.length > 0 ? (
-                        <span>
-                          {speechUnitMode === "line" ? "Line" : "Sentence"}{" "}
-                          <strong className="text-white">{currentSpeechIndex + 1}</strong> of{" "}
-                          <strong className="text-white">{pageSpeechUnits.length}</strong> • Page{" "}
-                          <strong className="text-white">{currentPageDisplay}</strong> of {totalPages || 1}
-                        </span>
-                      ) : (
-                        <span className="text-amber-300/80">No text layer on this page (scanned image)</span>
-                      )}
+                      Line <strong className="text-white">{currentSpeechIndex + 1}</strong> of <strong className="text-white">{pageSpeechUnits.length}</strong> • Page {currentPageDisplay} of {totalPages || 1}
                     </div>
                   </div>
                 </div>
 
-                {/* Right Header Options */}
                 <div className="flex items-center gap-1.5">
-                  {/* Mode switch */}
                   <button
                     type="button"
                     onClick={() => setSpeechUnitMode((m) => (m === "line" ? "sentence" : "line"))}
-                    className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-[10px] font-semibold text-white/80 transition-colors cursor-pointer"
-                    title="Switch between Line-by-Line and Sentence reading"
+                    className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-[10px] font-semibold text-white/80 cursor-pointer"
                   >
-                    {speechUnitMode === "line" ? "📄 Line by Line" : "💬 Sentences"}
+                    {speechUnitMode === "line" ? "📄 Line Mode" : "💬 Sentences"}
                   </button>
-
-                  {/* Auto-flip switch */}
                   <button
                     type="button"
                     onClick={() => setAutoAdvancePage((a) => !a)}
-                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                      autoAdvancePage
-                        ? "bg-amber-400/20 text-amber-300 border border-amber-400/40"
-                        : "bg-white/10 text-white/50 hover:text-white"
+                    className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                      autoAdvancePage ? "bg-amber-400/20 text-amber-300 border border-amber-400/40" : "bg-white/10 text-white/40"
                     }`}
-                    title={autoAdvancePage ? "Auto-flip page ON: will automatically turn to next page" : "Auto-flip page OFF"}
                   >
-                    <span>Auto-Flip:</span>
-                    <span>{autoAdvancePage ? "ON" : "OFF"}</span>
+                    Auto-Flip: {autoAdvancePage ? "ON" : "OFF"}
                   </button>
-
-                  {/* Minimize button */}
                   <button
                     type="button"
-                    onClick={() => setIsVoiceMinimized(true)}
-                    className="p-1 rounded-lg hover:bg-white/15 text-white/70 hover:text-white transition-colors cursor-pointer"
-                    title="Minimize player"
+                    onClick={() => setIsVoiceExpanded(false)}
+                    className="p-1 rounded-lg hover:bg-white/15 text-amber-300 hover:text-white cursor-pointer"
+                    title="Compact left window"
                   >
-                    <Minus size={14} />
+                    <Minimize2 size={14} />
                   </button>
-
-                  {/* Close button */}
                   <button
                     type="button"
                     onClick={closeVoiceReader}
-                    className="p-1 rounded-lg hover:bg-rose-500/20 text-white/70 hover:text-rose-300 transition-colors cursor-pointer"
-                    title="Close voice reader"
+                    className="p-1 rounded-lg hover:bg-rose-500/20 text-white/70 hover:text-rose-300 cursor-pointer"
+                    title="Close"
                   >
                     <X size={14} />
                   </button>
                 </div>
               </div>
 
-              {/* Teleprompter / Current Line Display */}
-              <div className="relative rounded-xl bg-white/5 border border-white/10 p-3 sm:p-3.5 min-h-[58px] flex items-center shadow-inner">
+              {/* Full Teleprompter Box */}
+              <div className="rounded-xl bg-white/5 border border-white/10 p-3 min-h-[70px] flex items-center">
                 {pageSpeechUnits.length > 0 ? (
-                  <div className="w-full">
-                    <p className="text-xs sm:text-sm font-medium leading-relaxed text-amber-100 font-serif line-clamp-3 select-text">
-                      <span className="text-amber-400 font-bold mr-1.5 text-base">“</span>
-                      {pageSpeechUnits[currentSpeechIndex]}
-                      <span className="text-amber-400 font-bold ml-1 text-base">”</span>
-                    </p>
-                  </div>
+                  <p className="text-sm font-medium leading-relaxed text-amber-100 font-serif line-clamp-4 select-text">
+                    <span className="text-amber-400 font-bold mr-1.5 text-base">“</span>
+                    {pageSpeechUnits[currentSpeechIndex]}
+                    <span className="text-amber-400 font-bold ml-1 text-base">”</span>
+                  </p>
                 ) : (
-                  <div className="w-full text-center text-xs text-white/50 py-1">
-                    {isExtractingText
-                      ? "Reading page text structure..."
-                      : "No text found on this page. Turn to the next page to listen."}
+                  <div className="text-xs text-white/50 text-center w-full">
+                    {isExtractingText ? "Extracting page lines..." : "No text on this page."}
                   </div>
                 )}
               </div>
 
-              {/* Bottom Control Row */}
+              {/* Expanded Controls */}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                {/* Voice Selection */}
-                <div className="flex items-center gap-1.5 max-w-[160px] sm:max-w-[200px]">
-                  <select
-                    value={selectedVoiceURI}
-                    onChange={(e) => handleVoiceChange(e.target.value)}
-                    className="w-full text-[11px] font-medium bg-white/10 hover:bg-white/15 border border-white/15 rounded-xl px-2 py-1 text-white outline-none cursor-pointer truncate"
-                    title="Select Voice"
+                <select
+                  value={selectedVoiceURI}
+                  onChange={(e) => handleVoiceChange(e.target.value)}
+                  className="text-xs font-medium bg-white/10 border border-white/15 rounded-xl px-2 py-1 text-amber-300 outline-none cursor-pointer max-w-[220px]"
+                >
+                  {curatedVoices.map((c) => (
+                    <option key={c.voiceURI} value={c.voiceURI} className="bg-neutral-900 text-white">
+                      {c.label}
+                    </option>
+                  ))}
+                  {curatedVoices.length === 0 && <option value="">Default Clear Voice</option>}
+                </select>
+
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={stepPrevLine} className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white cursor-pointer">
+                    <SkipBack size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={toggleVoicePlayPause}
+                    className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 text-black font-bold text-xs flex items-center gap-1 cursor-pointer"
                   >
-                    {availableVoices.length === 0 && <option value="">Default Voice</option>}
-                    {availableVoices.map((v) => (
-                      <option key={v.voiceURI} value={v.voiceURI} className="bg-neutral-900 text-white">
-                        {v.name.replace(/Google|Microsoft|Apple/gi, "").trim()} ({v.lang})
-                      </option>
-                    ))}
-                  </select>
+                    {isVoicePlaying ? <Pause size={13} className="fill-black" /> : <Play size={13} className="fill-black ml-0.5" />}
+                    <span>{isVoicePlaying ? "Pause" : isVoicePaused ? "Resume" : "Play"}</span>
+                  </button>
+                  <button type="button" onClick={stepNextLine} className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white cursor-pointer">
+                    <SkipForward size={14} />
+                  </button>
+                  <button type="button" onClick={stopVoice} className="p-1.5 rounded-lg bg-white/10 hover:bg-rose-500/20 text-white/70 hover:text-rose-300 cursor-pointer" title="Stop">
+                    <Square size={13} />
+                  </button>
                 </div>
 
-                {/* Primary Playback Transport */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  {[0.75, 1.0, 1.25, 1.5].map((rate) => (
+                    <button
+                      key={rate}
+                      type="button"
+                      onClick={() => handleRateChange(rate)}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${voiceRate === rate ? "bg-amber-400 text-black" : "bg-white/10 text-white/70"}`}
+                    >
+                      {rate}x
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* COMPACT LEFT-SIDE WINDOW (Admin-dashboard style) */
+            <div className="rounded-2xl bg-black/95 backdrop-blur-2xl border border-amber-400/40 shadow-2xl p-3 text-white space-y-2.5">
+              {/* Window Header */}
+              <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-5 h-5 rounded-md bg-amber-400 text-black flex items-center justify-center font-bold">
+                    <Headphones size={11} />
+                  </div>
+                  <div>
+                    <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wider block leading-tight">
+                      Voice Reader
+                    </span>
+                    <span className="text-[10px] text-white/50 block leading-tight">
+                      Line {currentSpeechIndex + 1}/{pageSpeechUnits.length || 1} • P{currentPageDisplay}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setAutoAdvancePage((a) => !a)}
+                    className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition-all cursor-pointer ${
+                      autoAdvancePage ? "bg-amber-400/20 text-amber-300 border border-amber-400/40" : "bg-white/10 text-white/40"
+                    }`}
+                    title="Auto-flip to next page"
+                  >
+                    Auto-Flip: {autoAdvancePage ? "ON" : "OFF"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsVoiceExpanded(true)}
+                    className="p-1 rounded hover:bg-white/15 text-white/70 hover:text-white cursor-pointer"
+                    title="Expand full view"
+                  >
+                    <Maximize2 size={12} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closeVoiceReader}
+                    className="p-1 rounded hover:bg-rose-500/20 text-white/70 hover:text-rose-300 cursor-pointer"
+                    title="Close voice reader"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Compact Line Preview */}
+              <div
+                onClick={() => setIsVoiceExpanded(true)}
+                className="rounded-xl bg-white/5 border border-white/10 p-2 min-h-[44px] flex items-center cursor-pointer hover:bg-white/8 transition-colors group"
+                title="Click to view full teleprompter"
+              >
+                {pageSpeechUnits.length > 0 ? (
+                  <p className="text-[11px] font-medium leading-relaxed text-amber-100 font-serif line-clamp-2 select-text">
+                    <span className="text-amber-400 font-bold mr-1">“</span>
+                    {pageSpeechUnits[currentSpeechIndex]}
+                    <span className="text-amber-400 font-bold ml-0.5">”</span>
+                  </p>
+                ) : (
+                  <div className="text-[10px] text-white/40 text-center w-full">
+                    {isExtractingText ? "Extracting..." : "No text on page."}
+                  </div>
+                )}
+              </div>
+
+              {/* Curated Voice Selector (Clean & Clear) */}
+              <div className="w-full">
+                <select
+                  value={selectedVoiceURI}
+                  onChange={(e) => handleVoiceChange(e.target.value)}
+                  className="w-full text-[11px] font-semibold bg-white/10 hover:bg-white/15 border border-white/15 rounded-xl px-2 py-1 text-amber-300 outline-none cursor-pointer truncate"
+                  title="Select Voice"
+                >
+                  {curatedVoices.map((c) => (
+                    <option key={c.voiceURI} value={c.voiceURI} className="bg-neutral-900 text-white">
+                      {c.label}
+                    </option>
+                  ))}
+                  {curatedVoices.length === 0 && <option value="">Default Clear Voice</option>}
+                </select>
+              </div>
+
+              {/* Bottom Transport Controls */}
+              <div className="flex items-center justify-between gap-1 pt-0.5">
+                <div className="flex items-center gap-1.5">
                   <button
                     type="button"
                     onClick={stepPrevLine}
                     disabled={currentSpeechIndex === 0 && currentPageDisplay <= 1}
-                    className="p-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer shadow-xs"
-                    title="Previous line (or page)"
+                    className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 text-white disabled:opacity-30 cursor-pointer"
+                    title="Previous line"
                   >
-                    <SkipBack size={15} />
+                    <SkipBack size={13} />
                   </button>
 
                   <button
                     type="button"
                     onClick={toggleVoicePlayPause}
                     disabled={pageSpeechUnits.length === 0}
-                    className="px-4 py-2 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 active:scale-95 text-black font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-amber-400/25 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                    title={isVoicePlaying ? "Pause speech" : "Play speech"}
+                    className="px-3 py-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 text-black font-bold text-[11px] flex items-center gap-1 shadow-md cursor-pointer active:scale-95 disabled:opacity-40"
+                    title={isVoicePlaying ? "Pause" : "Play"}
                   >
-                    {isVoicePlaying ? (
-                      <>
-                        <Pause size={14} className="fill-black" />
-                        <span>Pause</span>
-                      </>
-                    ) : (
-                      <>
-                        <Play size={14} className="fill-black ml-0.5" />
-                        <span>{isVoicePaused ? "Resume" : "Play"}</span>
-                      </>
-                    )}
+                    {isVoicePlaying ? <Pause size={11} className="fill-black" /> : <Play size={11} className="fill-black ml-0.5" />}
+                    <span>{isVoicePlaying ? "Pause" : isVoicePaused ? "Resume" : "Play"}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={stepNextLine}
                     disabled={currentSpeechIndex >= pageSpeechUnits.length - 1 && currentPageDisplay >= totalPages}
-                    className="p-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer shadow-xs"
-                    title="Next line (or page)"
+                    className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 text-white disabled:opacity-30 cursor-pointer"
+                    title="Next line"
                   >
-                    <SkipForward size={15} />
+                    <SkipForward size={13} />
                   </button>
 
                   <button
                     type="button"
                     onClick={stopVoice}
-                    className="p-2 rounded-xl bg-white/10 hover:bg-rose-500/30 hover:text-rose-300 active:scale-95 text-white/70 transition-all cursor-pointer shadow-xs"
-                    title="Stop playback"
+                    className="p-1.5 rounded-lg bg-white/10 hover:bg-rose-500/20 text-white/70 hover:text-rose-300 cursor-pointer"
+                    title="Stop"
                   >
-                    <Square size={14} />
+                    <Square size={12} />
                   </button>
                 </div>
 
-                {/* Speed Selector */}
+                {/* Speed buttons */}
                 <div className="flex items-center gap-1">
-                  <span className="text-[10px] text-white/50 font-semibold uppercase tracking-wider hidden sm:inline">
-                    Speed:
-                  </span>
-                  {[0.75, 1.0, 1.25, 1.5, 2.0].map((rate) => (
+                  {[0.75, 1.0, 1.25, 1.5].map((rate) => (
                     <button
                       key={rate}
                       type="button"
                       onClick={() => handleRateChange(rate)}
-                      className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                      className={`px-1 py-0.5 rounded text-[9px] font-bold cursor-pointer ${
                         voiceRate === rate
                           ? "bg-amber-400 text-black shadow-xs"
-                          : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                          : "bg-white/10 text-white/60 hover:text-white"
                       }`}
                     >
                       {rate}x
