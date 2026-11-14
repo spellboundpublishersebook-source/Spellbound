@@ -476,6 +476,31 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const [paceWarning, setPaceWarning] = useState(false);
   const pageTurnsRef = useRef([]);
 
+  // Responsive mobile reading width & page zoom
+  const [pageZoom, setPageZoom] = useState(1);
+  const [responsiveWidth, setResponsiveWidth] = useState(() => {
+    if (typeof window === "undefined") return BASE_PDF_WIDTH;
+    return window.innerWidth < 640 ? Math.max(280, window.innerWidth - 16) : BASE_PDF_WIDTH;
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (typeof window === "undefined") return;
+      const isMobile = window.innerWidth < 640;
+      if (isMobile) {
+        setResponsiveWidth(Math.max(280, window.innerWidth - 16));
+      } else {
+        setResponsiveWidth(BASE_PDF_WIDTH);
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const effectivePageWidth = Math.round(responsiveWidth * pageZoom);
+  const isMobileDesk = responsiveWidth < 640;
+
 
   // ==========================================
   // STUDENT CUSTOMIZATION STATES
@@ -2791,6 +2816,17 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             )}
           </button>
 
+          {/* Mobile & Desktop Page Zoom Control */}
+          <button
+            type="button"
+            onClick={() => setPageZoom((z) => (z === 1 ? 1.25 : z === 1.25 ? 1.5 : 1))}
+            className="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white border border-white/15 text-xs font-bold transition-all cursor-pointer shadow-xs flex items-center gap-1"
+            title={`Page Zoom: ${Math.round(pageZoom * 100)}% (Click to toggle 100% / 125% / 150%)`}
+          >
+            <ZoomIn size={13} />
+            <span>{Math.round(pageZoom * 100)}%</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setIsFullscreen((f) => !f)}
@@ -3777,7 +3813,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         <div
           ref={readingDeskRef}
           onPointerDown={handleDeskPointerDown}
-          className="flex-1 flex items-center justify-center p-4 sm:p-8 md:px-16 lg:px-20 overflow-x-auto overflow-y-auto relative z-0 min-h-[600px]"
+          className="flex-1 flex items-center justify-center p-2 sm:p-6 md:px-16 lg:px-20 overflow-x-auto overflow-y-auto relative z-0 min-h-0"
           style={{ backgroundColor: currentTheme.outerBg }}
         >
           {/* Floating Left Page Turn Button (Image 2 style) */}
@@ -3818,9 +3854,9 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           }`}
           style={{
             backgroundColor: currentTheme.pageBg,
-            minHeight: 520,
+            minHeight: isMobileDesk ? 380 : 520,
             width: "100%",
-            maxWidth: BASE_PDF_WIDTH + 80,
+            maxWidth: pageZoom > 1 ? `${effectivePageWidth}px` : (isMobileDesk ? "100%" : `${BASE_PDF_WIDTH + 80}px`),
             overflow: "visible", // CRITICAL: Allows sticky notes in margins & edges to stay completely unclipped
             ...fontBody,
             color: currentTheme.textColor,
@@ -3867,9 +3903,9 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                     className={`border-0 shadow-lg rounded-md overflow-hidden ${activeTool || lineFocus || draggingStickyId ? "pointer-events-none" : "pointer-events-auto"}`}
                     style={{
                       width: "100%",
-                      maxWidth: `${Math.min(BASE_PDF_WIDTH, epubPageDimensions.width || 640)}px`,
+                      maxWidth: `${Math.min(effectivePageWidth, epubPageDimensions.width || 640)}px`,
                       height: epubPageDimensions.height
-                        ? `${Math.round(epubPageDimensions.height * (Math.min(BASE_PDF_WIDTH, epubPageDimensions.width || 640) / (epubPageDimensions.width || 510)))}px`
+                        ? `${Math.round(epubPageDimensions.height * (Math.min(effectivePageWidth, epubPageDimensions.width || 640) / (epubPageDimensions.width || 510)))}px`
                         : "800px",
                       backgroundColor: currentTheme.pageBg || "#ffffff"
                     }}
@@ -3912,9 +3948,9 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   pageNumber={pdfPageNumber}
                   renderTextLayer={false}
                   renderAnnotationLayer={false}
-                  width={BASE_PDF_WIDTH}
+                  width={effectivePageWidth}
                   loading={
-                    <div className="flex items-center justify-center min-h-[480px] w-full">
+                    <div className="flex items-center justify-center min-h-[380px] sm:min-h-[480px] w-full">
                       <BookLoader size="sm" message={`Rendering page ${pdfPageNumber}...`} />
                     </div>
                   }
