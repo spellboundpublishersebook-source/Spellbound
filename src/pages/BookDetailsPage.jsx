@@ -110,7 +110,9 @@ export default function BookDetailsPage({ book, onNavigate, session }) {
                   )
                 ) : (
                   <div className="w-full bg-white/70 text-[#111214] font-bold py-3 rounded-full text-center border border-white text-sm">
-                    Not available for your institution
+                    {session?.type === "individual" || session?.type === "trial" || session?.type === "free_trial"
+                      ? "Not included in your user access"
+                      : "Not available for your institution"}
                   </div>
                 )
               ) : (

@@ -1230,14 +1230,20 @@ export default function ReaderDashboard({
                     {/* Products Content */}
                     {sortedBooks.length === 0 ? (
                       <div className="text-center py-20 admin-glass-panel rounded-2xl">
-                        <p className="text-[#111214] font-semibold mb-3">No books found matching your selected filters.</p>
-                        <button
-                          type="button"
-                          onClick={handleClearAll}
-                          className="text-xs font-bold uppercase tracking-wider text-[#111214] underline cursor-pointer"
-                        >
-                          Clear All Filters
-                        </button>
+                        <p className="text-[#111214] font-semibold mb-3">
+                          {myBooksRaw.length === 0
+                            ? "No books are currently assigned to your account. Please contact your library administrator."
+                            : "No books found matching your selected filters."}
+                        </p>
+                        {myBooksRaw.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={handleClearAll}
+                            className="text-xs font-bold uppercase tracking-wider text-[#111214] underline cursor-pointer"
+                          >
+                            Clear All Filters
+                          </button>
+                        )}
                       </div>
                     ) : viewMode === "grid" ? (
                       /* GRID VIEW */

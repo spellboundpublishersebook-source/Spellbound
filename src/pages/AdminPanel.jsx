@@ -2171,7 +2171,9 @@ function TrialsTab({ books, trialRequests, onApproveTrial, onRejectTrial, onDele
 
   function handleOpenEdit(trial) {
     setActiveTrialId(trial.id);
-    const existing = trial.bookids || trial.bookIds || books.map(b => b.id);
+    const existing = trial.bookids !== undefined && trial.bookids !== null
+      ? trial.bookids
+      : (trial.bookIds !== undefined && trial.bookIds !== null ? trial.bookIds : books.map(b => b.id));
     setSelected(Array.isArray(existing) ? [...existing] : []);
     setSearch("");
     setGenreFilter("All");

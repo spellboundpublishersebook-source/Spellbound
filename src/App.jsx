@@ -382,7 +382,7 @@ export default function App() {
               }
               return {
                 ...prev,
-                bookIds: updatedBookIds.length ? updatedBookIds : "all"
+                bookIds: Array.isArray(updatedBookIds) ? updatedBookIds : (updatedBookIds === "all" ? "all" : [])
               };
             }
             return prev;
@@ -584,7 +584,7 @@ export default function App() {
         return;
       }
 
-      const latestBookIds = r.bookIds?.length ? r.bookIds : "all";
+      const latestBookIds = Array.isArray(r.bookIds) ? r.bookIds : (r.bookIds === "all" ? "all" : []);
       if (JSON.stringify(session.bookIds) !== JSON.stringify(latestBookIds)) {
         setSession(prev => prev ? ({ ...prev, bookIds: latestBookIds }) : null);
       }
@@ -715,7 +715,7 @@ export default function App() {
       setSession({
         role: "reader", id, name: reader.name, type: reader.accountType || "trial",
         email: reader.email || null, institution: reader.institution || null,
-        bookIds: reader.bookIds?.length ? reader.bookIds : "all", startDate: reader.startDate, endDate: reader.endDate,
+        bookIds: Array.isArray(reader.bookIds) ? reader.bookIds : (reader.bookIds === "all" ? "all" : []), startDate: reader.startDate, endDate: reader.endDate,
       });
       if (openBookId) navigate("book-details", openBookId);
       else navigate("reader-dashboard");
@@ -729,7 +729,7 @@ export default function App() {
       }
       setSession({
         role: "reader", id, name: trial.name, type: "trial",
-        bookIds: trial.bookids || "all", startDate: trial.requestedAt, endDate: trial.expiresAt,
+        bookIds: Array.isArray(trial.bookids) ? trial.bookids : (trial.bookids === "all" ? "all" : (trial.bookids || "all")), startDate: trial.requestedAt, endDate: trial.expiresAt,
       });
       if (openBookId) navigate("book-details", openBookId);
       else navigate("reader-dashboard");
@@ -1308,7 +1308,7 @@ export default function App() {
       setSession(prev => {
         if (!prev || prev.role !== "reader") return prev;
         if (prev.id === readerId || (targetReader && (prev.id === targetReader.loginId || prev.email === targetReader.email || prev.loginId === targetReader.loginId))) {
-          return { ...prev, bookIds: bookIds?.length ? bookIds : "all" };
+          return { ...prev, bookIds: Array.isArray(bookIds) ? bookIds : (bookIds === "all" ? "all" : []) };
         }
         return prev;
       });
@@ -1710,8 +1710,8 @@ export default function App() {
         }
       } else {
         const r = readers.find(x => x.id === session.id || x.loginId === session.id || (session.email && x.email === session.email));
-        if (r && r.bookIds) {
-          allowedIds = r.bookIds?.length ? r.bookIds : "all";
+        if (r && r.bookIds !== undefined && r.bookIds !== null) {
+          allowedIds = Array.isArray(r.bookIds) ? r.bookIds : (r.bookIds === "all" ? "all" : []);
         }
       }
 
