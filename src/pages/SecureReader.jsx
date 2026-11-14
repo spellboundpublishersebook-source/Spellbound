@@ -515,6 +515,19 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     }
   });
   const [activeRailPopover, setActiveRailPopover] = useState(null); // null | 'theme' | 'lights' | 'epubStyle' | 'highlighter' | 'sticky'
+  const [popoverAnchorY, setPopoverAnchorY] = useState(120);
+
+  const toggleRailPopover = useCallback((popoverId, e) => {
+    setActiveRailPopover((curr) => {
+      if (curr === popoverId) return null;
+      if (e && e.currentTarget) {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const clampedY = Math.max(64, Math.min(window.innerHeight - 380, rect.top - 12));
+        setPopoverAnchorY(clampedY);
+      }
+      return popoverId;
+    });
+  }, []);
 
   const toggleRailExpanded = () => {
     setRailExpanded((prev) => {
@@ -1840,37 +1853,15 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   }, [isVoiceActive, closeVoiceReader, pageSpeechUnits, speakCurrentUnit, currentSpeechIndex]);
 
   // Draggable Voice Reader Widget Handlers
-  const handleVoiceDragStart = useCallback((e) => {
-    if (e.button !== undefined && e.button !== 0 && e.pointerType === "mouse") return;
-    if (e.target.closest("button") || e.target.closest("select") || e.target.closest("input")) {
-      return;
-    }
-
-    const el = voiceWidgetRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-
-    voiceDragRef.current = {
-      isDragging: true,
-      pointerId: e.pointerId,
-      startX: e.clientX,
-      startY: e.clientY,
-      initialX: rect.left,
-      initialY: rect.top,
-      width: rect.width,
-      height: rect.height,
-    };
-
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch (_) {}
-  }, []);
-
   const handleVoiceDragMove = useCallback((e) => {
     if (!voiceDragRef.current.isDragging) return;
     const { startX, startY, initialX, initialY, width, height } = voiceDragRef.current;
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
+    const clientX = e.clientX ?? e.touches?.[0]?.clientX;
+    const clientY = e.clientY ?? e.touches?.[0]?.clientY;
+    if (typeof clientX !== "number" || typeof clientY !== "number") return;
+
+    const dx = clientX - startX;
+    const dy = clientY - startY;
 
     const pad = 10;
     const newX = Math.max(pad, Math.min(window.innerWidth - width - pad, initialX + dx));
@@ -1883,9 +1874,57 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     if (!voiceDragRef.current.isDragging) return;
     voiceDragRef.current.isDragging = false;
     try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
+      if (voiceDragRef.current.capturedEl && voiceDragRef.current.pointerId !== undefined) {
+        voiceDragRef.current.capturedEl.releasePointerCapture(voiceDragRef.current.pointerId);
+      }
     } catch (_) {}
-  }, []);
+    window.removeEventListener("pointermove", handleVoiceDragMove);
+    window.removeEventListener("pointerup", handleVoiceDragEnd);
+    window.removeEventListener("pointercancel", handleVoiceDragEnd);
+    window.removeEventListener("touchmove", handleVoiceDragMove);
+    window.removeEventListener("touchend", handleVoiceDragEnd);
+    window.removeEventListener("touchcancel", handleVoiceDragEnd);
+  }, [handleVoiceDragMove]);
+
+  const handleVoiceDragStart = useCallback((e) => {
+    if (e.button !== undefined && e.button !== 0 && e.pointerType === "mouse") return;
+    if (e.target.closest("button") || e.target.closest("select") || e.target.closest("input")) {
+      return;
+    }
+
+    const el = voiceWidgetRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+
+    const clientX = e.clientX ?? e.touches?.[0]?.clientX;
+    const clientY = e.clientY ?? e.touches?.[0]?.clientY;
+    if (typeof clientX !== "number" || typeof clientY !== "number") return;
+
+    voiceDragRef.current = {
+      isDragging: true,
+      capturedEl: e.currentTarget,
+      pointerId: e.pointerId,
+      startX: clientX,
+      startY: clientY,
+      initialX: rect.left,
+      initialY: rect.top,
+      width: rect.width,
+      height: rect.height,
+    };
+
+    try {
+      if (e.pointerId !== undefined && e.currentTarget.setPointerCapture) {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      }
+    } catch (_) {}
+
+    window.addEventListener("pointermove", handleVoiceDragMove, { passive: true });
+    window.addEventListener("pointerup", handleVoiceDragEnd, { capture: true });
+    window.addEventListener("pointercancel", handleVoiceDragEnd, { capture: true });
+    window.addEventListener("touchmove", handleVoiceDragMove, { passive: true });
+    window.addEventListener("touchend", handleVoiceDragEnd, { capture: true });
+    window.addEventListener("touchcancel", handleVoiceDragEnd, { capture: true });
+  }, [handleVoiceDragMove, handleVoiceDragEnd]);
 
   // Load and cache browser system voices (curated for natural clarity and Indian English)
   useEffect(() => {
@@ -2884,7 +2923,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         {!railMinimized && (
           <aside
             aria-label="Reader navigation rail"
-            className={`relative z-40 hidden sm:flex flex-col justify-between shrink-0 my-3 ml-3 py-3 px-2 rounded-2xl transition-all duration-300 select-none overflow-y-auto overflow-x-hidden ${
+            className={`relative z-40 hidden sm:flex flex-col justify-between shrink-0 my-3 ml-3 py-3 px-2 rounded-2xl transition-all duration-300 select-none ${
               railExpanded ? "w-56" : "w-[68px]"
             } ${
               isDarkDesk
@@ -2933,7 +2972,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                 <div className="relative w-full">
                   <button
                     type="button"
-                    onClick={() => setActiveRailPopover(activeRailPopover === "theme" ? null : "theme")}
+                    onClick={(e) => toggleRailPopover("theme", e)}
                     title={`Theme: ${currentTheme.name}`}
                     className={`group relative flex items-center gap-3 w-full rounded-2xl transition-all duration-200 cursor-pointer focus:outline-none ${
                       railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
@@ -2972,56 +3011,13 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                       </>
                     )}
                   </button>
-
-                  {/* THEME FLYOUT POPOVER */}
-                  {activeRailPopover === "theme" && (
-                    <>
-                      <div className="fixed inset-0 z-[190]" onClick={() => setActiveRailPopover(null)} />
-                      <div
-                        className={`absolute left-full ml-3 top-0 z-[220] w-64 rounded-2xl p-2.5 shadow-2xl backdrop-blur-2xl text-xs space-y-1 ${
-                          isDarkDesk ? "bg-slate-900 border border-white/20 text-white" : "bg-white border border-slate-200 text-zinc-900"
-                        }`}
-                        style={{ backgroundColor: isDarkDesk ? "rgba(15, 23, 42, 0.98)" : "rgba(255, 255, 255, 0.98)" }}
-                      >
-                        <div className={`text-[10px] uppercase font-bold px-2 py-1 tracking-wider border-b mb-1 flex items-center justify-between ${
-                          isDarkDesk ? "text-amber-300 border-white/10" : "text-zinc-500 border-slate-100"
-                        }`}>
-                          <span>Reading Themes</span>
-                          <span className="opacity-60 text-[9px]">5 Styles</span>
-                        </div>
-                        {Object.values(READING_THEMES).map((t) => (
-                          <button
-                            key={t.id}
-                            type="button"
-                            onClick={() => {
-                              setThemeKey(t.id);
-                              setActiveRailPopover(null);
-                            }}
-                            className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left font-semibold transition-all cursor-pointer ${
-                              themeKey === t.id
-                                ? "bg-amber-400 text-black font-bold shadow-md"
-                                : isDarkDesk
-                                  ? "hover:bg-white/15 text-white"
-                                  : "hover:bg-slate-100 text-zinc-800"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="w-3.5 h-3.5 rounded-full border border-black/20 shadow-xs shrink-0" style={{ backgroundColor: t.pageBg }} />
-                              <span>{t.name}</span>
-                            </div>
-                            {themeKey === t.id && <Check size={13} className="text-black stroke-[2.5]" />}
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
                 </div>
 
                 {/* 2. PAGE LIGHTS & WARM EYE-CARE */}
                 <div className="relative w-full">
                   <button
                     type="button"
-                    onClick={() => setActiveRailPopover(activeRailPopover === "lights" ? null : "lights")}
+                    onClick={(e) => toggleRailPopover("lights", e)}
                     title={`Page Lights (${brightness}% Brightness, ${warmLight}% Warm Night Light)`}
                     className={`group relative flex items-center gap-3 w-full rounded-2xl transition-all duration-200 cursor-pointer focus:outline-none ${
                       railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
@@ -3058,66 +3054,6 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                       </span>
                     )}
                   </button>
-
-                  {/* PAGE LIGHTS FLYOUT POPOVER */}
-                  {activeRailPopover === "lights" && (
-                    <>
-                      <div className="fixed inset-0 z-[190]" onClick={() => setActiveRailPopover(null)} />
-                      <div
-                        className={`absolute left-full ml-3 top-0 z-[220] w-64 rounded-2xl p-4 shadow-2xl backdrop-blur-2xl text-xs space-y-3.5 ${
-                          isDarkDesk ? "bg-slate-900 border border-white/20 text-white" : "bg-white border border-slate-200 text-zinc-900"
-                        }`}
-                        style={{ backgroundColor: isDarkDesk ? "rgba(15, 23, 42, 0.98)" : "rgba(255, 255, 255, 0.98)" }}
-                      >
-                        <div className={`flex items-center justify-between pb-1 border-b font-bold ${
-                          isDarkDesk ? "border-white/10 text-amber-300" : "border-slate-100 text-zinc-900"
-                        }`}>
-                          <span>Page Light Controls</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setBrightness(100);
-                              setWarmLight(0);
-                            }}
-                            className="text-[10px] text-amber-600 hover:underline cursor-pointer"
-                          >
-                            Reset
-                          </button>
-                        </div>
-                        <div>
-                          <div className="flex items-center justify-between text-[11px] mb-1">
-                            <span className="flex items-center gap-1 font-semibold"><Sun size={12} /> Brightness</span>
-                            <span className="font-bold">{brightness}%</span>
-                          </div>
-                          <input
-                            type="range"
-                            min="50"
-                            max="140"
-                            value={brightness}
-                            onChange={(e) => setBrightness(Number(e.target.value))}
-                            className="w-full accent-amber-500 cursor-pointer"
-                          />
-                        </div>
-                        <div>
-                          <div className="flex items-center justify-between text-[11px] mb-1">
-                            <span className={`flex items-center gap-1 font-semibold ${isDarkDesk ? "text-amber-300" : "text-amber-600"}`}><Moon size={12} /> Warm Night Light</span>
-                            <span className="font-bold">{warmLight}%</span>
-                          </div>
-                          <input
-                            type="range"
-                            min="0"
-                            max="70"
-                            value={warmLight}
-                            onChange={(e) => setWarmLight(Number(e.target.value))}
-                            className="w-full accent-amber-500 cursor-pointer"
-                          />
-                          <div className="text-[10px] opacity-60 mt-1 leading-tight">
-                            Soft amber eye-protection filter for fatigue-free night study.
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
                 </div>
 
                 {/* 3. EPUB COLOR / STYLE (if EPUB) */}
@@ -3125,7 +3061,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   <div className="relative w-full">
                     <button
                       type="button"
-                      onClick={() => setActiveRailPopover(activeRailPopover === "epubStyle" ? null : "epubStyle")}
+                      onClick={(e) => toggleRailPopover("epubStyle", e)}
                       title="e-Book Style"
                       className={`group relative flex items-center gap-3 w-full rounded-2xl transition-all duration-200 cursor-pointer focus:outline-none ${
                         railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
@@ -3160,53 +3096,6 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                         </span>
                       )}
                     </button>
-
-                    {activeRailPopover === "epubStyle" && (
-                      <>
-                        <div className="fixed inset-0 z-[190]" onClick={() => setActiveRailPopover(null)} />
-                        <div
-                          className={`absolute left-full ml-3 top-0 z-[220] w-64 rounded-2xl p-2.5 shadow-2xl backdrop-blur-2xl text-xs space-y-1 ${
-                            isDarkDesk ? "bg-slate-900 border border-white/20 text-white" : "bg-white border border-slate-200 text-zinc-900"
-                          }`}
-                          style={{ backgroundColor: isDarkDesk ? "rgba(15, 23, 42, 0.98)" : "rgba(255, 255, 255, 0.98)" }}
-                        >
-                          <div className={`text-[10px] uppercase font-bold px-2 py-1 tracking-wider border-b flex items-center justify-between mb-1 ${
-                            isDarkDesk ? "text-amber-300 border-white/10" : "text-zinc-500 border-slate-100"
-                          }`}>
-                            <span>e-Book Style</span>
-                            <span className="text-[9px] opacity-60 font-normal">Auto / Custom</span>
-                          </div>
-                          {EPUB_COLOR_MODES.map((mode) => (
-                            <button
-                              key={mode.id}
-                              type="button"
-                              onClick={() => {
-                                setThemeKey(mode.id);
-                                setEpubColorMode(mode.id);
-                                setActiveRailPopover(null);
-                              }}
-                              className={`w-full flex items-start gap-2.5 px-2.5 py-2 rounded-xl text-left transition-all cursor-pointer ${
-                                epubColorMode === mode.id
-                                  ? "bg-amber-400 text-black font-bold shadow-md"
-                                  : isDarkDesk
-                                    ? "hover:bg-white/15 text-white"
-                                    : "hover:bg-slate-100 text-zinc-800"
-                              }`}
-                            >
-                              <div className="mt-0.5">
-                                <Check size={13} className={epubColorMode === mode.id ? "opacity-100 text-black stroke-[2.5]" : "opacity-0"} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-bold text-xs">{mode.name}</div>
-                                <div className={`text-[10px] leading-tight mt-0.5 ${epubColorMode === mode.id ? "text-black/80 font-medium" : "opacity-70"}`}>
-                                  {mode.desc}
-                                </div>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      </>
-                    )}
                   </div>
                 )}
 
@@ -3299,11 +3188,12 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                 <div className="relative w-full">
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={(e) => {
                       if (activeTool === "highlight") {
                         setActiveTool(null);
+                        setActiveRailPopover(null);
                       } else {
-                        setActiveRailPopover(activeRailPopover === "highlighter" ? null : "highlighter");
+                        toggleRailPopover("highlighter", e);
                       }
                     }}
                     title={`Highlighter (${HIGHLIGHT_COLORS[highlightColor].name})`}
@@ -3348,77 +3238,18 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                       </>
                     )}
                   </button>
-
-                  {/* HIGHLIGHTER COLOR PALETTE FLYOUT */}
-                  {activeRailPopover === "highlighter" && (
-                    <>
-                      <div className="fixed inset-0 z-[190]" onClick={() => setActiveRailPopover(null)} />
-                      <div
-                        className={`absolute left-full ml-3 top-0 z-[220] w-56 rounded-2xl p-3 shadow-2xl backdrop-blur-2xl text-xs space-y-2 ${
-                          isDarkDesk ? "bg-slate-900 border border-white/20 text-white" : "bg-white border border-slate-200 text-zinc-900"
-                        }`}
-                        style={{ backgroundColor: isDarkDesk ? "rgba(15, 23, 42, 0.98)" : "rgba(255, 255, 255, 0.98)" }}
-                      >
-                        <div className={`text-[10px] uppercase font-bold tracking-wider border-b pb-1 flex items-center justify-between ${
-                          isDarkDesk ? "text-amber-300 border-white/10" : "text-zinc-600 border-slate-100"
-                        }`}>
-                          <span>Highlight Color</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              toggleHighlighter();
-                              setActiveRailPopover(null);
-                            }}
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer ${
-                              activeTool === "highlight"
-                                ? "bg-amber-400 text-black"
-                                : isDarkDesk
-                                  ? "bg-white/10 text-white"
-                                  : "bg-slate-100 text-zinc-700"
-                            }`}
-                          >
-                            {activeTool === "highlight" ? "TURN OFF" : "ACTIVATE"}
-                          </button>
-                        </div>
-                        <div className="grid grid-cols-5 gap-2 pt-1">
-                          {Object.values(HIGHLIGHT_COLORS).map((col) => (
-                            <button
-                              key={col.id}
-                              type="button"
-                              onClick={() => {
-                                selectHighlightColor(col.id);
-                                setActiveTool("highlight");
-                                setActiveRailPopover(null);
-                              }}
-                              className={`w-7 h-7 rounded-full transition-transform cursor-pointer flex items-center justify-center ${
-                                highlightColor === col.id
-                                  ? "ring-2 ring-black scale-110 shadow-md"
-                                  : "hover:scale-105 opacity-80 hover:opacity-100"
-                              }`}
-                              style={{ backgroundColor: col.border }}
-                              title={`Highlight with ${col.name}`}
-                            >
-                              {highlightColor === col.id && <Check size={12} className="text-black stroke-[3]" />}
-                            </button>
-                          ))}
-                        </div>
-                        <p className="text-[10px] opacity-60 leading-tight pt-1">
-                          Select color and drag across text to highlight.
-                        </p>
-                      </div>
-                    </>
-                  )}
                 </div>
 
                 {/* 7. STICKY NOTE */}
                 <div className="relative w-full">
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={(e) => {
                       if (activeTool === "sticky") {
                         setActiveTool(null);
+                        setActiveRailPopover(null);
                       } else {
-                        setActiveRailPopover(activeRailPopover === "sticky" ? null : "sticky");
+                        toggleRailPopover("sticky", e);
                       }
                     }}
                     title={`Sticky Note (${STICKY_COLORS[stickyColor].label})`}
@@ -3463,94 +3294,6 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                       </>
                     )}
                   </button>
-
-                  {/* STICKY NOTE CONFIG FLYOUT */}
-                  {activeRailPopover === "sticky" && (
-                    <>
-                      <div className="fixed inset-0 z-[190]" onClick={() => setActiveRailPopover(null)} />
-                      <div
-                        className={`absolute left-full ml-3 top-0 z-[220] w-60 rounded-2xl p-3.5 shadow-2xl backdrop-blur-2xl text-xs space-y-3 ${
-                          isDarkDesk ? "bg-slate-900 border border-white/20 text-white" : "bg-white border border-slate-200 text-zinc-900"
-                        }`}
-                        style={{ backgroundColor: isDarkDesk ? "rgba(15, 23, 42, 0.98)" : "rgba(255, 255, 255, 0.98)" }}
-                      >
-                        <div className={`text-[10px] uppercase font-bold tracking-wider border-b pb-1 flex items-center justify-between ${
-                          isDarkDesk ? "text-amber-300 border-white/10" : "text-zinc-600 border-slate-100"
-                        }`}>
-                          <span>New Sticky Note</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              toggleStickyTool();
-                              setActiveRailPopover(null);
-                            }}
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer ${
-                              activeTool === "sticky"
-                                ? "bg-amber-400 text-black"
-                                : isDarkDesk
-                                  ? "bg-white/10 text-white"
-                                  : "bg-slate-100 text-zinc-700"
-                            }`}
-                          >
-                            {activeTool === "sticky" ? "TURN OFF" : "DROP NOTE"}
-                          </button>
-                        </div>
-                        <div>
-                          <label className="text-[10px] opacity-60 block mb-1">Color</label>
-                          <div className="grid grid-cols-5 gap-2">
-                            {Object.entries(STICKY_COLORS).map(([cKey, cVal]) => (
-                              <button
-                                key={cKey}
-                                type="button"
-                                onClick={() => {
-                                  setStickyColor(cKey);
-                                  setActiveTool("sticky");
-                                  setActiveRailPopover(null);
-                                }}
-                                className={`w-7 h-7 rounded-full border transition-transform cursor-pointer flex items-center justify-center ${
-                                  stickyColor === cKey
-                                    ? "ring-2 ring-black scale-110 shadow-md border-black"
-                                    : "border-black/20 hover:scale-105 opacity-80 hover:opacity-100"
-                                }`}
-                                style={{ backgroundColor: cVal.border }}
-                                title={cVal.label}
-                              >
-                                {stickyColor === cKey && <Check size={12} className="text-black stroke-[3]" />}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-[10px] opacity-60 block mb-1">Category Tag</label>
-                          <div className="grid grid-cols-2 gap-1.5">
-                            {["Note", "Code", "Formula", "Exam"].map((tag) => (
-                              <button
-                                key={tag}
-                                type="button"
-                                onClick={() => {
-                                  setStickyTag(tag);
-                                  setActiveTool("sticky");
-                                  setActiveRailPopover(null);
-                                }}
-                                className={`px-2 py-1 rounded-lg text-left font-semibold text-xs transition-all cursor-pointer ${
-                                  stickyTag === tag
-                                    ? "bg-amber-400 text-black font-bold"
-                                    : isDarkDesk
-                                      ? "bg-white/10 hover:bg-white/15 text-white"
-                                      : "bg-slate-100 hover:bg-slate-200 text-zinc-800"
-                                }`}
-                              >
-                                {tag}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        <p className="text-[10px] opacity-60 leading-tight">
-                          Click anywhere on the book page or in margins to place note.
-                        </p>
-                      </div>
-                    </>
-                  )}
                 </div>
 
                 {/* 8. STUDY NOTEBOOK */}
@@ -3760,6 +3503,309 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
               </button>
             </div>
           </aside>
+        )}
+
+        {/* ACTIVE RAIL FLYOUT POPOVER (Positioned at fixed z-[250] - Guaranteed above menu bar & never clipped) */}
+        {activeRailPopover && (
+          <>
+            {/* Fullscreen Dismiss Backdrop */}
+            <div
+              className="fixed inset-0 z-[240] bg-black/10 backdrop-blur-[1px]"
+              onClick={() => setActiveRailPopover(null)}
+              aria-hidden="true"
+            />
+            <div
+              className="fixed z-[250] select-none animate-in fade-in zoom-in-95 duration-150"
+              style={{
+                left: railMinimized ? "68px" : railExpanded ? "244px" : "88px",
+                top: `${popoverAnchorY}px`,
+              }}
+            >
+              {/* 1. Theme Flyout */}
+              {activeRailPopover === "theme" && (
+                <div
+                  className={`w-64 rounded-2xl p-2.5 shadow-2xl backdrop-blur-2xl text-xs space-y-1 ${
+                    isDarkDesk ? "bg-slate-900 border border-white/20 text-white" : "bg-white border border-slate-200 text-zinc-900"
+                  }`}
+                  style={{ backgroundColor: isDarkDesk ? "rgba(15, 23, 42, 0.98)" : "rgba(255, 255, 255, 0.98)" }}
+                >
+                  <div className={`text-[10px] uppercase font-bold px-2 py-1 tracking-wider border-b mb-1 flex items-center justify-between ${
+                    isDarkDesk ? "text-amber-300 border-white/10" : "text-zinc-500 border-slate-100"
+                  }`}>
+                    <span>Reading Themes</span>
+                    <span className="opacity-60 text-[9px]">5 Styles</span>
+                  </div>
+                  {Object.values(READING_THEMES).map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => {
+                        setThemeKey(t.id);
+                        setActiveRailPopover(null);
+                      }}
+                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left font-semibold transition-all cursor-pointer ${
+                        themeKey === t.id
+                          ? "bg-amber-400 text-black font-bold shadow-md"
+                          : isDarkDesk
+                            ? "hover:bg-white/15 text-white"
+                            : "hover:bg-slate-100 text-zinc-800"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="w-3.5 h-3.5 rounded-full border border-black/20 shadow-xs shrink-0" style={{ backgroundColor: t.pageBg }} />
+                        <span>{t.name}</span>
+                      </div>
+                      {themeKey === t.id && <Check size={13} className="text-black stroke-[2.5]" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* 2. Page Lights Flyout */}
+              {activeRailPopover === "lights" && (
+                <div
+                  className={`w-64 rounded-2xl p-4 shadow-2xl backdrop-blur-2xl text-xs space-y-3.5 ${
+                    isDarkDesk ? "bg-slate-900 border border-white/20 text-white" : "bg-white border border-slate-200 text-zinc-900"
+                  }`}
+                  style={{ backgroundColor: isDarkDesk ? "rgba(15, 23, 42, 0.98)" : "rgba(255, 255, 255, 0.98)" }}
+                >
+                  <div className={`flex items-center justify-between pb-1 border-b font-bold ${
+                    isDarkDesk ? "border-white/10 text-amber-300" : "border-slate-100 text-zinc-900"
+                  }`}>
+                    <span>Page Light Controls</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBrightness(100);
+                        setWarmLight(0);
+                      }}
+                      className="text-[10px] text-amber-600 hover:underline cursor-pointer"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <span className="flex items-center gap-1 font-semibold"><Sun size={12} /> Brightness</span>
+                      <span className="font-bold">{brightness}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="50"
+                      max="140"
+                      value={brightness}
+                      onChange={(e) => setBrightness(Number(e.target.value))}
+                      className="w-full accent-amber-500 cursor-pointer"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <span className={`flex items-center gap-1 font-semibold ${isDarkDesk ? "text-amber-300" : "text-amber-600"}`}><Moon size={12} /> Warm Night Light</span>
+                      <span className="font-bold">{warmLight}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="70"
+                      value={warmLight}
+                      onChange={(e) => setWarmLight(Number(e.target.value))}
+                      className="w-full accent-amber-500 cursor-pointer"
+                    />
+                    <div className="text-[10px] opacity-60 mt-1 leading-tight">
+                      Soft amber eye-protection filter for fatigue-free night study.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 3. e-Book Style Flyout */}
+              {activeRailPopover === "epubStyle" && (
+                <div
+                  className={`w-64 rounded-2xl p-2.5 shadow-2xl backdrop-blur-2xl text-xs space-y-1 ${
+                    isDarkDesk ? "bg-slate-900 border border-white/20 text-white" : "bg-white border border-slate-200 text-zinc-900"
+                  }`}
+                  style={{ backgroundColor: isDarkDesk ? "rgba(15, 23, 42, 0.98)" : "rgba(255, 255, 255, 0.98)" }}
+                >
+                  <div className={`text-[10px] uppercase font-bold px-2 py-1 tracking-wider border-b flex items-center justify-between mb-1 ${
+                    isDarkDesk ? "text-amber-300 border-white/10" : "text-zinc-500 border-slate-100"
+                  }`}>
+                    <span>e-Book Style</span>
+                    <span className="text-[9px] opacity-60 font-normal">Auto / Custom</span>
+                  </div>
+                  {EPUB_COLOR_MODES.map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      onClick={() => {
+                        setThemeKey(mode.id);
+                        setEpubColorMode(mode.id);
+                        setActiveRailPopover(null);
+                      }}
+                      className={`w-full flex items-start gap-2.5 px-2.5 py-2 rounded-xl text-left transition-all cursor-pointer ${
+                        epubColorMode === mode.id
+                          ? "bg-amber-400 text-black font-bold shadow-md"
+                          : isDarkDesk
+                            ? "hover:bg-white/15 text-white"
+                            : "hover:bg-slate-100 text-zinc-800"
+                      }`}
+                    >
+                      <div className="mt-0.5">
+                        <Check size={13} className={epubColorMode === mode.id ? "opacity-100 text-black stroke-[2.5]" : "opacity-0"} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-xs">{mode.name}</div>
+                        <div className={`text-[10px] leading-tight mt-0.5 ${epubColorMode === mode.id ? "text-black/80 font-medium" : "opacity-70"}`}>
+                          {mode.desc}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* 4. Highlighter Color Palette Flyout */}
+              {activeRailPopover === "highlighter" && (
+                <div
+                  className={`w-56 rounded-2xl p-3 shadow-2xl backdrop-blur-2xl text-xs space-y-2 ${
+                    isDarkDesk ? "bg-slate-900 border border-white/20 text-white" : "bg-white border border-slate-200 text-zinc-900"
+                  }`}
+                  style={{ backgroundColor: isDarkDesk ? "rgba(15, 23, 42, 0.98)" : "rgba(255, 255, 255, 0.98)" }}
+                >
+                  <div className={`text-[10px] uppercase font-bold tracking-wider border-b pb-1 flex items-center justify-between ${
+                    isDarkDesk ? "text-amber-300 border-white/10" : "text-zinc-600 border-slate-100"
+                  }`}>
+                    <span>Highlight Color</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        toggleHighlighter();
+                        setActiveRailPopover(null);
+                      }}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer ${
+                        activeTool === "highlight"
+                          ? "bg-amber-400 text-black"
+                          : isDarkDesk
+                            ? "bg-white/10 text-white"
+                            : "bg-slate-100 text-zinc-700"
+                      }`}
+                    >
+                      {activeTool === "highlight" ? "TURN OFF" : "ACTIVATE"}
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-5 gap-2 pt-1">
+                    {Object.values(HIGHLIGHT_COLORS).map((col) => (
+                      <button
+                        key={col.id}
+                        type="button"
+                        onClick={() => {
+                          selectHighlightColor(col.id);
+                          setActiveTool("highlight");
+                          setActiveRailPopover(null);
+                        }}
+                        className={`w-7 h-7 rounded-full transition-transform cursor-pointer flex items-center justify-center ${
+                          highlightColor === col.id
+                            ? "ring-2 ring-black scale-110 shadow-md"
+                            : "hover:scale-105 opacity-80 hover:opacity-100"
+                        }`}
+                        style={{ backgroundColor: col.border }}
+                        title={`Highlight with ${col.name}`}
+                      >
+                        {highlightColor === col.id && <Check size={12} className="text-black stroke-[3]" />}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] opacity-60 leading-tight pt-1">
+                    Select color and drag across text to highlight.
+                  </p>
+                </div>
+              )}
+
+              {/* 5. Sticky Note Config Flyout */}
+              {activeRailPopover === "sticky" && (
+                <div
+                  className={`w-60 rounded-2xl p-3.5 shadow-2xl backdrop-blur-2xl text-xs space-y-3 ${
+                    isDarkDesk ? "bg-slate-900 border border-white/20 text-white" : "bg-white border border-slate-200 text-zinc-900"
+                  }`}
+                  style={{ backgroundColor: isDarkDesk ? "rgba(15, 23, 42, 0.98)" : "rgba(255, 255, 255, 0.98)" }}
+                >
+                  <div className={`text-[10px] uppercase font-bold tracking-wider border-b pb-1 flex items-center justify-between ${
+                    isDarkDesk ? "text-amber-300 border-white/10" : "text-zinc-600 border-slate-100"
+                  }`}>
+                    <span>New Sticky Note</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        toggleStickyTool();
+                        setActiveRailPopover(null);
+                      }}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer ${
+                        activeTool === "sticky"
+                          ? "bg-amber-400 text-black"
+                          : isDarkDesk
+                            ? "bg-white/10 text-white"
+                            : "bg-slate-100 text-zinc-700"
+                      }`}
+                    >
+                      {activeTool === "sticky" ? "TURN OFF" : "DROP NOTE"}
+                    </button>
+                  </div>
+                  <div>
+                    <label className="text-[10px] opacity-60 block mb-1">Color</label>
+                    <div className="grid grid-cols-5 gap-2">
+                      {Object.entries(STICKY_COLORS).map(([cKey, cVal]) => (
+                        <button
+                          key={cKey}
+                          type="button"
+                          onClick={() => {
+                            setStickyColor(cKey);
+                            setActiveTool("sticky");
+                            setActiveRailPopover(null);
+                          }}
+                          className={`w-7 h-7 rounded-full border transition-transform cursor-pointer flex items-center justify-center ${
+                            stickyColor === cKey
+                              ? "ring-2 ring-black scale-110 shadow-md border-black"
+                              : "border-black/20 hover:scale-105 opacity-80 hover:opacity-100"
+                          }`}
+                          style={{ backgroundColor: cVal.border }}
+                          title={cVal.label}
+                        >
+                          {stickyColor === cKey && <Check size={12} className="text-black stroke-[3]" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] opacity-60 block mb-1">Category Tag</label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {["Note", "Code", "Formula", "Exam"].map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => {
+                            setStickyTag(tag);
+                            setActiveTool("sticky");
+                            setActiveRailPopover(null);
+                          }}
+                          className={`px-2 py-1 rounded-lg text-left font-semibold text-xs transition-all cursor-pointer ${
+                            stickyTag === tag
+                              ? "bg-amber-400 text-black font-bold"
+                              : isDarkDesk
+                                ? "bg-white/10 hover:bg-white/15 text-white"
+                                : "bg-slate-100 hover:bg-slate-200 text-zinc-800"
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-[10px] opacity-60 leading-tight">
+                    Click anywhere on the book page or in margins to place note.
+                  </p>
+                </div>
+              )}
+            </div>
+          </>
         )}
 
         {/* MINIMIZED FLOATING RESTORE PILL (Shown when rail is minimized) */}
@@ -4724,14 +4770,14 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       {isVoiceActive && (
         <div
           ref={voiceWidgetRef}
-          className={`fixed z-50 select-none pointer-events-auto transition-shadow ${
+          className={`fixed z-[300] select-none pointer-events-auto transition-shadow ${
             voicePosition
               ? ""
               : isVoiceExpanded
-                ? "bottom-16 left-1/2 -translate-x-1/2 w-full max-w-xl px-3 sm:px-4"
+                ? "bottom-20 left-1/2 -translate-x-1/2 w-full max-w-xl px-3 sm:px-4"
                 : isVoiceMinimized
-                  ? `${!railMinimized ? (railExpanded ? "sm:left-64" : "sm:left-24") : "sm:left-6"} left-3 bottom-16 sm:bottom-18`
-                  : `${!railMinimized ? (railExpanded ? "sm:left-64" : "sm:left-24") : "sm:left-6"} left-3 bottom-16 sm:bottom-18 w-[310px] sm:w-[350px]`
+                  ? `${!railMinimized ? (railExpanded ? "sm:left-[248px]" : "sm:left-[88px]") : "sm:left-4"} left-3 bottom-20`
+                  : `${!railMinimized ? (railExpanded ? "sm:left-[248px]" : "sm:left-[88px]") : "sm:left-4"} left-3 bottom-20 w-[310px] sm:w-[350px]`
           }`}
           style={
             voicePosition
