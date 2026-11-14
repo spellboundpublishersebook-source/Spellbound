@@ -6,7 +6,7 @@ import {
   Palette, Trash2, Check, Copy, ChevronDown, Sparkles, Code, FileText, 
   Download, Eye, List, BookOpen, Layers, Building2, GripVertical,
   Undo2, Redo2, GraduationCap, Play, Pause, SkipBack, SkipForward, Square, Headphones,
-  PanelLeft, PanelLeftClose, PanelLeftOpen
+  PanelLeft, PanelLeftClose
 } from "lucide-react";
 import { palette, fontDisplay, fontBody } from "../theme";
 import { BrandEmblem3D, ReaderToolIcon3D } from "../components/AdminGlassIcons";
@@ -2726,10 +2726,10 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                 ? "bg-amber-400 text-black border-amber-300 font-bold shadow-amber-400/20"
                 : "bg-white/10 hover:bg-white/20 active:scale-95 text-white border-white/15"
             }`}
-            title={railMinimized ? "Show Tools Rail" : "Hide Tools Rail"}
+            title={railMinimized ? "Show Reader Tools" : "Hide Reader Tools"}
           >
             <PanelLeft size={14} />
-            <span className="hidden sm:inline">Tools</span>
+            <span className="hidden sm:inline">{railMinimized ? "Reader Tools" : "Tools"}</span>
           </button>
           <div className="min-w-0">
             <div className="text-xs sm:text-sm font-extrabold truncate max-w-[220px] sm:max-w-md tracking-tight" style={fontDisplay}>
@@ -3808,25 +3808,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           </>
         )}
 
-        {/* MINIMIZED FLOATING RESTORE PILL (Shown when rail is minimized) */}
-        {railMinimized && (
-          <button
-            type="button"
-            onClick={toggleRailMinimized}
-            className={`fixed left-3 top-20 z-40 flex items-center gap-2 px-3.5 py-2.5 rounded-2xl transition-all cursor-pointer group hover:scale-105 shadow-xl backdrop-blur-xl ${
-              isDarkDesk
-                ? "bg-slate-900/95 hover:bg-slate-900 text-white border border-white/20"
-                : "bg-white/95 hover:bg-white text-[#111214] border border-slate-200/80 shadow-[0_10px_25px_-5px_rgba(15,23,42,0.15)]"
-            }`}
-            style={{
-              backgroundColor: isDarkDesk ? "rgba(15, 23, 42, 0.95)" : "rgba(255, 255, 255, 0.95)",
-            }}
-            title="Open Reader Tools Rail"
-          >
-            <PanelLeftOpen size={16} className="text-amber-500 group-hover:rotate-12 transition-transform" />
-            <span className="text-xs font-bold">Reader Tools</span>
-          </button>
-        )}
+
 
         {/* MAIN READING CANVAS VIEWPORT */}
         <div
