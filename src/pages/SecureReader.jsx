@@ -9,7 +9,7 @@ import {
   PanelLeft, PanelLeftClose, PanelLeftOpen
 } from "lucide-react";
 import { palette, fontDisplay, fontBody } from "../theme";
-import { BrandEmblem3D } from "../components/AdminGlassIcons";
+import { BrandEmblem3D, ReaderToolIcon3D } from "../components/AdminGlassIcons";
 import { supabase } from "../supabaseClient";
 import Button from "../components/Button";
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -684,6 +684,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
   // Active reading theme object
   const currentTheme = READING_THEMES[themeKey] || READING_THEMES.cleanLight || READING_THEMES.cream;
+  const isDarkDesk = themeKey === "midnight" || themeKey === "pitchDark";
 
   // Active document URL
   const activeDocumentUrl = isEpub
@@ -2832,9 +2833,16 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         {!railMinimized && (
           <aside
             aria-label="Reader navigation rail"
-            className={`relative z-40 hidden sm:flex flex-col justify-between shrink-0 my-3 ml-3 py-3 px-2 rounded-2xl bg-[#0c1017]/92 border border-white/15 shadow-[0_12px_28px_-14px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.15)] backdrop-blur-2xl transition-all duration-300 select-none overflow-y-auto overflow-x-hidden ${
+            className={`relative z-40 hidden sm:flex flex-col justify-between shrink-0 my-3 ml-3 py-3 px-2 rounded-2xl transition-all duration-300 select-none overflow-y-auto overflow-x-hidden ${
               railExpanded ? "w-56" : "w-[68px]"
+            } ${
+              isDarkDesk
+                ? "bg-slate-900/95 border border-white/15 shadow-[0_12px_28px_-14px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.15)] backdrop-blur-2xl text-white"
+                : "bg-slate-100/85 border border-white/80 shadow-[0_12px_28px_-14px_rgba(15,23,42,0.14),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-xl text-[#111214]"
             }`}
+            style={{
+              backgroundColor: isDarkDesk ? "rgba(15, 23, 42, 0.95)" : "rgba(241, 245, 249, 0.88)",
+            }}
           >
             <div className="flex flex-col items-center gap-3">
               {/* Header: Brand Emblem + Title */}
@@ -2842,7 +2850,12 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                 <div className="flex items-center gap-2.5">
                   <BrandEmblem3D size={28} />
                   {railExpanded && (
-                    <span className="font-bold text-xs tracking-tight text-white/90 truncate" style={fontDisplay}>
+                    <span
+                      className={`font-bold text-sm tracking-tight truncate ${
+                        isDarkDesk ? "text-white" : "text-[#111214]"
+                      }`}
+                      style={fontDisplay}
+                    >
                       Reader Tools
                     </span>
                   )}
@@ -2851,7 +2864,11 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   <button
                     type="button"
                     onClick={toggleRailMinimized}
-                    className="p-1 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-all cursor-pointer"
+                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                      isDarkDesk
+                        ? "hover:bg-white/10 text-white/50 hover:text-white"
+                        : "hover:bg-black/5 text-zinc-500 hover:text-[#111214]"
+                    }`}
                     title="Minimize Tools"
                   >
                     <PanelLeftClose size={15} />
@@ -2871,18 +2888,23 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                       railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
                     } ${
                       activeRailPopover === "theme"
-                        ? "bg-amber-400 text-[#111214] font-bold shadow-md scale-[1.02]"
-                        : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                        ? "bg-white/95 text-[#111214] shadow-[0_8px_20px_-6px_rgba(15,23,42,0.18)] ring-1 ring-black/10 scale-[1.02]"
+                        : isDarkDesk
+                          ? "text-zinc-300 hover:bg-white/10 hover:text-white"
+                          : "text-zinc-700 hover:bg-white/60 hover:text-[#111214]"
                     }`}
                   >
+                    {activeRailPopover === "theme" && (
+                      <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-[#111214]" />
+                    )}
                     <span className="shrink-0 transition-transform duration-200 group-hover:scale-110">
-                      <Palette size={20} className={activeRailPopover === "theme" ? "text-black" : "text-amber-300"} />
+                      <ReaderToolIcon3D id="theme" active={activeRailPopover === "theme"} size={22} />
                     </span>
                     {railExpanded ? (
                       <>
-                        <span className="text-xs font-bold truncate">Theme</span>
+                        <span className={`text-xs font-bold truncate ${activeRailPopover === "theme" ? "text-[#111214]" : isDarkDesk ? "text-white/90" : "text-[#111214]"}`}>Theme</span>
                         <span
-                          className="ml-auto w-3.5 h-3.5 rounded-full border border-white/40 shadow-xs shrink-0"
+                          className="ml-auto w-3.5 h-3.5 rounded-full border border-black/20 shadow-xs shrink-0"
                           style={{ backgroundColor: currentTheme.pageBg }}
                           title={currentTheme.name}
                         />
@@ -2893,7 +2915,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                           className="absolute bottom-1.5 right-1.5 w-2 h-2 rounded-full border border-black/40"
                           style={{ backgroundColor: currentTheme.pageBg }}
                         />
-                        <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#0c1017] text-white text-xs font-semibold shadow-xl border border-white/15">
+                        <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#111214] text-white text-xs font-semibold shadow-xl border border-white/15">
                           Theme: {currentTheme.name}
                         </span>
                       </>
@@ -2904,10 +2926,17 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   {activeRailPopover === "theme" && (
                     <>
                       <div className="fixed inset-0 z-[190]" onClick={() => setActiveRailPopover(null)} />
-                      <div className="absolute left-full ml-3 top-0 z-[220] w-64 rounded-2xl bg-[#0e121a]/95 border border-white/15 p-2.5 shadow-2xl backdrop-blur-2xl text-xs space-y-1">
-                        <div className="text-[10px] uppercase font-bold text-amber-300 px-2 py-1 tracking-wider border-b border-white/10 mb-1 flex items-center justify-between">
+                      <div
+                        className={`absolute left-full ml-3 top-0 z-[220] w-64 rounded-2xl p-2.5 shadow-2xl backdrop-blur-2xl text-xs space-y-1 ${
+                          isDarkDesk ? "bg-slate-900 border border-white/20 text-white" : "bg-white border border-slate-200 text-zinc-900"
+                        }`}
+                        style={{ backgroundColor: isDarkDesk ? "rgba(15, 23, 42, 0.98)" : "rgba(255, 255, 255, 0.98)" }}
+                      >
+                        <div className={`text-[10px] uppercase font-bold px-2 py-1 tracking-wider border-b mb-1 flex items-center justify-between ${
+                          isDarkDesk ? "text-amber-300 border-white/10" : "text-zinc-500 border-slate-100"
+                        }`}>
                           <span>Reading Themes</span>
-                          <span className="text-white/40 text-[9px]">5 Styles</span>
+                          <span className="opacity-60 text-[9px]">5 Styles</span>
                         </div>
                         {Object.values(READING_THEMES).map((t) => (
                           <button
@@ -2920,11 +2949,13 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                             className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left font-semibold transition-all cursor-pointer ${
                               themeKey === t.id
                                 ? "bg-amber-400 text-black font-bold shadow-md"
-                                : "hover:bg-white/15 text-white"
+                                : isDarkDesk
+                                  ? "hover:bg-white/15 text-white"
+                                  : "hover:bg-slate-100 text-zinc-800"
                             }`}
                           >
                             <div className="flex items-center gap-2">
-                              <span className="w-3.5 h-3.5 rounded-full border border-white/30 shadow-xs shrink-0" style={{ backgroundColor: t.pageBg }} />
+                              <span className="w-3.5 h-3.5 rounded-full border border-black/20 shadow-xs shrink-0" style={{ backgroundColor: t.pageBg }} />
                               <span>{t.name}</span>
                             </div>
                             {themeKey === t.id && <Check size={13} className="text-black stroke-[2.5]" />}
@@ -2945,27 +2976,33 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                       railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
                     } ${
                       activeRailPopover === "lights" || brightness !== 100 || warmLight > 0
-                        ? "bg-amber-400 text-[#111214] font-bold shadow-md scale-[1.02]"
-                        : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                        ? "bg-white/95 text-[#111214] shadow-[0_8px_20px_-6px_rgba(15,23,42,0.18)] ring-1 ring-black/10 scale-[1.02]"
+                        : isDarkDesk
+                          ? "text-zinc-300 hover:bg-white/10 hover:text-white"
+                          : "text-zinc-700 hover:bg-white/60 hover:text-[#111214]"
                     }`}
                   >
-                    {(brightness !== 100 || warmLight > 0) && (
-                      <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-black/70" />
+                    {(activeRailPopover === "lights" || brightness !== 100 || warmLight > 0) && (
+                      <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-[#111214]" />
                     )}
                     <span className="shrink-0 transition-transform duration-200 group-hover:scale-110">
-                      <Sun size={20} className={activeRailPopover === "lights" || brightness !== 100 || warmLight > 0 ? "text-black" : "text-amber-300"} />
+                      <ReaderToolIcon3D id="lights" active={activeRailPopover === "lights" || brightness !== 100 || warmLight > 0} size={22} />
                     </span>
                     {railExpanded ? (
                       <>
-                        <span className="text-xs font-bold truncate">Page Lights</span>
+                        <span className={`text-xs font-bold truncate ${
+                          activeRailPopover === "lights" || brightness !== 100 || warmLight > 0
+                            ? "text-[#111214]"
+                            : isDarkDesk ? "text-white/90" : "text-[#111214]"
+                        }`}>Page Lights</span>
                         {(brightness !== 100 || warmLight > 0) && (
-                          <span className="ml-auto text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-black/15 text-black">
+                          <span className="ml-auto text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-black/10 text-[#111214]">
                             {brightness}%
                           </span>
                         )}
                       </>
                     ) : (
-                      <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#0c1017] text-white text-xs font-semibold shadow-xl border border-white/15">
+                      <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#111214] text-white text-xs font-semibold shadow-xl border border-white/15">
                         Page Lights ({brightness}%)
                       </span>
                     )}
@@ -2975,23 +3012,30 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   {activeRailPopover === "lights" && (
                     <>
                       <div className="fixed inset-0 z-[190]" onClick={() => setActiveRailPopover(null)} />
-                      <div className="absolute left-full ml-3 top-0 z-[220] w-64 rounded-2xl bg-[#0e121a]/95 border border-white/15 p-4 shadow-2xl backdrop-blur-2xl text-xs space-y-3.5 text-white">
-                        <div className="flex items-center justify-between pb-1 border-b border-white/10 font-bold">
-                          <span className="text-amber-300">Page Light Controls</span>
+                      <div
+                        className={`absolute left-full ml-3 top-0 z-[220] w-64 rounded-2xl p-4 shadow-2xl backdrop-blur-2xl text-xs space-y-3.5 ${
+                          isDarkDesk ? "bg-slate-900 border border-white/20 text-white" : "bg-white border border-slate-200 text-zinc-900"
+                        }`}
+                        style={{ backgroundColor: isDarkDesk ? "rgba(15, 23, 42, 0.98)" : "rgba(255, 255, 255, 0.98)" }}
+                      >
+                        <div className={`flex items-center justify-between pb-1 border-b font-bold ${
+                          isDarkDesk ? "border-white/10 text-amber-300" : "border-slate-100 text-zinc-900"
+                        }`}>
+                          <span>Page Light Controls</span>
                           <button
                             type="button"
                             onClick={() => {
                               setBrightness(100);
                               setWarmLight(0);
                             }}
-                            className="text-[10px] text-amber-300 hover:underline cursor-pointer"
+                            className="text-[10px] text-amber-600 hover:underline cursor-pointer"
                           >
                             Reset
                           </button>
                         </div>
                         <div>
                           <div className="flex items-center justify-between text-[11px] mb-1">
-                            <span className="flex items-center gap-1"><Sun size={12} /> Brightness</span>
+                            <span className="flex items-center gap-1 font-semibold"><Sun size={12} /> Brightness</span>
                             <span className="font-bold">{brightness}%</span>
                           </div>
                           <input
@@ -3000,12 +3044,12 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                             max="140"
                             value={brightness}
                             onChange={(e) => setBrightness(Number(e.target.value))}
-                            className="w-full accent-amber-400 cursor-pointer"
+                            className="w-full accent-amber-500 cursor-pointer"
                           />
                         </div>
                         <div>
                           <div className="flex items-center justify-between text-[11px] mb-1">
-                            <span className="flex items-center gap-1 text-amber-300"><Moon size={12} /> Warm Night Light</span>
+                            <span className={`flex items-center gap-1 font-semibold ${isDarkDesk ? "text-amber-300" : "text-amber-600"}`}><Moon size={12} /> Warm Night Light</span>
                             <span className="font-bold">{warmLight}%</span>
                           </div>
                           <input
@@ -3016,7 +3060,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                             onChange={(e) => setWarmLight(Number(e.target.value))}
                             className="w-full accent-amber-500 cursor-pointer"
                           />
-                          <div className="text-[10px] text-zinc-400 mt-1 leading-tight">
+                          <div className="text-[10px] opacity-60 mt-1 leading-tight">
                             Soft amber eye-protection filter for fatigue-free night study.
                           </div>
                         </div>
@@ -3036,22 +3080,31 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                         railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
                       } ${
                         activeRailPopover === "epubStyle" || epubColorMode !== "auto"
-                          ? "bg-amber-400 text-[#111214] font-bold shadow-md scale-[1.02]"
-                          : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                          ? "bg-white/95 text-[#111214] shadow-[0_8px_20px_-6px_rgba(15,23,42,0.18)] ring-1 ring-black/10 scale-[1.02]"
+                          : isDarkDesk
+                            ? "text-zinc-300 hover:bg-white/10 hover:text-white"
+                            : "text-zinc-700 hover:bg-white/60 hover:text-[#111214]"
                       }`}
                     >
+                      {(activeRailPopover === "epubStyle" || epubColorMode !== "auto") && (
+                        <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-[#111214]" />
+                      )}
                       <span className="shrink-0 transition-transform duration-200 group-hover:scale-110">
-                        <Sparkles size={20} className={activeRailPopover === "epubStyle" || epubColorMode !== "auto" ? "text-black" : "text-amber-300"} />
+                        <ReaderToolIcon3D id="epubStyle" active={activeRailPopover === "epubStyle" || epubColorMode !== "auto"} size={22} />
                       </span>
                       {railExpanded ? (
                         <>
-                          <span className="text-xs font-bold truncate">e-Book Style</span>
-                          <span className="ml-auto text-[10px] font-extrabold capitalize opacity-80">
+                          <span className={`text-xs font-bold truncate ${
+                            activeRailPopover === "epubStyle" || epubColorMode !== "auto"
+                              ? "text-[#111214]"
+                              : isDarkDesk ? "text-white/90" : "text-[#111214]"
+                          }`}>e-Book Style</span>
+                          <span className="ml-auto text-[10px] font-extrabold capitalize opacity-70">
                             {epubColorMode}
                           </span>
                         </>
                       ) : (
-                        <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#0c1017] text-white text-xs font-semibold shadow-xl border border-white/15">
+                        <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#111214] text-white text-xs font-semibold shadow-xl border border-white/15">
                           e-Book Style: {epubColorMode}
                         </span>
                       )}
@@ -3060,23 +3113,33 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                     {activeRailPopover === "epubStyle" && (
                       <>
                         <div className="fixed inset-0 z-[190]" onClick={() => setActiveRailPopover(null)} />
-                        <div className="absolute left-full ml-3 top-0 z-[220] w-64 rounded-2xl bg-[#0e121a]/95 border border-white/15 p-2.5 shadow-2xl backdrop-blur-2xl text-xs space-y-1">
-                          <div className="text-[10px] uppercase font-bold text-amber-300 px-2 py-1 tracking-wider border-b border-white/10 flex items-center justify-between mb-1">
+                        <div
+                          className={`absolute left-full ml-3 top-0 z-[220] w-64 rounded-2xl p-2.5 shadow-2xl backdrop-blur-2xl text-xs space-y-1 ${
+                            isDarkDesk ? "bg-slate-900 border border-white/20 text-white" : "bg-white border border-slate-200 text-zinc-900"
+                          }`}
+                          style={{ backgroundColor: isDarkDesk ? "rgba(15, 23, 42, 0.98)" : "rgba(255, 255, 255, 0.98)" }}
+                        >
+                          <div className={`text-[10px] uppercase font-bold px-2 py-1 tracking-wider border-b flex items-center justify-between mb-1 ${
+                            isDarkDesk ? "text-amber-300 border-white/10" : "text-zinc-500 border-slate-100"
+                          }`}>
                             <span>e-Book Style</span>
-                            <span className="text-[9px] text-zinc-400 font-normal">Auto / Custom</span>
+                            <span className="text-[9px] opacity-60 font-normal">Auto / Custom</span>
                           </div>
                           {EPUB_COLOR_MODES.map((mode) => (
                             <button
                               key={mode.id}
                               type="button"
                               onClick={() => {
+                                setThemeKey(mode.id);
                                 setEpubColorMode(mode.id);
                                 setActiveRailPopover(null);
                               }}
                               className={`w-full flex items-start gap-2.5 px-2.5 py-2 rounded-xl text-left transition-all cursor-pointer ${
                                 epubColorMode === mode.id
                                   ? "bg-amber-400 text-black font-bold shadow-md"
-                                  : "hover:bg-white/15 text-white"
+                                  : isDarkDesk
+                                    ? "hover:bg-white/15 text-white"
+                                    : "hover:bg-slate-100 text-zinc-800"
                               }`}
                             >
                               <div className="mt-0.5">
@@ -3084,7 +3147,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="font-bold text-xs">{mode.name}</div>
-                                <div className={`text-[10px] leading-tight mt-0.5 ${epubColorMode === mode.id ? "text-black/80 font-medium" : "text-white/70"}`}>
+                                <div className={`text-[10px] leading-tight mt-0.5 ${epubColorMode === mode.id ? "text-black/80 font-medium" : "opacity-70"}`}>
                                   {mode.desc}
                                 </div>
                               </div>
@@ -3106,34 +3169,36 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                       railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
                     } ${
                       isVoiceActive
-                        ? "bg-amber-400 text-[#111214] font-bold shadow-md scale-[1.02]"
-                        : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                        ? "bg-white/95 text-[#111214] shadow-[0_8px_20px_-6px_rgba(15,23,42,0.18)] ring-1 ring-black/10 scale-[1.02]"
+                        : isDarkDesk
+                          ? "text-zinc-300 hover:bg-white/10 hover:text-white"
+                          : "text-zinc-700 hover:bg-white/60 hover:text-[#111214]"
                     }`}
                   >
                     {isVoiceActive && (
-                      <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-black/70" />
+                      <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-[#111214]" />
                     )}
                     <span className="shrink-0 transition-transform duration-200 group-hover:scale-110 relative">
-                      <Headphones size={20} className={isVoiceActive ? "text-black" : "text-amber-300"} />
+                      <ReaderToolIcon3D id="voice" active={isVoiceActive} size={22} />
                       {isVoicePlaying && (
                         <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
                       )}
                     </span>
                     {railExpanded ? (
                       <>
-                        <span className="text-xs font-bold truncate">Voice Reader</span>
+                        <span className={`text-xs font-bold truncate ${isVoiceActive ? "text-[#111214]" : isDarkDesk ? "text-white/90" : "text-[#111214]"}`}>Voice Reader</span>
                         {isVoicePlaying ? (
-                          <span className="ml-auto text-[10px] font-black text-emerald-950 bg-emerald-400/80 px-1.5 py-0.5 rounded flex items-center gap-1">
+                          <span className="ml-auto text-[10px] font-black text-emerald-950 bg-emerald-400 px-1.5 py-0.5 rounded flex items-center gap-1 shadow-xs">
                             Live
                           </span>
                         ) : isVoicePaused ? (
-                          <span className="ml-auto text-[10px] font-bold text-black/70 bg-black/15 px-1.5 py-0.5 rounded">
+                          <span className="ml-auto text-[10px] font-bold text-black/70 bg-black/10 px-1.5 py-0.5 rounded">
                             Paused
                           </span>
                         ) : null}
                       </>
                     ) : (
-                      <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#0c1017] text-white text-xs font-semibold shadow-xl border border-white/15">
+                      <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#111214] text-white text-xs font-semibold shadow-xl border border-white/15">
                         Voice Reader {isVoicePlaying ? "(Playing)" : isVoicePaused ? "(Paused)" : ""}
                       </span>
                     )}
@@ -3150,25 +3215,29 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                       railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
                     } ${
                       lineFocus
-                        ? "bg-amber-400 text-[#111214] font-bold shadow-md scale-[1.02]"
-                        : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                        ? "bg-white/95 text-[#111214] shadow-[0_8px_20px_-6px_rgba(15,23,42,0.18)] ring-1 ring-black/10 scale-[1.02]"
+                        : isDarkDesk
+                          ? "text-zinc-300 hover:bg-white/10 hover:text-white"
+                          : "text-zinc-700 hover:bg-white/60 hover:text-[#111214]"
                     }`}
                   >
                     {lineFocus && (
-                      <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-black/70" />
+                      <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-[#111214]" />
                     )}
                     <span className="shrink-0 transition-transform duration-200 group-hover:scale-110">
-                      <Sliders size={20} className={lineFocus ? "text-black" : "text-amber-300"} />
+                      <ReaderToolIcon3D id="lineFocus" active={lineFocus} size={22} />
                     </span>
                     {railExpanded ? (
                       <>
-                        <span className="text-xs font-bold truncate">Line Focus</span>
-                        <span className={`ml-auto text-[10px] font-extrabold px-1.5 py-0.5 rounded ${lineFocus ? "bg-black/20 text-black" : "bg-white/10 text-white/50"}`}>
+                        <span className={`text-xs font-bold truncate ${lineFocus ? "text-[#111214]" : isDarkDesk ? "text-white/90" : "text-[#111214]"}`}>Line Focus</span>
+                        <span className={`ml-auto text-[10px] font-extrabold px-1.5 py-0.5 rounded ${
+                          lineFocus ? "bg-[#111214] text-white" : isDarkDesk ? "bg-white/10 text-white/50" : "bg-black/5 text-zinc-500"
+                        }`}>
                           {lineFocus ? "ON" : "OFF"}
                         </span>
                       </>
                     ) : (
-                      <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#0c1017] text-white text-xs font-semibold shadow-xl border border-white/15">
+                      <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#111214] text-white text-xs font-semibold shadow-xl border border-white/15">
                         Line Focus: {lineFocus ? "ON" : "OFF"}
                       </span>
                     )}
@@ -3191,21 +3260,27 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                       railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
                     } ${
                       activeTool === "highlight" || activeRailPopover === "highlighter"
-                        ? "bg-amber-400 text-[#111214] font-bold shadow-md scale-[1.02]"
-                        : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                        ? "bg-white/95 text-[#111214] shadow-[0_8px_20px_-6px_rgba(15,23,42,0.18)] ring-1 ring-black/10 scale-[1.02]"
+                        : isDarkDesk
+                          ? "text-zinc-300 hover:bg-white/10 hover:text-white"
+                          : "text-zinc-700 hover:bg-white/60 hover:text-[#111214]"
                     }`}
                   >
-                    {activeTool === "highlight" && (
-                      <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-black/70" />
+                    {(activeTool === "highlight" || activeRailPopover === "highlighter") && (
+                      <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-[#111214]" />
                     )}
                     <span className="shrink-0 transition-transform duration-200 group-hover:scale-110">
-                      <Highlighter size={20} className={activeTool === "highlight" || activeRailPopover === "highlighter" ? "text-black" : "text-amber-300"} />
+                      <ReaderToolIcon3D id="highlighter" active={activeTool === "highlight" || activeRailPopover === "highlighter"} size={22} />
                     </span>
                     {railExpanded ? (
                       <>
-                        <span className="text-xs font-bold truncate">Highlighter</span>
+                        <span className={`text-xs font-bold truncate ${
+                          activeTool === "highlight" || activeRailPopover === "highlighter"
+                            ? "text-[#111214]"
+                            : isDarkDesk ? "text-white/90" : "text-[#111214]"
+                        }`}>Highlighter</span>
                         <span
-                          className="ml-auto w-3.5 h-3.5 rounded-full border border-white/50 shadow-xs shrink-0"
+                          className="ml-auto w-3.5 h-3.5 rounded-full border border-black/20 shadow-xs shrink-0"
                           style={{ backgroundColor: HIGHLIGHT_COLORS[highlightColor].border }}
                           title={HIGHLIGHT_COLORS[highlightColor].name}
                         />
@@ -3216,7 +3291,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                           className="absolute bottom-1.5 right-1.5 w-2 h-2 rounded-full border border-black/40"
                           style={{ backgroundColor: HIGHLIGHT_COLORS[highlightColor].border }}
                         />
-                        <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#0c1017] text-white text-xs font-semibold shadow-xl border border-white/15">
+                        <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#111214] text-white text-xs font-semibold shadow-xl border border-white/15">
                           Highlighter {activeTool === "highlight" ? "(Active)" : `(${HIGHLIGHT_COLORS[highlightColor].name})`}
                         </span>
                       </>
@@ -3227,8 +3302,15 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   {activeRailPopover === "highlighter" && (
                     <>
                       <div className="fixed inset-0 z-[190]" onClick={() => setActiveRailPopover(null)} />
-                      <div className="absolute left-full ml-3 top-0 z-[220] w-52 rounded-2xl bg-[#0e121a]/95 border border-white/15 p-3 shadow-2xl backdrop-blur-2xl text-xs space-y-2 text-white">
-                        <div className="text-[10px] uppercase font-bold text-amber-300 tracking-wider border-b border-white/10 pb-1 flex items-center justify-between">
+                      <div
+                        className={`absolute left-full ml-3 top-0 z-[220] w-56 rounded-2xl p-3 shadow-2xl backdrop-blur-2xl text-xs space-y-2 ${
+                          isDarkDesk ? "bg-slate-900 border border-white/20 text-white" : "bg-white border border-slate-200 text-zinc-900"
+                        }`}
+                        style={{ backgroundColor: isDarkDesk ? "rgba(15, 23, 42, 0.98)" : "rgba(255, 255, 255, 0.98)" }}
+                      >
+                        <div className={`text-[10px] uppercase font-bold tracking-wider border-b pb-1 flex items-center justify-between ${
+                          isDarkDesk ? "text-amber-300 border-white/10" : "text-zinc-600 border-slate-100"
+                        }`}>
                           <span>Highlight Color</span>
                           <button
                             type="button"
@@ -3236,11 +3318,15 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                               toggleHighlighter();
                               setActiveRailPopover(null);
                             }}
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              activeTool === "highlight" ? "bg-amber-400 text-black" : "bg-white/10 text-white"
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer ${
+                              activeTool === "highlight"
+                                ? "bg-amber-400 text-black"
+                                : isDarkDesk
+                                  ? "bg-white/10 text-white"
+                                  : "bg-slate-100 text-zinc-700"
                             }`}
                           >
-                            {activeTool === "highlight" ? "TURN OFF" : "ACTIVE"}
+                            {activeTool === "highlight" ? "TURN OFF" : "ACTIVATE"}
                           </button>
                         </div>
                         <div className="grid grid-cols-5 gap-2 pt-1">
@@ -3255,7 +3341,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                               }}
                               className={`w-7 h-7 rounded-full transition-transform cursor-pointer flex items-center justify-center ${
                                 highlightColor === col.id
-                                  ? "ring-2 ring-white scale-110 shadow-md"
+                                  ? "ring-2 ring-black scale-110 shadow-md"
                                   : "hover:scale-105 opacity-80 hover:opacity-100"
                               }`}
                               style={{ backgroundColor: col.border }}
@@ -3265,7 +3351,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                             </button>
                           ))}
                         </div>
-                        <p className="text-[10px] text-white/50 leading-tight pt-1">
+                        <p className="text-[10px] opacity-60 leading-tight pt-1">
                           Select color and drag across text to highlight.
                         </p>
                       </div>
@@ -3289,21 +3375,27 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                       railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
                     } ${
                       activeTool === "sticky" || activeRailPopover === "sticky"
-                        ? "bg-amber-400 text-[#111214] font-bold shadow-md scale-[1.02]"
-                        : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                        ? "bg-white/95 text-[#111214] shadow-[0_8px_20px_-6px_rgba(15,23,42,0.18)] ring-1 ring-black/10 scale-[1.02]"
+                        : isDarkDesk
+                          ? "text-zinc-300 hover:bg-white/10 hover:text-white"
+                          : "text-zinc-700 hover:bg-white/60 hover:text-[#111214]"
                     }`}
                   >
-                    {activeTool === "sticky" && (
-                      <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-black/70" />
+                    {(activeTool === "sticky" || activeRailPopover === "sticky") && (
+                      <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-[#111214]" />
                     )}
                     <span className="shrink-0 transition-transform duration-200 group-hover:scale-110">
-                      <StickyNote size={20} className={activeTool === "sticky" || activeRailPopover === "sticky" ? "text-black" : "text-amber-300"} />
+                      <ReaderToolIcon3D id="sticky" active={activeTool === "sticky" || activeRailPopover === "sticky"} size={22} />
                     </span>
                     {railExpanded ? (
                       <>
-                        <span className="text-xs font-bold truncate">+ Sticky Note</span>
+                        <span className={`text-xs font-bold truncate ${
+                          activeTool === "sticky" || activeRailPopover === "sticky"
+                            ? "text-[#111214]"
+                            : isDarkDesk ? "text-white/90" : "text-[#111214]"
+                        }`}>+ Sticky Note</span>
                         <span
-                          className="ml-auto w-3.5 h-3.5 rounded-full border border-white/50 shadow-xs shrink-0"
+                          className="ml-auto w-3.5 h-3.5 rounded-full border border-black/20 shadow-xs shrink-0"
                           style={{ backgroundColor: STICKY_COLORS[stickyColor].border }}
                           title={STICKY_COLORS[stickyColor].label}
                         />
@@ -3314,7 +3406,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                           className="absolute bottom-1.5 right-1.5 w-2 h-2 rounded-full border border-black/40"
                           style={{ backgroundColor: STICKY_COLORS[stickyColor].border }}
                         />
-                        <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#0c1017] text-white text-xs font-semibold shadow-xl border border-white/15">
+                        <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#111214] text-white text-xs font-semibold shadow-xl border border-white/15">
                           + Sticky Note {activeTool === "sticky" ? "(Active)" : ""}
                         </span>
                       </>
@@ -3325,8 +3417,15 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   {activeRailPopover === "sticky" && (
                     <>
                       <div className="fixed inset-0 z-[190]" onClick={() => setActiveRailPopover(null)} />
-                      <div className="absolute left-full ml-3 top-0 z-[220] w-60 rounded-2xl bg-[#0e121a]/95 border border-white/15 p-3.5 shadow-2xl backdrop-blur-2xl text-xs space-y-3 text-white">
-                        <div className="text-[10px] uppercase font-bold text-amber-300 tracking-wider border-b border-white/10 pb-1 flex items-center justify-between">
+                      <div
+                        className={`absolute left-full ml-3 top-0 z-[220] w-60 rounded-2xl p-3.5 shadow-2xl backdrop-blur-2xl text-xs space-y-3 ${
+                          isDarkDesk ? "bg-slate-900 border border-white/20 text-white" : "bg-white border border-slate-200 text-zinc-900"
+                        }`}
+                        style={{ backgroundColor: isDarkDesk ? "rgba(15, 23, 42, 0.98)" : "rgba(255, 255, 255, 0.98)" }}
+                      >
+                        <div className={`text-[10px] uppercase font-bold tracking-wider border-b pb-1 flex items-center justify-between ${
+                          isDarkDesk ? "text-amber-300 border-white/10" : "text-zinc-600 border-slate-100"
+                        }`}>
                           <span>New Sticky Note</span>
                           <button
                             type="button"
@@ -3334,15 +3433,19 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                               toggleStickyTool();
                               setActiveRailPopover(null);
                             }}
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              activeTool === "sticky" ? "bg-amber-400 text-black" : "bg-white/10 text-white"
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer ${
+                              activeTool === "sticky"
+                                ? "bg-amber-400 text-black"
+                                : isDarkDesk
+                                  ? "bg-white/10 text-white"
+                                  : "bg-slate-100 text-zinc-700"
                             }`}
                           >
                             {activeTool === "sticky" ? "TURN OFF" : "DROP NOTE"}
                           </button>
                         </div>
                         <div>
-                          <label className="text-[10px] text-white/60 block mb-1">Color</label>
+                          <label className="text-[10px] opacity-60 block mb-1">Color</label>
                           <div className="grid grid-cols-5 gap-2">
                             {Object.entries(STICKY_COLORS).map(([cKey, cVal]) => (
                               <button
@@ -3355,8 +3458,8 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                                 }}
                                 className={`w-7 h-7 rounded-full border transition-transform cursor-pointer flex items-center justify-center ${
                                   stickyColor === cKey
-                                    ? "ring-2 ring-white scale-110 shadow-md border-white"
-                                    : "border-white/30 hover:scale-105 opacity-80 hover:opacity-100"
+                                    ? "ring-2 ring-black scale-110 shadow-md border-black"
+                                    : "border-black/20 hover:scale-105 opacity-80 hover:opacity-100"
                                 }`}
                                 style={{ backgroundColor: cVal.border }}
                                 title={cVal.label}
@@ -3367,7 +3470,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                           </div>
                         </div>
                         <div>
-                          <label className="text-[10px] text-white/60 block mb-1">Category Tag</label>
+                          <label className="text-[10px] opacity-60 block mb-1">Category Tag</label>
                           <div className="grid grid-cols-2 gap-1.5">
                             {["Note", "Code", "Formula", "Exam"].map((tag) => (
                               <button
@@ -3381,7 +3484,9 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                                 className={`px-2 py-1 rounded-lg text-left font-semibold text-xs transition-all cursor-pointer ${
                                   stickyTag === tag
                                     ? "bg-amber-400 text-black font-bold"
-                                    : "bg-white/10 hover:bg-white/15 text-white"
+                                    : isDarkDesk
+                                      ? "bg-white/10 hover:bg-white/15 text-white"
+                                      : "bg-slate-100 hover:bg-slate-200 text-zinc-800"
                                 }`}
                               >
                                 {tag}
@@ -3389,7 +3494,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                             ))}
                           </div>
                         </div>
-                        <p className="text-[10px] text-white/50 leading-tight">
+                        <p className="text-[10px] opacity-60 leading-tight">
                           Click anywhere on the book page or in margins to place note.
                         </p>
                       </div>
@@ -3408,28 +3513,33 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                         railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
                       } ${
                         showNotebook
-                          ? "bg-amber-400 text-[#111214] font-bold shadow-md scale-[1.02]"
-                          : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                          ? "bg-white/95 text-[#111214] shadow-[0_8px_20px_-6px_rgba(15,23,42,0.18)] ring-1 ring-black/10 scale-[1.02]"
+                          : isDarkDesk
+                            ? "text-zinc-300 hover:bg-white/10 hover:text-white"
+                            : "text-zinc-700 hover:bg-white/60 hover:text-[#111214]"
                       }`}
                     >
+                      {showNotebook && (
+                        <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-[#111214]" />
+                      )}
                       <span className="shrink-0 transition-transform duration-200 group-hover:scale-110">
-                        <BookOpen size={20} className={showNotebook ? "text-black" : "text-amber-300"} />
+                        <ReaderToolIcon3D id="notebook" active={showNotebook} size={22} />
                       </span>
                       {railExpanded ? (
                         <>
-                          <span className="text-xs font-bold truncate">Study Notebook</span>
-                          <span className="ml-auto bg-amber-400 text-black text-[10px] px-1.5 py-0.5 rounded-full font-black shadow-xs">
+                          <span className={`text-xs font-bold truncate ${showNotebook ? "text-[#111214]" : isDarkDesk ? "text-white/90" : "text-[#111214]"}`}>Study Notebook</span>
+                          <span className="ml-auto bg-[#F97316] text-white text-[10px] px-1.5 py-0.5 rounded-full font-black shadow-xs">
                             {totalNotesCount}
                           </span>
                         </>
                       ) : (
                         <>
                           {totalNotesCount > 0 && (
-                            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-amber-400 text-black text-[10px] font-black flex items-center justify-center shadow-sm">
+                            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#F97316] text-white text-[10px] font-black flex items-center justify-center shadow-sm">
                               {totalNotesCount}
                             </span>
                           )}
-                          <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#0c1017] text-white text-xs font-semibold shadow-xl border border-white/15">
+                          <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#111214] text-white text-xs font-semibold shadow-xl border border-white/15">
                             Study Notebook ({totalNotesCount})
                           </span>
                         </>
@@ -3449,26 +3559,24 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                         railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
                       } ${
                         isBookmarked
-                          ? "bg-amber-400 text-[#111214] font-bold shadow-md scale-[1.02]"
-                          : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                          ? "bg-white/95 text-[#111214] shadow-[0_8px_20px_-6px_rgba(15,23,42,0.18)] ring-1 ring-black/10 scale-[1.02]"
+                          : isDarkDesk
+                            ? "text-zinc-300 hover:bg-white/10 hover:text-white"
+                            : "text-zinc-700 hover:bg-white/60 hover:text-[#111214]"
                       }`}
                     >
                       {isBookmarked && (
-                        <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-black/70" />
+                        <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-[#111214]" />
                       )}
                       <span className="shrink-0 transition-transform duration-200 group-hover:scale-110">
-                        {isBookmarked ? (
-                          <BookMarked size={20} className="text-black" />
-                        ) : (
-                          <Bookmark size={20} className="text-amber-300" />
-                        )}
+                        <ReaderToolIcon3D id="bookmark" active={isBookmarked} size={22} />
                       </span>
                       {railExpanded ? (
-                        <span className="text-xs font-bold truncate">
+                        <span className={`text-xs font-bold truncate ${isBookmarked ? "text-[#111214]" : isDarkDesk ? "text-white/90" : "text-[#111214]"}`}>
                           {isBookmarked ? "Bookmarked" : "Bookmark"}
                         </span>
                       ) : (
-                        <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#0c1017] text-white text-xs font-semibold shadow-xl border border-white/15">
+                        <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#111214] text-white text-xs font-semibold shadow-xl border border-white/15">
                           {isBookmarked ? "Bookmarked" : "Bookmark Page"}
                         </span>
                       )}
@@ -3487,19 +3595,24 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                         railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
                       } ${
                         sectionSelectActive
-                          ? "bg-amber-400 text-[#111214] font-bold shadow-md scale-[1.02]"
-                          : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                          ? "bg-white/95 text-[#111214] shadow-[0_8px_20px_-6px_rgba(15,23,42,0.18)] ring-1 ring-black/10 scale-[1.02]"
+                          : isDarkDesk
+                            ? "text-zinc-300 hover:bg-white/10 hover:text-white"
+                            : "text-zinc-700 hover:bg-white/60 hover:text-[#111214]"
                       }`}
                     >
+                      {sectionSelectActive && (
+                        <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-[#111214]" />
+                      )}
                       <span className="shrink-0 transition-transform duration-200 group-hover:scale-110">
-                        <ScanSearch size={20} className={sectionSelectActive ? "text-black" : "text-amber-300"} />
+                        <ReaderToolIcon3D id="zoomSection" active={sectionSelectActive} size={22} />
                       </span>
                       {railExpanded ? (
-                        <span className="text-xs font-bold truncate">
+                        <span className={`text-xs font-bold truncate ${sectionSelectActive ? "text-[#111214]" : isDarkDesk ? "text-white/90" : "text-[#111214]"}`}>
                           {sectionSelectActive ? "Selecting..." : "Zoom Section"}
                         </span>
                       ) : (
-                        <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#0c1017] text-white text-xs font-semibold shadow-xl border border-white/15">
+                        <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#111214] text-white text-xs font-semibold shadow-xl border border-white/15">
                           Zoom Section
                         </span>
                       )}
@@ -3516,12 +3629,22 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                     title="Undo annotation (Ctrl+Z)"
                     className={`p-2 rounded-xl transition-all flex items-center justify-center ${
                       historyIndex > 0
-                        ? "text-zinc-200 hover:bg-white/15 hover:text-white cursor-pointer active:scale-95"
-                        : "text-zinc-600 cursor-not-allowed"
+                        ? isDarkDesk
+                          ? "text-zinc-200 hover:bg-white/15 hover:text-white cursor-pointer active:scale-95"
+                          : "text-zinc-700 hover:bg-white/80 hover:text-[#111214] cursor-pointer active:scale-95"
+                        : isDarkDesk ? "text-zinc-600 cursor-not-allowed" : "text-zinc-400 cursor-not-allowed"
                     }`}
                   >
                     <Undo2 size={16} />
-                    {railExpanded && <span className="ml-1.5 text-xs font-semibold">Undo</span>}
+                    {railExpanded && (
+                      <span className={`ml-1.5 text-xs font-bold ${
+                        historyIndex > 0
+                          ? isDarkDesk ? "text-zinc-200" : "text-[#111214]"
+                          : isDarkDesk ? "text-zinc-600" : "text-zinc-400"
+                      }`}>
+                        Undo
+                      </span>
+                    )}
                   </button>
                   <button
                     type="button"
@@ -3530,26 +3653,40 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                     title="Redo annotation (Ctrl+Y)"
                     className={`p-2 rounded-xl transition-all flex items-center justify-center ${
                       historyIndex >= 0 && historyIndex < history.length - 1
-                        ? "text-zinc-200 hover:bg-white/15 hover:text-white cursor-pointer active:scale-95"
-                        : "text-zinc-600 cursor-not-allowed"
+                        ? isDarkDesk
+                          ? "text-zinc-200 hover:bg-white/15 hover:text-white cursor-pointer active:scale-95"
+                          : "text-zinc-700 hover:bg-white/80 hover:text-[#111214] cursor-pointer active:scale-95"
+                        : isDarkDesk ? "text-zinc-600 cursor-not-allowed" : "text-zinc-400 cursor-not-allowed"
                     }`}
                   >
                     <Redo2 size={16} />
-                    {railExpanded && <span className="ml-1.5 text-xs font-semibold">Redo</span>}
+                    {railExpanded && (
+                      <span className={`ml-1.5 text-xs font-bold ${
+                        historyIndex >= 0 && historyIndex < history.length - 1
+                          ? isDarkDesk ? "text-zinc-200" : "text-[#111214]"
+                          : isDarkDesk ? "text-zinc-600" : "text-zinc-400"
+                      }`}>
+                        Redo
+                      </span>
+                    )}
                   </button>
                 </div>
               </nav>
             </div>
 
             {/* Bottom Rail Controls: Compact/Expand + Minimize */}
-            <div className="flex flex-col items-center gap-1.5 pt-3 border-t border-white/10">
+            <div className={`flex flex-col items-center gap-1.5 pt-3 border-t ${isDarkDesk ? "border-white/10" : "border-black/5"}`}>
               <button
                 type="button"
                 onClick={toggleRailExpanded}
                 aria-label={railExpanded ? "Compact sidebar rail" : "Expand sidebar labels"}
                 className={`w-full flex items-center ${
                   railExpanded ? "justify-between px-3" : "justify-center"
-                } py-2 rounded-xl text-xs font-semibold text-zinc-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer`}
+                } py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                  isDarkDesk
+                    ? "text-zinc-300 hover:bg-white/10 hover:text-white"
+                    : "text-zinc-700 hover:bg-white/70 hover:text-[#111214]"
+                }`}
               >
                 <PanelLeft size={16} />
                 {railExpanded && <span>Compact Rail</span>}
@@ -3561,7 +3698,11 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                 aria-label="Hide sidebar for full-screen reading"
                 className={`w-full flex items-center ${
                   railExpanded ? "justify-between px-3" : "justify-center"
-                } py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer`}
+                } py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                  isDarkDesk
+                    ? "text-zinc-400 hover:bg-white/10 hover:text-white"
+                    : "text-zinc-600 hover:bg-white/70 hover:text-[#111214]"
+                }`}
               >
                 <PanelLeftClose size={16} />
                 {railExpanded && <span>Hide Rail</span>}
@@ -3575,11 +3716,18 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           <button
             type="button"
             onClick={toggleRailMinimized}
-            className="fixed left-3 top-20 z-40 flex items-center gap-2 px-3 py-2 rounded-2xl bg-[#0c1017]/92 hover:bg-[#0c1017] text-white border border-white/20 shadow-2xl backdrop-blur-xl transition-all cursor-pointer group hover:scale-105 hover:border-amber-400/60"
+            className={`fixed left-3 top-20 z-40 flex items-center gap-2 px-3.5 py-2.5 rounded-2xl transition-all cursor-pointer group hover:scale-105 shadow-xl backdrop-blur-xl ${
+              isDarkDesk
+                ? "bg-slate-900/95 hover:bg-slate-900 text-white border border-white/20"
+                : "bg-white/95 hover:bg-white text-[#111214] border border-slate-200/80 shadow-[0_10px_25px_-5px_rgba(15,23,42,0.15)]"
+            }`}
+            style={{
+              backgroundColor: isDarkDesk ? "rgba(15, 23, 42, 0.95)" : "rgba(255, 255, 255, 0.95)",
+            }}
             title="Open Reader Tools Rail"
           >
-            <PanelLeftOpen size={16} className="text-amber-300 group-hover:rotate-12 transition-transform" />
-            <span className="text-xs font-bold">Tools</span>
+            <PanelLeftOpen size={16} className="text-amber-500 group-hover:rotate-12 transition-transform" />
+            <span className="text-xs font-bold">Reader Tools</span>
           </button>
         )}
 

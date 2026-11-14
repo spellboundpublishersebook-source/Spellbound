@@ -302,3 +302,282 @@ export function Book3DFallbackSVG({ color = "#F97316" }) {
     </svg>
   );
 }
+
+/**
+ * Bespoke 3D glossy icons for the Secure Reader Tools navigation rail.
+ * Matches the visual fidelity and colorful 3D palette of the Admin Dashboard.
+ */
+export function ReaderToolIcon3D({ id, active = false, size = 22 }) {
+  const uid = `rdr3d_${id}`;
+  const opacityRest = active ? 1 : 0.88;
+
+  switch (id) {
+    case "theme":
+      return (
+        <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ opacity: opacityRest }} aria-hidden="true">
+          <defs>
+            <linearGradient id={`${uid}_p`} x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#818CF8" />
+              <stop offset="100%" stopColor="#4338CA" />
+            </linearGradient>
+            <linearGradient id={`${uid}_hi`} x1="6" y1="5" x2="20" y2="15" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {/* Palette body */}
+          <path
+            d="M16 4.5C9.6 4.5 4.5 9.6 4.5 16C4.5 20.2 7.2 23.6 11 25.2C12 25.6 12.8 26.5 12.8 27.6V27.8C12.8 28.5 13.4 29 14.1 29H16C23.2 29 28.5 23.2 28.5 16C28.5 9.6 22.9 4.5 16 4.5Z"
+            fill={`url(#${uid}_p)`}
+          />
+          {/* Top gloss curve */}
+          <path
+            d="M6.5 15.5C6.5 10.5 10.5 6.5 16 6.5C19.5 6.5 23 8.5 25 11.5C21 8.5 15.5 8 10 11C7.8 12.2 6.8 13.8 6.5 15.5Z"
+            fill={`url(#${uid}_hi)`}
+          />
+          {/* Thumb hole */}
+          <ellipse cx="20.5" cy="22.5" rx="2.5" ry="2.2" fill="#18181B" fillOpacity="0.75" />
+          {/* Colorful paint dots */}
+          <circle cx="10" cy="11.5" r="2.2" fill="#F43F5E" />
+          <circle cx="16" cy="9.2" r="2.2" fill="#FBBF24" />
+          <circle cx="22" cy="11.5" r="2.2" fill="#34D399" />
+          <circle cx="9.5" cy="17.5" r="2.2" fill="#38BDF8" />
+          <circle cx="14" cy="20.5" r="1.8" fill="#F472B6" />
+        </svg>
+      );
+
+    case "lights":
+      return (
+        <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ opacity: opacityRest }} aria-hidden="true">
+          <defs>
+            <linearGradient id={`${uid}_s`} x1="8" y1="8" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#FEF08A" />
+              <stop offset="45%" stopColor="#F59E0B" />
+              <stop offset="100%" stopColor="#EA580C" />
+            </linearGradient>
+            <linearGradient id={`${uid}_r`} x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#FDE047" />
+              <stop offset="100%" stopColor="#F97316" />
+            </linearGradient>
+          </defs>
+          {/* Radiating rounded rays */}
+          <rect x="14.5" y="2.5" width="3" height="4.5" rx="1.5" fill={`url(#${uid}_r)`} />
+          <rect x="14.5" y="25" width="3" height="4.5" rx="1.5" fill={`url(#${uid}_r)`} />
+          <rect x="2.5" y="14.5" width="4.5" height="3" rx="1.5" fill={`url(#${uid}_r)`} />
+          <rect x="25" y="14.5" width="4.5" height="3" rx="1.5" fill={`url(#${uid}_r)`} />
+          <rect x="6" y="6" width="3.2" height="4.2" rx="1.6" transform="rotate(-45 7.6 8.1)" fill={`url(#${uid}_r)`} />
+          <rect x="22" y="22" width="3.2" height="4.2" rx="1.6" transform="rotate(-45 23.6 24.1)" fill={`url(#${uid}_r)`} />
+          <rect x="22" y="6" width="3.2" height="4.2" rx="1.6" transform="rotate(45 23.6 8.1)" fill={`url(#${uid}_r)`} />
+          <rect x="6" y="22" width="3.2" height="4.2" rx="1.6" transform="rotate(45 7.6 24.1)" fill={`url(#${uid}_r)`} />
+          {/* Sun body */}
+          <circle cx="16" cy="16" r="7.5" fill={`url(#${uid}_s)`} />
+          <circle cx="13.5" cy="13.5" r="3" fill="#ffffff" fillOpacity="0.45" />
+          <circle cx="16" cy="16" r="5" fill="#FFE14D" fillOpacity="0.3" />
+        </svg>
+      );
+
+    case "epubStyle":
+      return (
+        <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ opacity: opacityRest }} aria-hidden="true">
+          <defs>
+            <linearGradient id={`${uid}_bg`} x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#C084FC" />
+              <stop offset="100%" stopColor="#7E22CE" />
+            </linearGradient>
+          </defs>
+          <rect x="4.5" y="4.5" width="23" height="23" rx="6.5" fill={`url(#${uid}_bg)`} />
+          {/* Bold Serif 'A' */}
+          <path
+            d="M11 21.5L14.2 11H17.8L21 21.5H18.7L18 19H14L13.3 21.5H11ZM14.5 17.2H17.5L16 12.6L14.5 17.2Z"
+            fill="#ffffff"
+          />
+          {/* 4-point golden sparkle */}
+          <path
+            d="M23 6L23.8 8.2L26 9L23.8 9.8L23 12L22.2 9.8L20 9L22.2 8.2L23 6Z"
+            fill="#FDE047"
+          />
+          <circle cx="9" cy="9" r="1.5" fill="#ffffff" fillOpacity="0.4" />
+        </svg>
+      );
+
+    case "voice":
+      return (
+        <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ opacity: opacityRest }} aria-hidden="true">
+          <defs>
+            <linearGradient id={`${uid}_head`} x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#34D399" />
+              <stop offset="100%" stopColor="#059669" />
+            </linearGradient>
+            <linearGradient id={`${uid}_cup`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#1E293B" />
+              <stop offset="100%" stopColor="#0F172A" />
+            </linearGradient>
+          </defs>
+          {/* Headband arch */}
+          <path
+            d="M6 16C6 10.5 10.5 6 16 6C21.5 6 26 10.5 26 16"
+            stroke={`url(#${uid}_head)`}
+            strokeWidth="3.6"
+            strokeLinecap="round"
+          />
+          {/* Earcups */}
+          <rect x="4" y="14" width="4.8" height="9" rx="2.4" fill={`url(#${uid}_cup)`} stroke="#34D399" strokeWidth="1.2" />
+          <rect x="23.2" y="14" width="4.8" height="9" rx="2.4" fill={`url(#${uid}_cup)`} stroke="#34D399" strokeWidth="1.2" />
+          {/* Audio soundwave bars in center */}
+          <rect x="11.5" y="15" width="2" height="6" rx="1" fill="#FDE047" />
+          <rect x="15" y="12" width="2" height="12" rx="1" fill="#34D399" />
+          <rect x="18.5" y="14" width="2" height="8" rx="1" fill="#FDE047" />
+        </svg>
+      );
+
+    case "lineFocus":
+      return (
+        <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ opacity: opacityRest }} aria-hidden="true">
+          <defs>
+            <linearGradient id={`${uid}_bg`} x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#60A5FA" />
+              <stop offset="100%" stopColor="#2563EB" />
+            </linearGradient>
+          </defs>
+          <rect x="4.5" y="4.5" width="23" height="23" rx="6.5" fill={`url(#${uid}_bg)`} />
+          {/* Masked dark regions */}
+          <rect x="6.5" y="6.5" width="19" height="5" rx="1.5" fill="#0F172A" fillOpacity="0.75" />
+          <rect x="6.5" y="20.5" width="19" height="5" rx="1.5" fill="#0F172A" fillOpacity="0.75" />
+          {/* Reading spotlight focus slit in middle */}
+          <rect x="6.5" y="12.5" width="19" height="7" rx="1.8" fill="#ffffff" fillOpacity="0.95" />
+          <rect x="8" y="14.5" width="11" height="1.6" rx="0.8" fill="#1E293B" />
+          <rect x="8" y="17" width="7" height="1.4" rx="0.7" fill="#64748B" />
+          {/* Focal amber indicator */}
+          <circle cx="22" cy="16" r="2.2" fill="#F59E0B" />
+        </svg>
+      );
+
+    case "highlighter":
+      return (
+        <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ opacity: opacityRest }} aria-hidden="true">
+          <defs>
+            <linearGradient id={`${uid}_pen`} x1="6" y1="6" x2="26" y2="26" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#FEF08A" />
+              <stop offset="40%" stopColor="#FACC15" />
+              <stop offset="100%" stopColor="#EAB308" />
+            </linearGradient>
+          </defs>
+          {/* Marker body tilted */}
+          <path
+            d="M17.5 5.5L24.5 12.5L14 23L7 16L17.5 5.5Z"
+            fill={`url(#${uid}_pen)`}
+          />
+          {/* Grip collar */}
+          <path d="M10.5 19.5L7 16L9.5 13.5L13 17L10.5 19.5Z" fill="#18181B" />
+          {/* Chisel tip */}
+          <path d="M7 16L4 21L9 19.5L7 16Z" fill="#FDE047" stroke="#CA8A04" strokeWidth="0.8" />
+          {/* Neon highlight swatch beneath */}
+          <rect x="4.5" y="25" width="23" height="3" rx="1.5" fill="#FACC15" fillOpacity="0.9" />
+          <circle cx="21" cy="9" r="1.5" fill="#ffffff" fillOpacity="0.7" />
+        </svg>
+      );
+
+    case "sticky":
+      return (
+        <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ opacity: opacityRest }} aria-hidden="true">
+          <defs>
+            <linearGradient id={`${uid}_n`} x1="5" y1="5" x2="27" y2="27" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#FEF08A" />
+              <stop offset="100%" stopColor="#FACC15" />
+            </linearGradient>
+          </defs>
+          {/* Sticky paper */}
+          <path
+            d="M5.5 8C5.5 6.6 6.6 5.5 8 5.5H24C25.4 5.5 26.5 6.6 26.5 8V19L19.5 26.5H8C6.6 26.5 5.5 25.4 5.5 24V8Z"
+            fill={`url(#${uid}_n)`}
+          />
+          {/* Folded corner dog-ear */}
+          <path d="M19.5 19H26.5L19.5 26.5V19Z" fill="#CA8A04" />
+          <path d="M19.5 19L26.5 26.5H19.5V19Z" fill="#EAB308" fillOpacity="0.4" />
+          {/* Pushpin / Header tape */}
+          <rect x="13.5" y="4" width="5" height="3.5" rx="1.2" fill="#EF4444" />
+          {/* Note content lines */}
+          <rect x="9" y="11" width="13" height="1.8" rx="0.9" fill="#1E293B" fillOpacity="0.45" />
+          <rect x="9" y="15" width="11" height="1.8" rx="0.9" fill="#1E293B" fillOpacity="0.45" />
+          <rect x="9" y="19" width="7" height="1.8" rx="0.9" fill="#1E293B" fillOpacity="0.3" />
+        </svg>
+      );
+
+    case "notebook":
+      return (
+        <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ opacity: opacityRest }} aria-hidden="true">
+          <defs>
+            <linearGradient id={`${uid}_c`} x1="6" y1="4" x2="26" y2="28" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#10B981" />
+              <stop offset="100%" stopColor="#047857" />
+            </linearGradient>
+          </defs>
+          {/* Hardcover book */}
+          <rect x="6" y="4.5" width="20" height="23" rx="4" fill={`url(#${uid}_c)`} />
+          {/* Spine on left */}
+          <rect x="6" y="4.5" width="4.5" height="23" rx="2" fill="#064E3B" />
+          {/* Gold bookmark ribbon */}
+          <path d="M18 4.5V15L20 13.5L22 15V4.5H18Z" fill="#F59E0B" />
+          {/* Gold embossed emblem */}
+          <circle cx="15.5" cy="18" r="3.2" fill="#FDE047" />
+          <circle cx="15.5" cy="18" r="1.8" fill="#047857" />
+          {/* Page edge slivers */}
+          <rect x="25" y="6" width="1.5" height="20" rx="0.75" fill="#F1F5F9" />
+        </svg>
+      );
+
+    case "bookmark":
+      return (
+        <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ opacity: opacityRest }} aria-hidden="true">
+          <defs>
+            <linearGradient id={`${uid}_rb`} x1="8" y1="4" x2="24" y2="28" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#FB7185" />
+              <stop offset="60%" stopColor="#E11D48" />
+              <stop offset="100%" stopColor="#9F1239" />
+            </linearGradient>
+          </defs>
+          {/* Ribbon with swallowtail bottom */}
+          <path
+            d="M8.5 5C8.5 4.2 9.2 3.5 10 3.5H22C22.8 3.5 23.5 4.2 23.5 5V27.5L16 22.5L8.5 27.5V5Z"
+            fill={`url(#${uid}_rb)`}
+          />
+          {/* Golden star badge pinned on top */}
+          <circle cx="16" cy="11" r="5" fill="#FEF08A" />
+          <path
+            d="M16 7.5L17.2 10.2L20.1 10.5L18 12.4L18.6 15.2L16 13.8L13.4 15.2L14 12.4L11.9 10.5L14.8 10.2L16 7.5Z"
+            fill="#D97706"
+          />
+          {/* Ribbon sheen */}
+          <line x1="11.5" y1="17" x2="11.5" y2="23" stroke="#ffffff" strokeOpacity="0.4" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      );
+
+    case "zoomSection":
+    default:
+      return (
+        <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ opacity: opacityRest }} aria-hidden="true">
+          <defs>
+            <linearGradient id={`${uid}_lens`} x1="6" y1="6" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#67E8F9" />
+              <stop offset="60%" stopColor="#0EA5E9" />
+              <stop offset="100%" stopColor="#0369A1" />
+            </linearGradient>
+          </defs>
+          {/* Magnifier lens outer rim */}
+          <circle cx="13.5" cy="13.5" r="9" fill={`url(#${uid}_lens)`} stroke="#1E293B" strokeWidth="2.2" />
+          {/* Lens reflection crescent */}
+          <path
+            d="M7.5 12C7.8 8.5 10.5 6.2 14 6C11 6.5 8.5 8.5 8 12L7.5 12Z"
+            fill="#ffffff"
+            fillOpacity="0.8"
+          />
+          {/* Focus reticle in center */}
+          <line x1="13.5" y1="9.5" x2="13.5" y2="17.5" stroke="#FDE047" strokeWidth="1.6" strokeLinecap="round" />
+          <line x1="9.5" y1="13.5" x2="17.5" y2="13.5" stroke="#FDE047" strokeWidth="1.6" strokeLinecap="round" />
+          {/* Handle */}
+          <path d="M20 20L27.5 27.5" stroke="#1E293B" strokeWidth="4.2" strokeLinecap="round" />
+          <path d="M20 20L27.5 27.5" stroke="#F59E0B" strokeWidth="2.2" strokeLinecap="round" />
+        </svg>
+      );
+  }
+}
