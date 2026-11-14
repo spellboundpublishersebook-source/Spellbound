@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { 
-  ChevronLeft, ChevronRight, ArrowLeft, ShieldAlert, Volume2, VolumeX, 
+  ChevronLeft, ChevronRight, ArrowLeft, ShieldAlert, Volume2, VolumeX, Volume1,
   ZoomIn, ZoomOut, RotateCcw, ScanSearch, X, Sun, Moon, Highlighter, 
   StickyNote, Bookmark, BookMarked, Maximize, Minimize, Minus, Maximize2, Clock, Sliders, 
   Palette, Trash2, Check, Copy, ChevronDown, Sparkles, Code, FileText, 
   Download, Eye, List, BookOpen, Layers, Building2, GripVertical,
-  Undo2, Redo2, GraduationCap
+  Undo2, Redo2, GraduationCap, Play, Pause, SkipBack, SkipForward, Square, Headphones
 } from "lucide-react";
 import { palette, fontDisplay, fontBody } from "../theme";
 import { supabase } from "../supabaseClient";
@@ -123,6 +123,137 @@ const STICKY_COLORS = {
   purple: { id: "purple", bg: "#F3E8FF", border: "#C084FC", text: "#581C87" },
 };
 
+// ==========================================
+// VOICE READER TEXT EXTRACTION HELPERS (100% Free & Client-Side)
+// ==========================================
+async function extractPdfPageLines(doc, pageNumber) {
+  if (!doc) return [];
+  try {
+    const pageObj = await doc.getPage(pageNumber);
+    const textContent = await pageObj.getTextContent();
+    if (!textContent || !textContent.items || textContent.items.length === 0) {
+      return [];
+    }
+
+    const rawItems = textContent.items.filter(
+      (it) => it.str && typeof it.str === "string" && it.str.trim().length > 0
+    );
+    if (rawItems.length === 0) return [];
+
+    // Sort items: top-to-bottom (higher Y to lower Y in PDF viewport), then left-to-right (lower X to higher X)
+    rawItems.sort((a, b) => {
+      const yA = a.transform ? a.transform[5] : 0;
+      const yB = b.transform ? b.transform[5] : 0;
+      const yDiff = yB - yA;
+      if (Math.abs(yDiff) > 6) {
+        return yDiff;
+      }
+      const xA = a.transform ? a.transform[4] : 0;
+      const xB = b.transform ? b.transform[4] : 0;
+      return xA - xB;
+    });
+
+    const lines = [];
+    let currentLine = "";
+    let lastY = null;
+
+    for (const item of rawItems) {
+      const y = item.transform ? item.transform[5] : 0;
+      const str = item.str.trim();
+      if (!str) continue;
+
+      if (lastY === null) {
+        currentLine = str;
+        lastY = y;
+      } else if (Math.abs(y - lastY) > 6) {
+        if (currentLine.trim()) lines.push(currentLine.trim());
+        currentLine = str;
+        lastY = y;
+      } else {
+        const needsSpace =
+          currentLine.length > 0 &&
+          !currentLine.endsWith(" ") &&
+          !str.startsWith(" ") &&
+          !str.match(/^[,.:;?!)]/);
+        currentLine += (needsSpace ? " " : "") + str;
+      }
+    }
+    if (currentLine.trim()) lines.push(currentLine.trim());
+
+    return lines;
+  } catch (err) {
+    console.warn("PDF line extraction failed:", err);
+    return [];
+  }
+}
+
+function extractEpubLines(html) {
+  if (!html) return [];
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+    doc.querySelectorAll("script, style, noscript, svg").forEach((el) => el.remove());
+
+    const blockSelectors = "p, h1, h2, h3, h4, h5, h6, li, blockquote, dt, dd, pre";
+    const blocks = doc.querySelectorAll(blockSelectors);
+    const lines = [];
+
+    if (blocks.length > 0) {
+      blocks.forEach((b) => {
+        const text = b.textContent?.trim().replace(/\s+/g, " ");
+        if (text) lines.push(text);
+      });
+    } else {
+      const allText = doc.body.textContent || "";
+      allText.split(/\r?\n/).forEach((l) => {
+        const trimmed = l.trim().replace(/\s+/g, " ");
+        if (trimmed) lines.push(trimmed);
+      });
+    }
+    return lines;
+  } catch (err) {
+    console.warn("EPUB line extraction failed:", err);
+    return [];
+  }
+}
+
+function convertLinesToSentences(rawLines) {
+  if (!rawLines || rawLines.length === 0) return [];
+  const joined = rawLines.join(" ").replace(/\s+/g, " ").trim();
+  if (!joined) return [];
+
+  const sentences = joined.split(/(?<=[.!?])\s+/);
+  const results = [];
+  for (let s of sentences) {
+    s = s.trim();
+    if (!s) continue;
+    if (s.length > 220) {
+      const clauses = s.split(/(?<=[,;:])\s+/);
+      let acc = "";
+      for (const c of clauses) {
+        if ((acc + " " + c).length > 200 && acc) {
+          results.push(acc.trim());
+          acc = c;
+        } else {
+          acc = acc ? `${acc} ${c}` : c;
+        }
+      }
+      if (acc.trim()) results.push(acc.trim());
+    } else {
+      results.push(s);
+    }
+  }
+  return results;
+}
+
+function formatSpeechUnits(lines, mode) {
+  if (!lines || lines.length === 0) return [];
+  if (mode === "sentence") {
+    return convertLinesToSentences(lines);
+  }
+  return lines.map((l) => l.trim()).filter((l) => l.length > 0);
+}
+
 export default function SecureReader({ book, session, onBack, onSaveStudentCustomizations, initialPage = null }) {
   const [page, setPage] = useState(0); // For text pages
   const [pdfPageNumber, setPdfPageNumber] = useState(1);
@@ -130,24 +261,34 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const [warning, setWarning] = useState(false);
   const [isFocused, setIsFocused] = useState(true);
   const [jumpInput, setJumpInput] = useState("");
-  const [isPlaying, setIsPlaying] = useState(false);
   const [resumedToast, setResumedToast] = useState(null);
 
-  const toggleReadAloud = useCallback(() => {
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
-    if (isPlaying) {
-      window.speechSynthesis.cancel();
-      setIsPlaying(false);
-    } else {
-      const textToRead = Array.isArray(book.pages) ? book.pages[page] : "";
-      if (!textToRead) return;
-      const utterance = new SpeechSynthesisUtterance(textToRead);
-      utterance.onend = () => setIsPlaying(false);
-      utterance.onerror = () => setIsPlaying(false);
-      window.speechSynthesis.speak(utterance);
-      setIsPlaying(true);
-    }
-  }, [isPlaying, book.pages, page]);
+  // ==========================================
+  // PROFESSIONAL VOICE / READ ALOUD SYSTEM
+  // ==========================================
+  const [isVoiceActive, setIsVoiceActive] = useState(false);
+  const [isVoicePlaying, setIsVoicePlaying] = useState(false);
+  const [isVoicePaused, setIsVoicePaused] = useState(false);
+  const [isVoiceMinimized, setIsVoiceMinimized] = useState(false);
+  const [voiceRate, setVoiceRate] = useState(1.0); // 0.75, 1.0, 1.25, 1.5, 2.0
+  const [voicePitch, setVoicePitch] = useState(1.0);
+  const [selectedVoiceURI, setSelectedVoiceURI] = useState("");
+  const [availableVoices, setAvailableVoices] = useState([]);
+  const [autoAdvancePage, setAutoAdvancePage] = useState(true);
+  const [speechUnitMode, setSpeechUnitMode] = useState("line"); // "line" or "sentence"
+  const [pageSpeechUnits, setPageSpeechUnits] = useState([]);
+  const [currentSpeechIndex, setCurrentSpeechIndex] = useState(0);
+  const [isExtractingText, setIsExtractingText] = useState(false);
+
+  const pdfDocRef = useRef(null);
+  const activeUtteranceRef = useRef(null);
+  const isVoiceActiveRef = useRef(false);
+  const isVoicePlayingRef = useRef(false);
+  const shouldAutoPlayNextPageRef = useRef(false);
+  const speechTimeoutRef = useRef(null);
+
+  isVoiceActiveRef.current = isVoiceActive;
+  isVoicePlayingRef.current = isVoicePlaying;
   const hasInitializedRef = useRef(false);
   const bookIdRef = useRef(book.id);
   if (bookIdRef.current !== book.id) {
@@ -1264,6 +1405,262 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     goToGlobalPage(currentPageDisplay - 1);
   }, [checkPaceLimit, currentPageDisplay, goToGlobalPage]);
 
+  // ==========================================
+  // VOICE PLAYBACK ENGINE (Line-by-line & Page-by-page)
+  // ==========================================
+  const stopVoice = useCallback(() => {
+    if (speechTimeoutRef.current) {
+      clearTimeout(speechTimeoutRef.current);
+      speechTimeoutRef.current = null;
+    }
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    activeUtteranceRef.current = null;
+    setIsVoicePlaying(false);
+    setIsVoicePaused(false);
+  }, []);
+
+  const handleVoicePageEnd = useCallback(() => {
+    if (autoAdvancePage && currentPageDisplay < totalPages) {
+      shouldAutoPlayNextPageRef.current = true;
+      next();
+    } else {
+      stopVoice();
+    }
+  }, [autoAdvancePage, currentPageDisplay, totalPages, next, stopVoice]);
+
+  const speakCurrentUnit = useCallback((unitIndex, unitsList = pageSpeechUnits) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+
+    if (speechTimeoutRef.current) {
+      clearTimeout(speechTimeoutRef.current);
+      speechTimeoutRef.current = null;
+    }
+
+    if (!unitsList || unitsList.length === 0) {
+      stopVoice();
+      return;
+    }
+
+    const safeIndex = Math.max(0, Math.min(unitIndex, unitsList.length - 1));
+    const textToSpeak = unitsList[safeIndex];
+
+    if (!textToSpeak || !textToSpeak.trim()) {
+      if (safeIndex < unitsList.length - 1) {
+        setCurrentSpeechIndex(safeIndex + 1);
+        speakCurrentUnit(safeIndex + 1, unitsList);
+      } else {
+        handleVoicePageEnd();
+      }
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    activeUtteranceRef.current = utterance; // Keep ref to prevent Chrome GC pause bug
+
+    utterance.rate = voiceRate;
+    utterance.pitch = voicePitch;
+
+    if (selectedVoiceURI && availableVoices.length > 0) {
+      const matched = availableVoices.find((v) => v.voiceURI === selectedVoiceURI);
+      if (matched) utterance.voice = matched;
+    }
+
+    utterance.onstart = () => {
+      setIsVoicePlaying(true);
+      setIsVoicePaused(false);
+    };
+
+    utterance.onend = () => {
+      activeUtteranceRef.current = null;
+      if (!isVoiceActiveRef.current) return;
+
+      if (safeIndex < unitsList.length - 1) {
+        const nextIndex = safeIndex + 1;
+        setCurrentSpeechIndex(nextIndex);
+        speechTimeoutRef.current = setTimeout(() => {
+          if (isVoiceActiveRef.current && isVoicePlayingRef.current) {
+            speakCurrentUnit(nextIndex, unitsList);
+          }
+        }, 180);
+      } else {
+        handleVoicePageEnd();
+      }
+    };
+
+    utterance.onerror = (e) => {
+      activeUtteranceRef.current = null;
+      if (e.error === "canceled" || e.error === "interrupted") return;
+      console.warn("Speech synthesis notice:", e);
+      setIsVoicePlaying(false);
+    };
+
+    window.speechSynthesis.speak(utterance);
+    setIsVoicePlaying(true);
+    setIsVoicePaused(false);
+  }, [pageSpeechUnits, voiceRate, voicePitch, selectedVoiceURI, availableVoices, stopVoice, handleVoicePageEnd]);
+
+  const pauseVoice = useCallback(() => {
+    if (speechTimeoutRef.current) {
+      clearTimeout(speechTimeoutRef.current);
+      speechTimeoutRef.current = null;
+    }
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    activeUtteranceRef.current = null;
+    setIsVoicePlaying(false);
+    setIsVoicePaused(true);
+  }, []);
+
+  const resumeVoice = useCallback(() => {
+    speakCurrentUnit(currentSpeechIndex, pageSpeechUnits);
+  }, [speakCurrentUnit, currentSpeechIndex, pageSpeechUnits]);
+
+  const toggleVoicePlayPause = useCallback(() => {
+    if (isVoicePlaying) {
+      pauseVoice();
+    } else {
+      resumeVoice();
+    }
+  }, [isVoicePlaying, pauseVoice, resumeVoice]);
+
+  const stepPrevLine = useCallback(() => {
+    if (currentSpeechIndex > 0) {
+      const prevIdx = currentSpeechIndex - 1;
+      setCurrentSpeechIndex(prevIdx);
+      if (isVoicePlaying || isVoicePaused) {
+        speakCurrentUnit(prevIdx, pageSpeechUnits);
+      }
+    } else if (currentPageDisplay > 1) {
+      shouldAutoPlayNextPageRef.current = isVoicePlaying;
+      prev();
+    }
+  }, [currentSpeechIndex, isVoicePlaying, isVoicePaused, speakCurrentUnit, pageSpeechUnits, currentPageDisplay, prev]);
+
+  const stepNextLine = useCallback(() => {
+    if (currentSpeechIndex < pageSpeechUnits.length - 1) {
+      const nextIdx = currentSpeechIndex + 1;
+      setCurrentSpeechIndex(nextIdx);
+      if (isVoicePlaying || isVoicePaused) {
+        speakCurrentUnit(nextIdx, pageSpeechUnits);
+      }
+    } else if (currentPageDisplay < totalPages) {
+      shouldAutoPlayNextPageRef.current = isVoicePlaying;
+      next();
+    }
+  }, [currentSpeechIndex, pageSpeechUnits.length, isVoicePlaying, isVoicePaused, speakCurrentUnit, pageSpeechUnits, currentPageDisplay, totalPages, next]);
+
+  const toggleVoiceReader = useCallback(() => {
+    if (isVoiceActive) {
+      stopVoice();
+      setIsVoiceActive(false);
+    } else {
+      setIsVoiceActive(true);
+      setIsVoiceMinimized(false);
+      if (pageSpeechUnits.length > 0) {
+        speakCurrentUnit(currentSpeechIndex, pageSpeechUnits);
+      } else {
+        shouldAutoPlayNextPageRef.current = true;
+      }
+    }
+  }, [isVoiceActive, stopVoice, pageSpeechUnits, speakCurrentUnit, currentSpeechIndex]);
+
+  // Load and cache browser system voices
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+
+    const populateVoices = () => {
+      try {
+        const voices = window.speechSynthesis.getVoices() || [];
+        if (voices.length > 0) {
+          setAvailableVoices(voices);
+          if (!selectedVoiceURI) {
+            const best =
+              voices.find((v) => v.lang.startsWith("en") && (v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Premium") || v.name.includes("Enhanced") || v.name.includes("Samantha") || v.name.includes("Daniel") || v.name.includes("Karen"))) ||
+              voices.find((v) => v.lang.startsWith("en")) ||
+              voices.find((v) => v.default) ||
+              voices[0];
+            if (best) setSelectedVoiceURI(best.voiceURI);
+          }
+        }
+      } catch (_) {}
+    };
+
+    populateVoices();
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = populateVoices;
+    }
+  }, [selectedVoiceURI]);
+
+  // Extract lines whenever the page or document changes
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function loadPageUnits() {
+      setIsExtractingText(true);
+      let rawLines = [];
+
+      try {
+        if (activeDocumentUrl) {
+          let doc = pdfDocRef.current;
+          if (!doc && pdfjs) {
+            try {
+              doc = await pdfjs.getDocument(activeDocumentUrl).promise;
+              pdfDocRef.current = doc;
+            } catch (_) {}
+          }
+          if (doc) {
+            rawLines = await extractPdfPageLines(doc, pdfPageNumber);
+          }
+        } else if (isEpub && activeEpubPageHtml) {
+          rawLines = extractEpubLines(activeEpubPageHtml);
+        } else if (Array.isArray(book.pages) && book.pages[page]) {
+          rawLines = (book.pages[page] || "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+        }
+      } catch (err) {
+        console.warn("Text extraction failed:", err);
+      }
+
+      if (isCancelled) return;
+
+      const units = formatSpeechUnits(rawLines, speechUnitMode);
+      setPageSpeechUnits(units);
+      setCurrentSpeechIndex(0);
+      setIsExtractingText(false);
+
+      if (shouldAutoPlayNextPageRef.current && isVoiceActiveRef.current) {
+        shouldAutoPlayNextPageRef.current = false;
+        if (units.length > 0) {
+          speakCurrentUnit(0, units);
+        } else {
+          stopVoice();
+        }
+      }
+    }
+
+    loadPageUnits();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [currentPageDisplay, pdfPageNumber, activeDocumentUrl, isEpub, activeEpubPageHtml, page, book.pages, speechUnitMode]);
+
+  // Component unmount cleanup
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      if (speechTimeoutRef.current) {
+        clearTimeout(speechTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Focus lock and screenshot blocker
   useEffect(() => {
     let blurTimer = null;
@@ -2027,17 +2424,35 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             <Clock size={12} className="text-amber-400" /> {readingMinutes}m read
           </div>
 
-          {!book.pdfUrl && !isEpub && (
-            <button
-              onClick={toggleReadAloud}
-              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs ${
-                isPlaying ? "bg-amber-400 text-black font-bold" : "bg-white/10 text-white hover:bg-white/20 active:scale-95 border border-white/15"
-              }`}
-            >
-              {isPlaying ? <VolumeX size={13} /> : <Volume2 size={13} />}
-              <span>{isPlaying ? "Stop" : "Read"}</span>
-            </button>
-          )}
+          {/* Professional Voice / Listen Aloud Button */}
+          <button
+            type="button"
+            onClick={toggleVoiceReader}
+            className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs ${
+              isVoiceActive
+                ? "bg-gradient-to-r from-amber-400 to-yellow-300 text-black shadow-amber-400/25 ring-2 ring-amber-400/50 scale-102"
+                : "bg-white/10 hover:bg-white/20 active:scale-95 text-white border border-white/15"
+            }`}
+            title="Listen Aloud / Voice Reader (Line-by-line & Page-by-page)"
+          >
+            {isVoicePlaying ? (
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-600 animate-ping" />
+                <Headphones size={13} className="text-black" />
+                <span>Listening</span>
+              </span>
+            ) : isVoicePaused ? (
+              <span className="flex items-center gap-1.5">
+                <Volume1 size={13} className="text-amber-300" />
+                <span>Paused</span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5">
+                <Headphones size={13} />
+                <span>Voice Reader</span>
+              </span>
+            )}
+          </button>
 
           <button
             type="button"
@@ -2640,7 +3055,10 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             >
               <Document
                 file={activeDocumentUrl}
-                onLoadSuccess={({ numPages }) => setNumPdfPages(numPages)}
+                onLoadSuccess={(pdf) => {
+                  setNumPdfPages(pdf.numPages);
+                  pdfDocRef.current = pdf;
+                }}
                 loading={
                   <div className="py-20 px-8 flex items-center justify-center">
                     <BookLoader
@@ -3458,6 +3876,280 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           </button>
         </div>
       </div>
+
+      {/* FLOATING VOICE / AUDIO READER CONSOLE (100% Free & Unlimited) */}
+      {isVoiceActive && (
+        <div
+          className="fixed bottom-16 left-1/2 -translate-x-1/2 w-full max-w-2xl px-3 sm:px-4 z-50 animate-in fade-in slide-in-from-bottom-4 duration-200 select-none pointer-events-auto"
+        >
+          {isVoiceMinimized ? (
+            /* MINIMIZED FLOATING PILL */
+            <div className="flex items-center justify-between gap-3 px-4 py-2 rounded-full bg-black/95 backdrop-blur-2xl border border-amber-400/50 shadow-2xl text-xs text-white">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+                <Headphones size={14} className="text-amber-400" />
+                <span className="font-bold text-amber-300">
+                  {pageSpeechUnits.length > 0
+                    ? `Line ${currentSpeechIndex + 1}/${pageSpeechUnits.length}`
+                    : isExtractingText
+                    ? "Loading..."
+                    : "Ready"}
+                </span>
+                <span className="text-white/40">• Page {currentPageDisplay}</span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={stepPrevLine}
+                  className="p-1 rounded-lg hover:bg-white/10 active:scale-95 text-white/80 hover:text-white cursor-pointer"
+                  title="Previous line"
+                >
+                  <SkipBack size={13} />
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleVoicePlayPause}
+                  className="p-1.5 rounded-full bg-amber-400 text-black hover:bg-yellow-300 active:scale-90 font-bold transition-all cursor-pointer shadow-sm"
+                  title={isVoicePlaying ? "Pause" : "Play"}
+                >
+                  {isVoicePlaying ? <Pause size={12} /> : <Play size={12} className="ml-0.5" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={stepNextLine}
+                  className="p-1 rounded-lg hover:bg-white/10 active:scale-95 text-white/80 hover:text-white cursor-pointer"
+                  title="Next line"
+                >
+                  <SkipForward size={13} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsVoiceMinimized(false)}
+                  className="p-1 rounded-lg hover:bg-white/10 active:scale-95 text-amber-300 hover:text-white cursor-pointer ml-1"
+                  title="Expand audio console"
+                >
+                  <Maximize2 size={13} />
+                </button>
+                <button
+                  type="button"
+                  onClick={stopVoice}
+                  className="p-1 rounded-lg hover:bg-white/10 active:scale-95 text-rose-400 hover:text-rose-300 cursor-pointer"
+                  title="Stop and close"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* FULL LUXURY STUDIO PLAYER */
+            <div className="rounded-2xl bg-black/95 backdrop-blur-2xl border border-amber-400/40 shadow-2xl p-3.5 sm:p-4 text-white space-y-3">
+              {/* Header Row */}
+              <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400 to-yellow-500 text-black flex items-center justify-center font-bold shadow-md">
+                    <Headphones size={15} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-amber-300 tracking-wide uppercase">
+                        AI Voice Reader
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-white/70 font-semibold">
+                        Free & Unlimited
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-white/60">
+                      {isExtractingText ? (
+                        <span className="text-amber-400 animate-pulse">Extracting text from page...</span>
+                      ) : pageSpeechUnits.length > 0 ? (
+                        <span>
+                          {speechUnitMode === "line" ? "Line" : "Sentence"}{" "}
+                          <strong className="text-white">{currentSpeechIndex + 1}</strong> of{" "}
+                          <strong className="text-white">{pageSpeechUnits.length}</strong> • Page{" "}
+                          <strong className="text-white">{currentPageDisplay}</strong> of {totalPages || 1}
+                        </span>
+                      ) : (
+                        <span className="text-amber-300/80">No text layer on this page (scanned image)</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Header Options */}
+                <div className="flex items-center gap-1.5">
+                  {/* Mode switch */}
+                  <button
+                    type="button"
+                    onClick={() => setSpeechUnitMode((m) => (m === "line" ? "sentence" : "line"))}
+                    className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-[10px] font-semibold text-white/80 transition-colors cursor-pointer"
+                    title="Switch between Line-by-Line and Sentence reading"
+                  >
+                    {speechUnitMode === "line" ? "📄 Line by Line" : "💬 Sentences"}
+                  </button>
+
+                  {/* Auto-flip switch */}
+                  <button
+                    type="button"
+                    onClick={() => setAutoAdvancePage((a) => !a)}
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                      autoAdvancePage
+                        ? "bg-amber-400/20 text-amber-300 border border-amber-400/40"
+                        : "bg-white/10 text-white/50 hover:text-white"
+                    }`}
+                    title={autoAdvancePage ? "Auto-flip page ON: will automatically turn to next page" : "Auto-flip page OFF"}
+                  >
+                    <span>Auto-Flip:</span>
+                    <span>{autoAdvancePage ? "ON" : "OFF"}</span>
+                  </button>
+
+                  {/* Minimize button */}
+                  <button
+                    type="button"
+                    onClick={() => setIsVoiceMinimized(true)}
+                    className="p-1 rounded-lg hover:bg-white/15 text-white/70 hover:text-white transition-colors cursor-pointer"
+                    title="Minimize player"
+                  >
+                    <Minus size={14} />
+                  </button>
+
+                  {/* Close button */}
+                  <button
+                    type="button"
+                    onClick={stopVoice}
+                    className="p-1 rounded-lg hover:bg-rose-500/20 text-white/70 hover:text-rose-300 transition-colors cursor-pointer"
+                    title="Close voice reader"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Teleprompter / Current Line Display */}
+              <div className="relative rounded-xl bg-white/5 border border-white/10 p-3 sm:p-3.5 min-h-[58px] flex items-center shadow-inner">
+                {pageSpeechUnits.length > 0 ? (
+                  <div className="w-full">
+                    <p className="text-xs sm:text-sm font-medium leading-relaxed text-amber-100 font-serif line-clamp-3 select-text">
+                      <span className="text-amber-400 font-bold mr-1.5 text-base">“</span>
+                      {pageSpeechUnits[currentSpeechIndex]}
+                      <span className="text-amber-400 font-bold ml-1 text-base">”</span>
+                    </p>
+                  </div>
+                ) : (
+                  <div className="w-full text-center text-xs text-white/50 py-1">
+                    {isExtractingText
+                      ? "Reading page text structure..."
+                      : "No text found on this page. Turn to the next page to listen."}
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom Control Row */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                {/* Voice Selection */}
+                <div className="flex items-center gap-1.5 max-w-[160px] sm:max-w-[200px]">
+                  <select
+                    value={selectedVoiceURI}
+                    onChange={(e) => {
+                      setSelectedVoiceURI(e.target.value);
+                      if (isVoicePlaying) {
+                        setTimeout(() => speakCurrentUnit(currentSpeechIndex, pageSpeechUnits), 50);
+                      }
+                    }}
+                    className="w-full text-[11px] font-medium bg-white/10 hover:bg-white/15 border border-white/15 rounded-xl px-2 py-1 text-white outline-none cursor-pointer truncate"
+                    title="Select Voice"
+                  >
+                    {availableVoices.length === 0 && <option value="">Default Voice</option>}
+                    {availableVoices.map((v) => (
+                      <option key={v.voiceURI} value={v.voiceURI} className="bg-neutral-900 text-white">
+                        {v.name.replace(/Google|Microsoft|Apple/gi, "").trim()} ({v.lang})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Primary Playback Transport */}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={stepPrevLine}
+                    disabled={currentSpeechIndex === 0 && currentPageDisplay <= 1}
+                    className="p-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer shadow-xs"
+                    title="Previous line (or page)"
+                  >
+                    <SkipBack size={15} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={toggleVoicePlayPause}
+                    disabled={pageSpeechUnits.length === 0}
+                    className="px-4 py-2 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 active:scale-95 text-black font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-amber-400/25 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    title={isVoicePlaying ? "Pause speech" : "Play speech"}
+                  >
+                    {isVoicePlaying ? (
+                      <>
+                        <Pause size={14} className="fill-black" />
+                        <span>Pause</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play size={14} className="fill-black ml-0.5" />
+                        <span>{isVoicePaused ? "Resume" : "Play"}</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={stepNextLine}
+                    disabled={currentSpeechIndex >= pageSpeechUnits.length - 1 && currentPageDisplay >= totalPages}
+                    className="p-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer shadow-xs"
+                    title="Next line (or page)"
+                  >
+                    <SkipForward size={15} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={stopVoice}
+                    className="p-2 rounded-xl bg-white/10 hover:bg-rose-500/30 hover:text-rose-300 active:scale-95 text-white/70 transition-all cursor-pointer shadow-xs"
+                    title="Stop playback"
+                  >
+                    <Square size={14} />
+                  </button>
+                </div>
+
+                {/* Speed Selector */}
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-white/50 font-semibold uppercase tracking-wider hidden sm:inline">
+                    Speed:
+                  </span>
+                  {[0.75, 1.0, 1.25, 1.5, 2.0].map((rate) => (
+                    <button
+                      key={rate}
+                      type="button"
+                      onClick={() => {
+                        setVoiceRate(rate);
+                        if (isVoicePlaying) {
+                          setTimeout(() => speakCurrentUnit(currentSpeechIndex, pageSpeechUnits), 50);
+                        }
+                      }}
+                      className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                        voiceRate === rate
+                          ? "bg-amber-400 text-black shadow-xs"
+                          : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                      }`}
+                    >
+                      {rate}x
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
