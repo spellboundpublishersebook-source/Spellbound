@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { 
   ChevronLeft, ChevronRight, ArrowLeft, ShieldAlert, Volume2, VolumeX, Volume1,
-  ZoomIn, ZoomOut, RotateCcw, ScanSearch, X, Sun, Moon, Highlighter, 
+  ZoomIn, ZoomOut, RotateCcw, RotateCw, AlertCircle, ScanSearch, X, Sun, Moon, Highlighter, 
   StickyNote, Bookmark, BookMarked, Maximize, Minimize, Minus, Maximize2, Minimize2, Clock, Sliders, 
   Palette, Trash2, Check, Copy, ChevronDown, Sparkles, Code, FileText, 
   Download, Eye, List, BookOpen, Layers, Building2, GripVertical,
@@ -729,6 +729,156 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const activeDocumentUrl = isEpub
     ? (currentEpubSection?.type === "pdf" ? currentEpubSection.url : null)
     : book.pdfUrl;
+
+  // Resilient multi-tier PDF document source and auto-recovery states
+  const [documentSource, setDocumentSource] = useState(() => activeDocumentUrl);
+  const [documentLoadState, setDocumentLoadState] = useState("loading"); // "loading" | "retrying" | "success" | "error"
+  const [documentErrorDetails, setDocumentErrorDetails] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const docBufferCacheRef = useRef(new Map());
+
+  // PDF.js options with fallback cMaps and font support
+  const pdfDocumentOptions = useMemo(() => ({
+    cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+    cMapPacked: true,
+    standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
+    isEvalSupported: false,
+  }), []);
+
+  useEffect(() => {
+    if (!activeDocumentUrl) {
+      setDocumentSource(null);
+      setDocumentLoadState("idle");
+      setDocumentErrorDetails(null);
+      setRetryCount(0);
+      return;
+    }
+
+    const cached = docBufferCacheRef.current.get(activeDocumentUrl);
+    if (cached) {
+      setDocumentSource({ data: cached });
+      setDocumentLoadState("success");
+      setDocumentErrorDetails(null);
+      return;
+    }
+
+    setDocumentSource(activeDocumentUrl);
+    setDocumentLoadState("loading");
+    setDocumentErrorDetails(null);
+    setRetryCount(0);
+  }, [activeDocumentUrl]);
+
+  const fetchResilientPdfBuffer = useCallback(async (rawUrl, attempt = 1) => {
+    if (!rawUrl) throw new Error("No document URL provided");
+
+    let targetUrl = rawUrl;
+
+    // Supabase signed URL auto-healing if direct public fetch returns 401/403 or on retry
+    if (attempt >= 2 && targetUrl.includes("/storage/v1/object/")) {
+      try {
+        let storagePath = null;
+        if (targetUrl.includes("/storage/v1/object/public/pdfs/")) {
+          storagePath = targetUrl.split("/storage/v1/object/public/pdfs/")[1]?.split("?")[0];
+        } else if (targetUrl.includes("/storage/v1/object/sign/pdfs/")) {
+          storagePath = targetUrl.split("/storage/v1/object/sign/pdfs/")[1]?.split("?")[0];
+        } else if (targetUrl.includes("/pdfs/")) {
+          storagePath = targetUrl.split("/pdfs/")[1]?.split("?")[0];
+        }
+
+        if (storagePath) {
+          const decodedPath = decodeURIComponent(storagePath);
+          const { data: signedData, error: signErr } = await supabase.storage
+            .from("pdfs")
+            .createSignedUrl(decodedPath, 7200);
+
+          if (!signErr && signedData?.signedUrl) {
+            targetUrl = signedData.signedUrl;
+          }
+        }
+      } catch (signEx) {
+        console.warn("Could not generate fresh signed URL during recovery:", signEx);
+      }
+    }
+
+    if (attempt > 1) {
+      await new Promise((res) => setTimeout(res, attempt * 600));
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+    try {
+      const fetchUrl = attempt > 1
+        ? `${targetUrl}${targetUrl.includes("?") ? "&" : "?"}_r=${Date.now()}`
+        : targetUrl;
+
+      const res = await fetch(fetchUrl, {
+        signal: controller.signal,
+        mode: "cors",
+        headers: { Accept: "application/pdf,*/*" },
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        throw new Error(`Storage responded with HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      const buffer = await res.arrayBuffer();
+      return buffer;
+    } catch (err) {
+      clearTimeout(timeoutId);
+      throw err;
+    }
+  }, []);
+
+  const handleDocumentError = useCallback(async (err) => {
+    console.warn("PDF stream load error encountered:", err);
+
+    if (retryCount < 3 && activeDocumentUrl) {
+      setDocumentLoadState("retrying");
+      const nextAttempt = retryCount + 1;
+      setRetryCount(nextAttempt);
+
+      try {
+        const buffer = await fetchResilientPdfBuffer(activeDocumentUrl, nextAttempt);
+        if (buffer && buffer.byteLength > 0) {
+          docBufferCacheRef.current.set(activeDocumentUrl, buffer);
+          setDocumentSource({ data: buffer });
+          setDocumentLoadState("loading");
+          return;
+        }
+      } catch (recoveryErr) {
+        console.warn(`Auto-recovery attempt ${nextAttempt} failed:`, recoveryErr);
+      }
+    }
+
+    setDocumentLoadState("error");
+    setDocumentErrorDetails(
+      err?.message?.includes("Missing PDF") || err?.message?.includes("Unexpected server response")
+        ? "The document download was interrupted by network instability."
+        : (err?.message || "Please verify your internet connection or check storage bucket configuration.")
+    );
+  }, [retryCount, activeDocumentUrl, fetchResilientPdfBuffer]);
+
+  const handleManualRetry = useCallback(async () => {
+    setDocumentLoadState("retrying");
+    setDocumentErrorDetails(null);
+    try {
+      const buffer = await fetchResilientPdfBuffer(activeDocumentUrl, 3);
+      if (buffer && buffer.byteLength > 0) {
+        docBufferCacheRef.current.set(activeDocumentUrl, buffer);
+        setDocumentSource({ data: buffer });
+        setDocumentLoadState("loading");
+        return;
+      }
+    } catch (err) {
+      console.error("Manual retry failed:", err);
+    }
+    // Fallback cache-busted direct load
+    setDocumentSource(`${activeDocumentUrl}${activeDocumentUrl.includes("?") ? "&" : "?"}_t=${Date.now()}`);
+    setDocumentLoadState("loading");
+  }, [activeDocumentUrl, fetchResilientPdfBuffer]);
 
   // Load and cache unpacked EPUB chapter whenever section changes
   useEffect(() => {
@@ -3918,29 +4068,55 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             </div>
           ) : activeDocumentUrl ? (
             <div
-              className="w-full h-full flex items-center justify-center pointer-events-none relative z-0"
+              className="w-full h-full flex items-center justify-center relative z-0"
               style={{ filter: currentTheme.canvasFilter }}
             >
               <Document
-                file={activeDocumentUrl}
+                file={documentSource || activeDocumentUrl}
+                options={pdfDocumentOptions}
                 onLoadSuccess={(pdf) => {
                   setNumPdfPages(pdf.numPages);
                   pdfDocRef.current = pdf;
+                  setDocumentLoadState("success");
+                  setDocumentErrorDetails(null);
                 }}
+                onLoadError={handleDocumentError}
                 loading={
-                  <div className="py-20 px-8 flex items-center justify-center">
+                  <div className="py-20 px-8 flex items-center justify-center pointer-events-auto">
                     <BookLoader
                       book={book}
-                      message="Loading secure document..."
+                      message={documentLoadState === "retrying" ? "Reconnecting to storage edge & loading secure document..." : "Loading secure document..."}
                       size="md"
                     />
                   </div>
                 }
                 error={
-                  <div className="p-16 text-center flex flex-col items-center">
-                    <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-3 font-bold text-lg">!</div>
-                    <p className="text-red-600 font-semibold mb-1">Unable to load document</p>
-                    <p className="text-xs text-gray-500 max-w-sm">Please verify your internet connection or check storage bucket configuration.</p>
+                  <div className="p-8 sm:p-14 text-center flex flex-col items-center pointer-events-auto max-w-md mx-auto my-auto">
+                    <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mb-4 shadow-sm">
+                      <AlertCircle size={28} />
+                    </div>
+                    <p className="text-base font-bold text-red-600 mb-1" style={fontDisplay}>Unable to load document</p>
+                    <p className="text-xs text-slate-500 max-w-sm mb-6 leading-relaxed">
+                      {documentErrorDetails || "Network connection interrupted or storage service temporarily busy."}
+                    </p>
+                    <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full">
+                      <button
+                        type="button"
+                        onClick={handleManualRetry}
+                        disabled={documentLoadState === "retrying"}
+                        className="w-full flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs shadow-md transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+                      >
+                        <RotateCw size={14} className={documentLoadState === "retrying" ? "animate-spin" : ""} />
+                        <span>{documentLoadState === "retrying" ? "Connecting to storage..." : "Retry Loading"}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={onBack}
+                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-200/80 hover:bg-slate-300 text-slate-800 font-semibold text-xs transition-all cursor-pointer whitespace-nowrap"
+                      >
+                        Back to Library
+                      </button>
+                    </div>
                   </div>
                 }
               >
@@ -4426,7 +4602,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                     height: Math.round(BASE_PDF_WIDTH * sectionZoom * (sectionCrop.pageHeight / sectionCrop.pageWidth)),
                   }}
                 >
-                  <Document file={activeDocumentUrl} loading={null}>
+                  <Document file={documentSource || activeDocumentUrl} options={pdfDocumentOptions} loading={null}>
                     <Page
                       pageNumber={pdfPageNumber}
                       renderTextLayer={false}
