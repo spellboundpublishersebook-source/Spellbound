@@ -17,10 +17,8 @@ import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import BookLoader from "../components/BookLoader";
 import { loadEpubDocument } from "../utils/epubLoader";
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-
-// Set up local pdf.js worker (eliminates external CDN latency)
-pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
+// High-availability Cloudflare CDNJS worker (guaranteed application/javascript MIME type across Windows, Chrome, and all environments)
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
 
 const BASE_PDF_WIDTH = 640;
 const MIN_SECTION_ZOOM = 0.75;
@@ -835,6 +833,16 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const handleDocumentError = useCallback(async (err) => {
     console.warn("PDF stream load error encountered:", err);
 
+    // If worker fails, toggle between reliable Cloudflare CDNJS and unpkg CDN
+    if (err?.message?.includes("fake worker") || err?.message?.includes("dynamically imported module") || err?.message?.includes("worker")) {
+      const currentWorker = pdfjs.GlobalWorkerOptions.workerSrc || "";
+      if (currentWorker.includes("cdnjs")) {
+        pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+      } else {
+        pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+      }
+    }
+
     if (retryCount < 3 && activeDocumentUrl) {
       setDocumentLoadState("retrying");
       const nextAttempt = retryCount + 1;
@@ -864,6 +872,10 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const handleManualRetry = useCallback(async () => {
     setDocumentLoadState("retrying");
     setDocumentErrorDetails(null);
+
+    // Ensure worker source is set to trusted Cloudflare CDNJS
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+
     try {
       const buffer = await fetchResilientPdfBuffer(activeDocumentUrl, 3);
       if (buffer && buffer.byteLength > 0) {
