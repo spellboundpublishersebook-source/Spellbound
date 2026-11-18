@@ -700,8 +700,29 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const [bookNavTab, setBookNavTab] = useState("toc"); // "toc" | "jump" | "myBookmarks"
   const [targetBookPageInput, setTargetBookPageInput] = useState("");
   const [targetPdfPageInput, setTargetPdfPageInput] = useState("");
+  const [sideCalibPrintedInput, setSideCalibPrintedInput] = useState("");
   const [calibratedSuccess, setCalibratedSuccess] = useState(false);
   const [newBookmarkTitle, setNewBookmarkTitle] = useState("");
+
+  // Persistent jump mode (saved per book id in localStorage: "book" or "pdf")
+  const [jumpMode, setJumpModeState] = useState(() => {
+    try {
+      return localStorage.getItem(`reader_jump_mode_${book.id}`) || "book";
+    } catch (_) {
+      return "book";
+    }
+  });
+
+  const setJumpMode = useCallback((newMode) => {
+    setJumpModeState(newMode);
+    try {
+      localStorage.setItem(`reader_jump_mode_${book.id}`, newMode);
+    } catch (_) {}
+  }, [book.id]);
+
+  const [showOffsetQuickPopover, setShowOffsetQuickPopover] = useState(false);
+  const [quickCalibInput, setQuickCalibInput] = useState("");
+  const quickOffsetPopoverRef = useRef(null);
 
   // Persistent book page offset (saved per book id in localStorage)
   const [bookPageOffset, setBookPageOffsetState] = useState(() => {
@@ -1914,11 +1935,6 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     return true;
   }, []);
 
-  // Sync jump input
-  useEffect(() => {
-    setJumpInput(currentPageDisplay.toString());
-  }, [currentPageDisplay]);
-
   const goToGlobalPage = useCallback((targetGlobal) => {
     if (!checkPaceLimit()) return;
     const maxP = totalPages || 1;
@@ -1938,15 +1954,118 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     setPdfPageNumber(localPage);
   }, [checkPaceLimit, totalPages, isEpub, activeDocumentUrl, globalToLocal, activeEpubSectionId]);
 
-  const handleJump = () => {
-    let p = parseInt(jumpInput, 10);
-    const maxP = totalPages || 1;
-    if (!isNaN(p) && p >= 1 && p <= maxP) {
-      goToGlobalPage(p);
+  // ==========================================
+  // BOOK PAGES & NAVIGATOR COMPUTED LOGIC
+  // ==========================================
+  const currentBookPageNumber = useMemo(() => {
+    const p = activeDocumentUrl ? pdfPageNumber : currentPageDisplay;
+    if (activeDocumentUrl && pdfPageLabels && pdfPageLabels[pdfPageNumber - 1]) {
+      const parsed = parseInt(pdfPageLabels[pdfPageNumber - 1], 10);
+      if (!isNaN(parsed) && String(parsed) === pdfPageLabels[pdfPageNumber - 1].trim()) {
+        return parsed;
+      }
+    }
+    return p - bookPageOffset;
+  }, [activeDocumentUrl, pdfPageNumber, currentPageDisplay, bookPageOffset, pdfPageLabels]);
+
+  const currentBookPageLabel = useMemo(() => {
+    if (activeDocumentUrl && pdfPageLabels && pdfPageLabels[pdfPageNumber - 1]) {
+      return pdfPageLabels[pdfPageNumber - 1];
+    }
+    if (currentBookPageNumber <= 0) {
+      return `Prelim (${activeDocumentUrl ? pdfPageNumber : currentPageDisplay})`;
+    }
+    return `Book p. ${currentBookPageNumber}`;
+  }, [activeDocumentUrl, pdfPageLabels, pdfPageNumber, currentPageDisplay, currentBookPageNumber]);
+
+  // Sync jump input with current page and active jump mode
+  useEffect(() => {
+    if (jumpMode === "book") {
+      setJumpInput(currentBookPageNumber > 0 ? String(currentBookPageNumber) : (currentBookPageLabel || String(currentPageDisplay)));
     } else {
       setJumpInput(currentPageDisplay.toString());
     }
-  };
+  }, [currentPageDisplay, jumpMode, currentBookPageNumber, currentBookPageLabel]);
+
+  // Close quick offset popover on outside click
+  useEffect(() => {
+    if (!showOffsetQuickPopover) return;
+    function handleClickOutside(e) {
+      if (quickOffsetPopoverRef.current && !quickOffsetPopoverRef.current.contains(e.target)) {
+        setShowOffsetQuickPopover(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showOffsetQuickPopover]);
+
+  const handleJump = useCallback(() => {
+    const trimmed = (jumpInput || "").trim();
+    if (!trimmed) {
+      if (jumpMode === "book") {
+        setJumpInput(currentBookPageNumber > 0 ? String(currentBookPageNumber) : (currentBookPageLabel || String(currentPageDisplay)));
+      } else {
+        setJumpInput(currentPageDisplay.toString());
+      }
+      return;
+    }
+
+    if (jumpMode === "book") {
+      // 1. If PDF has embedded page labels, check if any matches
+      if (pdfPageLabels && Array.isArray(pdfPageLabels)) {
+        const matchIdx = pdfPageLabels.findIndex(
+          (l) => l && (l.toLowerCase() === trimmed.toLowerCase() || l.replace(/\D/g, '') === trimmed)
+        );
+        if (matchIdx >= 0) {
+          goToGlobalPage(matchIdx + 1);
+          return;
+        }
+      }
+
+      // 2. Otherwise apply calibrated offset: PDF page = Book page + offset
+      const targetBookNum = parseInt(trimmed, 10);
+      if (!isNaN(targetBookNum)) {
+        const targetPdfPage = targetBookNum + bookPageOffset;
+        const maxP = totalPages || 1;
+        const clamped = Math.max(1, Math.min(targetPdfPage, maxP));
+        goToGlobalPage(clamped);
+      } else {
+        setJumpInput(currentBookPageNumber > 0 ? String(currentBookPageNumber) : String(currentPageDisplay));
+      }
+    } else {
+      // Raw PDF mode
+      let p = parseInt(trimmed, 10);
+      const maxP = totalPages || 1;
+      if (!isNaN(p) && p >= 1 && p <= maxP) {
+        goToGlobalPage(p);
+      } else {
+        setJumpInput(currentPageDisplay.toString());
+      }
+    }
+  }, [jumpInput, jumpMode, currentBookPageNumber, currentBookPageLabel, currentPageDisplay, pdfPageLabels, bookPageOffset, totalPages, goToGlobalPage]);
+
+  const handleApplyCustomOffset = useCallback((customPrintedPage) => {
+    const currentPdf = activeDocumentUrl ? pdfPageNumber : currentPageDisplay;
+    const printedNum = parseInt(customPrintedPage !== undefined ? customPrintedPage : quickCalibInput, 10);
+    if (!isNaN(printedNum)) {
+      const newOffset = currentPdf - printedNum;
+      setBookPageOffset(newOffset);
+      setCalibratedSuccess(true);
+      setTimeout(() => setCalibratedSuccess(false), 3000);
+      setShowOffsetQuickPopover(false);
+    }
+  }, [activeDocumentUrl, pdfPageNumber, currentPageDisplay, quickCalibInput, setBookPageOffset]);
+
+  const handleApplySideCustomOffset = useCallback(() => {
+    const currentPdf = activeDocumentUrl ? pdfPageNumber : currentPageDisplay;
+    const printedNum = parseInt(sideCalibPrintedInput, 10);
+    if (!isNaN(printedNum)) {
+      const newOffset = currentPdf - printedNum;
+      setBookPageOffset(newOffset);
+      setCalibratedSuccess(true);
+      setTimeout(() => setCalibratedSuccess(false), 3000);
+    }
+  }, [activeDocumentUrl, pdfPageNumber, currentPageDisplay, sideCalibPrintedInput, setBookPageOffset]);
 
   const next = useCallback(() => {
     if (!checkPaceLimit()) return;
@@ -1959,24 +2078,6 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     if (currentPageDisplay <= 1) return;
     goToGlobalPage(currentPageDisplay - 1);
   }, [checkPaceLimit, currentPageDisplay, goToGlobalPage]);
-
-  // ==========================================
-  // BOOK PAGES & NAVIGATOR COMPUTED LOGIC
-  // ==========================================
-  const currentBookPageNumber = useMemo(() => {
-    const p = activeDocumentUrl ? pdfPageNumber : currentPageDisplay;
-    return p - bookPageOffset;
-  }, [activeDocumentUrl, pdfPageNumber, currentPageDisplay, bookPageOffset]);
-
-  const currentBookPageLabel = useMemo(() => {
-    if (activeDocumentUrl && pdfPageLabels && pdfPageLabels[pdfPageNumber - 1]) {
-      return pdfPageLabels[pdfPageNumber - 1];
-    }
-    if (currentBookPageNumber <= 0) {
-      return `Prelim (${activeDocumentUrl ? pdfPageNumber : currentPageDisplay})`;
-    }
-    return `Book p. ${currentBookPageNumber}`;
-  }, [activeDocumentUrl, pdfPageLabels, pdfPageNumber, currentPageDisplay, currentBookPageNumber]);
 
   const documentBookmarks = useMemo(() => {
     if (isEpub && Array.isArray(epubSections) && epubSections.length > 0) {
@@ -4757,27 +4858,55 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                       </div>
 
                       {/* Section C: Book Page Offset Calibrator */}
-                      <div className="pt-2 border-t border-black/10 dark:border-white/10 space-y-2">
+                      <div className="pt-2.5 border-t border-black/10 dark:border-white/10 space-y-2.5">
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">
-                            Calibrate Book Page 1
+                            Sync / Calibrate Book Page
                           </span>
-                          <span className="text-[10px] font-mono opacity-80">
+                          <span className="text-[10px] font-mono font-bold text-amber-500">
                             Offset: {bookPageOffset > 0 ? `+${bookPageOffset}` : bookPageOffset}p
                           </span>
+                        </div>
+
+                        {/* Direct Sheet Page Sync (e.g. PDF 120 = Printed Book 106) */}
+                        <div className="p-2 rounded-xl bg-amber-400/10 border border-amber-400/20 space-y-1.5">
+                          <div className="text-[10px] text-zinc-600 dark:text-zinc-300 leading-snug">
+                            Current page is <strong>PDF {pdfPageNumber}</strong>. What printed page number is shown on this sheet?
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="number"
+                              value={sideCalibPrintedInput}
+                              onChange={(e) => setSideCalibPrintedInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleApplySideCustomOffset();
+                              }}
+                              placeholder="e.g. 106"
+                              className={`flex-1 px-2.5 py-1 rounded-lg text-xs font-bold outline-none border transition-all ${
+                                isDarkDesk ? "bg-white/10 border-white/15 text-white" : "bg-white border-amber-300 text-black"
+                              }`}
+                            />
+                            <button
+                              type="button"
+                              onClick={handleApplySideCustomOffset}
+                              className="px-3 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-black font-extrabold text-xs shadow-xs transition-all cursor-pointer"
+                            >
+                              Sync
+                            </button>
+                          </div>
                         </div>
 
                         <button
                           type="button"
                           onClick={handleCalibrateBookPage1}
-                          className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-amber-400/20 hover:bg-amber-400/35 border border-amber-400/40 text-amber-950 dark:text-amber-200 font-bold text-xs transition-all cursor-pointer"
+                          className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 border border-black/10 dark:border-white/15 font-bold text-[11px] transition-all cursor-pointer"
                         >
                           {calibratedSuccess ? (
                             <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                              <Check size={14} /> Calibrated! PDF Page {pdfPageNumber} = Book Page 1
+                              <Check size={14} /> Calibrated! (Offset: {bookPageOffset > 0 ? `+${bookPageOffset}` : bookPageOffset}p)
                             </span>
                           ) : (
-                            <span>Set Current Page (PDF {pdfPageNumber}) as Book Page 1</span>
+                            <span>Set This Page (PDF {pdfPageNumber}) as Book Page 1</span>
                           )}
                         </button>
 
@@ -4787,7 +4916,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                             onClick={() => setBookPageOffset(0)}
                             className="w-full text-center text-[10px] opacity-60 hover:opacity-100 hover:underline cursor-pointer"
                           >
-                            Reset page offset to 0
+                            Reset page offset to 0 (PDF = Book)
                           </button>
                         )}
                       </div>
@@ -5981,32 +6110,180 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
               title={`Drag to scrub page (1 to ${totalPages || 1})`}
             />
           </div>
-          <span className="text-xs font-bold text-amber-300 whitespace-nowrap shrink-0 flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              setQuickCalibInput(currentBookPageNumber > 0 ? String(currentBookPageNumber) : "");
+              setShowOffsetQuickPopover((v) => !v);
+            }}
+            className="text-xs font-bold text-amber-300 whitespace-nowrap shrink-0 flex items-center gap-1.5 p-1 px-2 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+            title="Click to toggle Book / PDF page jump & calibrate offset"
+          >
             <span>{currentPageDisplay}</span>
             <span className="text-white/50 font-normal">of</span>
             <span>{totalPages || 1}</span>
             {currentBookPageLabel && (
-              <span className="hidden md:inline-flex items-center text-[10px] font-semibold text-amber-200/90 bg-amber-400/15 border border-amber-400/25 px-2 py-0.2 rounded-md">
+              <span className="hidden sm:inline-flex items-center text-[10px] font-semibold text-amber-200/90 bg-amber-400/15 border border-amber-400/25 px-2 py-0.2 rounded-md">
                 {currentBookPageLabel}
               </span>
             )}
-          </span>
+          </button>
         </div>
 
-        {/* Right: Direct Page Input Jump & Next Button */}
+        {/* Right: Direct Page Input Jump (Book vs PDF) & Next Button */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <div className="hidden sm:inline-flex items-center gap-1.5 bg-black/40 border border-white/15 px-2.5 py-1 rounded-xl shadow-inner">
-            <span className="text-[11px] text-white/60 font-semibold">Page</span>
-            <input
-              type="number"
-              className="w-11 px-1 py-0.5 text-center text-xs font-bold rounded-lg bg-white/15 text-white outline-none border border-white/20 focus:border-amber-400 focus:bg-white focus:text-black transition-all"
-              value={jumpInput}
-              onChange={(e) => setJumpInput(e.target.value)}
-              onBlur={handleJump}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleJump();
-              }}
-            />
+          <div className="relative hidden sm:inline-flex items-center">
+            <div className="inline-flex items-center gap-1.5 bg-black/50 border border-white/20 p-1 rounded-xl shadow-lg backdrop-blur-md">
+              {/* Mode Toggle: Book vs PDF */}
+              <div className="flex items-center bg-white/10 p-0.5 rounded-lg border border-white/10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setJumpMode("book");
+                    setJumpInput(currentBookPageNumber > 0 ? String(currentBookPageNumber) : (currentBookPageLabel || String(currentPageDisplay)));
+                  }}
+                  className={`px-2 py-0.5 rounded text-[10px] font-extrabold tracking-tight transition-all cursor-pointer ${
+                    jumpMode === "book"
+                      ? "bg-gradient-to-r from-amber-400 to-yellow-300 text-black shadow-xs"
+                      : "text-white/65 hover:text-white"
+                  }`}
+                  title="Jump by Printed Book Page Number (e.g. 106)"
+                >
+                  Book
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setJumpMode("pdf");
+                    setJumpInput(String(currentPageDisplay));
+                  }}
+                  className={`px-2 py-0.5 rounded text-[10px] font-extrabold tracking-tight transition-all cursor-pointer ${
+                    jumpMode === "pdf"
+                      ? "bg-gradient-to-r from-amber-400 to-yellow-300 text-black shadow-xs"
+                      : "text-white/65 hover:text-white"
+                  }`}
+                  title="Jump by Raw PDF Document Page (e.g. 120)"
+                >
+                  PDF
+                </button>
+              </div>
+
+              {/* Number Input */}
+              <input
+                type="text"
+                inputMode="numeric"
+                className="w-12 px-1 py-0.5 text-center text-xs font-black rounded-lg bg-white/15 text-white outline-none border border-white/20 focus:border-amber-400 focus:bg-white focus:text-black transition-all shadow-inner"
+                value={jumpInput}
+                placeholder={jumpMode === "book" ? "Book #" : "PDF #"}
+                onChange={(e) => setJumpInput(e.target.value)}
+                onFocus={(e) => e.target.select()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleJump();
+                }}
+                onBlur={handleJump}
+                title={jumpMode === "book" ? `Jump to Book Page (Offset: ${bookPageOffset > 0 ? `+${bookPageOffset}` : bookPageOffset}p)` : "Jump to PDF Page"}
+              />
+
+              {/* Calibrate / Settings Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setQuickCalibInput(currentBookPageNumber > 0 ? String(currentBookPageNumber) : "");
+                  setShowOffsetQuickPopover((v) => !v);
+                }}
+                className={`p-1 px-1.5 rounded-lg border text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  showOffsetQuickPopover
+                    ? "bg-amber-400 text-black border-amber-300 shadow-sm"
+                    : bookPageOffset !== 0
+                      ? "bg-amber-400/25 text-amber-300 border-amber-400/40 hover:bg-amber-400/35"
+                      : "bg-white/10 text-white/60 border-white/10 hover:text-white hover:bg-white/15"
+                }`}
+                title={`Calibrate Book vs PDF Page offset (current offset: ${bookPageOffset > 0 ? `+${bookPageOffset}` : bookPageOffset}p)`}
+              >
+                <Sliders size={11} strokeWidth={2.4} />
+                <span className="hidden xl:inline text-[9px]">
+                  {bookPageOffset !== 0 ? (bookPageOffset > 0 ? `+${bookPageOffset}p` : `${bookPageOffset}p`) : "Sync"}
+                </span>
+              </button>
+            </div>
+
+            {/* Quick Calibration Popover right above the button */}
+            {showOffsetQuickPopover && (
+              <div
+                ref={quickOffsetPopoverRef}
+                className="absolute bottom-full right-0 mb-2.5 w-76 sm:w-80 p-3.5 rounded-2xl bg-zinc-900/98 border border-white/20 text-white shadow-2xl backdrop-blur-2xl z-50 animate-in fade-in zoom-in-95 duration-150"
+              >
+                <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-white/10">
+                  <div className="flex items-center gap-1.5 font-bold text-xs text-amber-300">
+                    <BookOpen size={14} className="text-amber-400" />
+                    <span>Sync Book & PDF Page Numbers</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowOffsetQuickPopover(false)}
+                    className="p-1 rounded-md text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+
+                <div className="text-[11px] text-white/70 mb-2 leading-relaxed">
+                  Current document is at <strong className="text-white">PDF Page {activeDocumentUrl ? pdfPageNumber : currentPageDisplay}</strong>. What printed page number is shown on this sheet?
+                </div>
+
+                <div className="flex items-center gap-2 mb-3">
+                  <input
+                    type="number"
+                    value={quickCalibInput}
+                    onChange={(e) => setQuickCalibInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleApplyCustomOffset();
+                    }}
+                    placeholder="e.g. 106"
+                    className="flex-1 px-2.5 py-1.5 rounded-xl bg-white/10 border border-white/20 text-xs font-bold text-white outline-none focus:border-amber-400 focus:bg-white/20"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleApplyCustomOffset()}
+                    className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 text-black font-extrabold text-xs shadow-md transition-all cursor-pointer active:scale-95 shrink-0"
+                  >
+                    Set Offset
+                  </button>
+                </div>
+
+                <div className="space-y-1 pt-2 border-t border-white/10 text-[10px]">
+                  <div className="flex items-center justify-between text-white/60 mb-1">
+                    <span>Active offset: <strong className="text-amber-300">{bookPageOffset > 0 ? `+${bookPageOffset}` : bookPageOffset} pages</strong></span>
+                    {calibratedSuccess && (
+                      <span className="text-emerald-400 font-bold flex items-center gap-1">
+                        <Check size={11} /> Saved!
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyCustomOffset(1)}
+                    className="w-full text-left px-2 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 hover:text-white transition-colors flex items-center justify-between"
+                  >
+                    <span>Set this page as Book Page 1</span>
+                    <span className="text-amber-400/80 font-mono text-[9px]">Offset = {(activeDocumentUrl ? pdfPageNumber : currentPageDisplay) - 1}p</span>
+                  </button>
+                  {bookPageOffset !== 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBookPageOffset(0);
+                        setShowOffsetQuickPopover(false);
+                      }}
+                      className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-red-500/10 text-red-300/80 hover:text-red-300 transition-colors"
+                    >
+                      Reset offset to 0 (PDF = Book)
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <button
