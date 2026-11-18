@@ -6,7 +6,7 @@ import {
   Palette, Trash2, Check, Copy, ChevronDown, Sparkles, Code, FileText, 
   Download, Eye, List, BookOpen, Layers, Building2, GripVertical,
   Undo2, Redo2, GraduationCap, Play, Pause, SkipBack, SkipForward, Square, Headphones,
-  PanelLeft, PanelLeftClose
+  PanelLeft, PanelLeftClose, Search, ArrowUp, ArrowDown, Hash
 } from "lucide-react";
 import { palette, fontDisplay, fontBody } from "../theme";
 import { BrandEmblem3D, ReaderToolIcon3D } from "../components/AdminGlassIcons";
@@ -409,6 +409,146 @@ function getCuratedVoices(allVoices) {
   return curated.slice(0, 10);
 }
 
+// ==========================================
+// DOCUMENT OUTLINE & SEARCH HELPERS
+// ==========================================
+function escapeRegExp(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function resolvePdfDestPage(pdf, dest) {
+  if (!dest) return null;
+  let explicitDest = dest;
+  if (typeof dest === "string") {
+    try {
+      explicitDest = await pdf.getDestination(dest);
+    } catch (_) {}
+  }
+  if (Array.isArray(explicitDest) && explicitDest.length > 0) {
+    const pageRef = explicitDest[0];
+    if (typeof pageRef === "number") {
+      return pageRef + 1; // 0-based page index to 1-based page number
+    }
+    if (pageRef && typeof pageRef === "object") {
+      try {
+        const pageIndex = await pdf.getPageIndex(pageRef);
+        return pageIndex + 1;
+      } catch (_) {}
+    }
+  }
+  return null;
+}
+
+async function parsePdfOutline(pdf, items) {
+  if (!items || !Array.isArray(items)) return [];
+  const result = [];
+  for (const item of items) {
+    let pageNum = null;
+    try {
+      pageNum = await resolvePdfDestPage(pdf, item.dest);
+    } catch (_) {}
+
+    let children = [];
+    if (item.items && item.items.length > 0) {
+      children = await parsePdfOutline(pdf, item.items);
+    }
+
+    result.push({
+      title: item.title || "Untitled Section",
+      pageNumber: pageNum,
+      dest: item.dest,
+      items: children
+    });
+  }
+  return result;
+}
+
+async function findMatchesInPdfPage(doc, pageNumber, query, options = {}) {
+  if (!doc || !query || !query.trim()) return [];
+  try {
+    const pageObj = await doc.getPage(pageNumber);
+    const textContent = await pageObj.getTextContent();
+    if (!textContent || !textContent.items) return [];
+
+    const viewport = pageObj.getViewport({ scale: 1 });
+    const q = options.matchCase ? query.trim() : query.trim().toLowerCase();
+    const isWhole = options.wholeWord;
+
+    const matches = [];
+
+    textContent.items.forEach((item, itemIdx) => {
+      if (!item.str || typeof item.str !== "string") return;
+      const originalStr = item.str;
+      const compareStr = options.matchCase ? originalStr : originalStr.toLowerCase();
+
+      let startIndex = 0;
+      while (startIndex < compareStr.length) {
+        let matchIdx = -1;
+        if (isWhole) {
+          try {
+            const regex = new RegExp(`\\b${escapeRegExp(q)}\\b`, options.matchCase ? "g" : "gi");
+            regex.lastIndex = startIndex;
+            const execRes = regex.exec(compareStr);
+            if (execRes) matchIdx = execRes.index;
+          } catch (_) {
+            matchIdx = compareStr.indexOf(q, startIndex);
+          }
+        } else {
+          matchIdx = compareStr.indexOf(q, startIndex);
+        }
+
+        if (matchIdx === -1) break;
+
+        const tx = item.transform ? item.transform[4] : 0;
+        const ty = item.transform ? item.transform[5] : 0;
+        let vx = tx;
+        let vy = viewport.height - ty;
+        if (typeof viewport.convertToViewportPoint === "function") {
+          try {
+            const pt = viewport.convertToViewportPoint(tx, ty);
+            vx = pt[0];
+            vy = pt[1];
+          } catch (_) {}
+        }
+
+        const fontSize = Math.sqrt((item.transform[0] || 0) ** 2 + (item.transform[1] || 0) ** 2) || item.height || 12;
+        const totalWidth = item.width || (item.str.length * fontSize * 0.55);
+
+        const charStartRatio = originalStr.length > 0 ? matchIdx / originalStr.length : 0;
+        const charLenRatio = originalStr.length > 0 ? Math.min(1, q.length / originalStr.length) : 1;
+
+        const matchVx = vx + (charStartRatio * totalWidth);
+        const matchWidth = Math.max(10, totalWidth * charLenRatio);
+        const matchVy = vy - fontSize;
+        const matchHeight = Math.max(14, fontSize * 1.25);
+
+        const leftPct = (matchVx / viewport.width) * 100;
+        const topPct = (matchVy / viewport.height) * 100;
+        const widthPct = (matchWidth / viewport.width) * 100;
+        const heightPct = (matchHeight / viewport.height) * 100;
+
+        matches.push({
+          id: `match_${pageNumber}_${itemIdx}_${matchIdx}`,
+          pageNumber,
+          text: originalStr.substring(matchIdx, matchIdx + q.length),
+          fullString: originalStr,
+          leftPct: Math.max(0, Math.min(98, leftPct)),
+          topPct: Math.max(0, Math.min(98, topPct)),
+          widthPct: Math.max(1, Math.min(100 - leftPct, widthPct)),
+          heightPct: Math.max(1, Math.min(100 - topPct, heightPct)),
+        });
+
+        startIndex = matchIdx + Math.max(1, q.length);
+      }
+    });
+
+    return matches;
+  } catch (err) {
+    console.warn("Failed to find matches in PDF page:", err);
+    return [];
+  }
+}
+
 export default function SecureReader({ book, session, onBack, onSaveStudentCustomizations, initialPage = null }) {
   const [page, setPage] = useState(0); // For text pages
   const [pdfPageNumber, setPdfPageNumber] = useState(1);
@@ -535,15 +675,76 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       return false;
     }
   });
-  const [activeRailPopover, setActiveRailPopover] = useState(null); // null | 'theme' | 'lights' | 'epubStyle' | 'highlighter' | 'sticky'
+  const [activeRailPopover, setActiveRailPopover] = useState(null); // null | 'theme' | 'lights' | 'epubStyle' | 'highlighter' | 'sticky' | 'search' | 'pageJump'
   const [popoverAnchorY, setPopoverAnchorY] = useState(120);
+
+  // ==========================================
+  // WORD SEARCH IN PAGE & BOOK
+  // ==========================================
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchScope, setSearchScope] = useState("page"); // "page" or "book"
+  const [matchCase, setMatchCase] = useState(false);
+  const [wholeWord, setWholeWord] = useState(false);
+  const [pageMatches, setPageMatches] = useState([]);
+  const [activeMatchIndex, setActiveMatchIndex] = useState(0);
+  const [isSearchingBook, setIsSearchingBook] = useState(false);
+  const [bookSearchResults, setBookSearchResults] = useState([]);
+  const searchInputRef = useRef(null);
+  const pageTextCacheRef = useRef({});
+
+  // ==========================================
+  // BOOK NAVIGATOR, PDF OUTLINES & PAGE JUMP
+  // ==========================================
+  const [pdfBookmarks, setPdfBookmarks] = useState([]);
+  const [pdfPageLabels, setPdfPageLabels] = useState(null);
+  const [bookNavTab, setBookNavTab] = useState("toc"); // "toc" | "jump" | "myBookmarks"
+  const [targetBookPageInput, setTargetBookPageInput] = useState("");
+  const [targetPdfPageInput, setTargetPdfPageInput] = useState("");
+  const [calibratedSuccess, setCalibratedSuccess] = useState(false);
+  const [newBookmarkTitle, setNewBookmarkTitle] = useState("");
+
+  // Persistent book page offset (saved per book id in localStorage)
+  const [bookPageOffset, setBookPageOffsetState] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`reader_offset_${book.id}`);
+      return saved !== null ? parseInt(saved, 10) || 0 : 0;
+    } catch (_) {
+      return 0;
+    }
+  });
+
+  const setBookPageOffset = useCallback((newOffset) => {
+    const val = parseInt(newOffset, 10) || 0;
+    setBookPageOffsetState(val);
+    try {
+      localStorage.setItem(`reader_offset_${book.id}`, String(val));
+    } catch (_) {}
+  }, [book.id]);
+
+  // Persistent user custom bookmarks (saved per book id in localStorage)
+  const [userBookmarks, setUserBookmarks] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`reader_user_bookmarks_${book.id}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch (_) {
+      return [];
+    }
+  });
+
+  const saveUserBookmarks = useCallback((bookmarks) => {
+    setUserBookmarks(bookmarks);
+    try {
+      localStorage.setItem(`reader_user_bookmarks_${book.id}`, JSON.stringify(bookmarks));
+    } catch (_) {}
+  }, [book.id]);
 
   const toggleRailPopover = useCallback((popoverId, e) => {
     setActiveRailPopover((curr) => {
       if (curr === popoverId) return null;
       if (e && e.currentTarget) {
         const rect = e.currentTarget.getBoundingClientRect();
-        const clampedY = Math.max(64, Math.min(window.innerHeight - 380, rect.top - 12));
+        const maxH = (popoverId === "search" || popoverId === "pageJump") ? 460 : 380;
+        const clampedY = Math.max(64, Math.min(window.innerHeight - maxH, rect.top - 12));
         setPopoverAnchorY(clampedY);
       }
       return popoverId;
@@ -1760,6 +1961,243 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   }, [checkPaceLimit, currentPageDisplay, goToGlobalPage]);
 
   // ==========================================
+  // BOOK PAGES & NAVIGATOR COMPUTED LOGIC
+  // ==========================================
+  const currentBookPageNumber = useMemo(() => {
+    const p = activeDocumentUrl ? pdfPageNumber : currentPageDisplay;
+    return p - bookPageOffset;
+  }, [activeDocumentUrl, pdfPageNumber, currentPageDisplay, bookPageOffset]);
+
+  const currentBookPageLabel = useMemo(() => {
+    if (activeDocumentUrl && pdfPageLabels && pdfPageLabels[pdfPageNumber - 1]) {
+      return pdfPageLabels[pdfPageNumber - 1];
+    }
+    if (currentBookPageNumber <= 0) {
+      return `Prelim (${activeDocumentUrl ? pdfPageNumber : currentPageDisplay})`;
+    }
+    return `Book p. ${currentBookPageNumber}`;
+  }, [activeDocumentUrl, pdfPageLabels, pdfPageNumber, currentPageDisplay, currentBookPageNumber]);
+
+  const documentBookmarks = useMemo(() => {
+    if (isEpub && Array.isArray(epubSections) && epubSections.length > 0) {
+      return epubSections.map((s, idx) => ({
+        title: s.title || `Section ${idx + 1}`,
+        pageNumber: s.start || (idx + 1),
+        items: []
+      }));
+    }
+    return pdfBookmarks;
+  }, [isEpub, epubSections, pdfBookmarks]);
+
+  const handleJumpToBookPage = useCallback((inputVal) => {
+    const trimmed = (inputVal !== undefined ? inputVal : targetBookPageInput).trim();
+    if (!trimmed) return;
+
+    // 1. If PDF has embedded page labels, check if any matches
+    if (pdfPageLabels && Array.isArray(pdfPageLabels)) {
+      const matchIdx = pdfPageLabels.findIndex(
+        (l) => l && (l.toLowerCase() === trimmed.toLowerCase() || l.replace(/\D/g, '') === trimmed)
+      );
+      if (matchIdx >= 0) {
+        goToGlobalPage(matchIdx + 1);
+        setActiveRailPopover(null);
+        return;
+      }
+    }
+
+    // 2. Otherwise apply calibrated offset: PDF page = Book page + offset
+    const targetBookNum = parseInt(trimmed, 10);
+    if (!isNaN(targetBookNum)) {
+      const targetPdfPage = targetBookNum + bookPageOffset;
+      const maxP = totalPages || 1;
+      const clamped = Math.max(1, Math.min(targetPdfPage, maxP));
+      goToGlobalPage(clamped);
+      setActiveRailPopover(null);
+    }
+  }, [targetBookPageInput, pdfPageLabels, bookPageOffset, totalPages, goToGlobalPage]);
+
+  const handleJumpToPdfPage = useCallback((inputVal) => {
+    const trimmed = (inputVal !== undefined ? inputVal : targetPdfPageInput).trim();
+    if (!trimmed) return;
+    const targetPdfNum = parseInt(trimmed, 10);
+    if (!isNaN(targetPdfNum)) {
+      const maxP = totalPages || 1;
+      const clamped = Math.max(1, Math.min(targetPdfNum, maxP));
+      goToGlobalPage(clamped);
+      setActiveRailPopover(null);
+    }
+  }, [targetPdfPageInput, totalPages, goToGlobalPage]);
+
+  const handleCalibrateBookPage1 = useCallback(() => {
+    const currentPdf = activeDocumentUrl ? pdfPageNumber : currentPageDisplay;
+    const newOffset = currentPdf - 1;
+    setBookPageOffset(newOffset);
+    setCalibratedSuccess(true);
+    setTimeout(() => setCalibratedSuccess(false), 3000);
+  }, [activeDocumentUrl, pdfPageNumber, currentPageDisplay, setBookPageOffset]);
+
+  const handleAddUserBookmark = useCallback(() => {
+    const currentPdf = activeDocumentUrl ? pdfPageNumber : currentPageDisplay;
+    const title = newBookmarkTitle.trim() || `Bookmark at ${currentBookPageLabel || `PDF p. ${currentPdf}`}`;
+    const newB = {
+      id: `bm_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      pageNumber: currentPdf,
+      bookPageLabel: currentBookPageLabel,
+      title,
+      createdAt: new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+    };
+    saveUserBookmarks([newB, ...userBookmarks]);
+    setNewBookmarkTitle("");
+  }, [activeDocumentUrl, pdfPageNumber, currentPageDisplay, newBookmarkTitle, currentBookPageLabel, saveUserBookmarks, userBookmarks]);
+
+  const handleDeleteUserBookmark = useCallback((bmId) => {
+    saveUserBookmarks(userBookmarks.filter((b) => b.id !== bmId));
+  }, [saveUserBookmarks, userBookmarks]);
+
+  // ==========================================
+  // WORD SEARCH LOGIC
+  // ==========================================
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function executePageSearch() {
+      if (!searchQuery || !searchQuery.trim()) {
+        setPageMatches([]);
+        setActiveMatchIndex(0);
+        return;
+      }
+
+      if (activeDocumentUrl) {
+        let doc = pdfDocRef.current;
+        if (!doc && pdfjs) {
+          try {
+            doc = await pdfjs.getDocument(activeDocumentUrl).promise;
+            pdfDocRef.current = doc;
+          } catch (_) {}
+        }
+        if (doc) {
+          const matches = await findMatchesInPdfPage(doc, pdfPageNumber, searchQuery, {
+            matchCase,
+            wholeWord,
+          });
+          if (!isCancelled) {
+            setPageMatches(matches);
+            setActiveMatchIndex(0);
+          }
+        }
+      } else if (isEpub && activeEpubPageHtml) {
+        const lines = extractEpubLines(activeEpubPageHtml);
+        const q = matchCase ? searchQuery.trim() : searchQuery.trim().toLowerCase();
+        let matchCount = 0;
+        lines.forEach((l) => {
+          const check = matchCase ? l : l.toLowerCase();
+          let idx = check.indexOf(q);
+          while (idx !== -1) {
+            matchCount++;
+            idx = check.indexOf(q, idx + Math.max(1, q.length));
+          }
+        });
+        if (!isCancelled) {
+          setPageMatches(Array.from({ length: matchCount }, (_, i) => ({ id: `epub_m_${i}`, pageNumber: currentPageDisplay })));
+          setActiveMatchIndex(0);
+        }
+      }
+    }
+
+    executePageSearch();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [searchQuery, pdfPageNumber, currentPageDisplay, activeDocumentUrl, isEpub, activeEpubPageHtml, matchCase, wholeWord]);
+
+  const goToNextMatch = useCallback(() => {
+    if (pageMatches.length === 0) return;
+    setActiveMatchIndex((curr) => (curr + 1) % pageMatches.length);
+  }, [pageMatches.length]);
+
+  const goToPrevMatch = useCallback(() => {
+    if (pageMatches.length === 0) return;
+    setActiveMatchIndex((curr) => (curr - 1 + pageMatches.length) % pageMatches.length);
+  }, [pageMatches.length]);
+
+  const handleSearchEntireBook = useCallback(async () => {
+    if (!searchQuery || !searchQuery.trim()) return;
+    setIsSearchingBook(true);
+    setBookSearchResults([]);
+
+    const q = matchCase ? searchQuery.trim() : searchQuery.trim().toLowerCase();
+    const results = [];
+    const totalP = totalPages || numPdfPages || 1;
+
+    try {
+      if (activeDocumentUrl) {
+        let doc = pdfDocRef.current;
+        if (!doc && pdfjs) {
+          try {
+            doc = await pdfjs.getDocument(activeDocumentUrl).promise;
+            pdfDocRef.current = doc;
+          } catch (_) {}
+        }
+        if (doc) {
+          for (let p = 1; p <= totalP; p++) {
+            let fullText = pageTextCacheRef.current[p];
+            if (!fullText) {
+              try {
+                const pageObj = await doc.getPage(p);
+                const tc = await pageObj.getTextContent();
+                fullText = (tc.items || []).map((i) => i.str || "").join(" ");
+                pageTextCacheRef.current[p] = fullText;
+              } catch (_) {
+                fullText = "";
+              }
+            }
+
+            const compareText = matchCase ? fullText : fullText.toLowerCase();
+            let count = 0;
+            let firstIdx = -1;
+            let idx = compareText.indexOf(q);
+            while (idx !== -1) {
+              if (firstIdx === -1) firstIdx = idx;
+              count++;
+              idx = compareText.indexOf(q, idx + Math.max(1, q.length));
+            }
+
+            if (count > 0) {
+              const start = Math.max(0, firstIdx - 35);
+              const end = Math.min(fullText.length, firstIdx + q.length + 45);
+              let snippet = fullText.substring(start, end).replace(/\s+/g, " ");
+              if (start > 0) snippet = "…" + snippet;
+              if (end < fullText.length) snippet += "…";
+
+              results.push({
+                pageNumber: p,
+                count,
+                snippet,
+              });
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Book search failed:", err);
+    }
+
+    setBookSearchResults(results);
+    setIsSearchingBook(false);
+  }, [searchQuery, matchCase, wholeWord, totalPages, numPdfPages, activeDocumentUrl]);
+
+  // Scroll active search match into view smoothly
+  useEffect(() => {
+    if (pageMatches.length > 0) {
+      const el = document.getElementById("active-search-match");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+      }
+    }
+  }, [activeMatchIndex, pageMatches]);
+
+  // ==========================================
   // VOICE PLAYBACK ENGINE (Line-by-line & Page-by-page)
   // ==========================================
   const closeVoiceReader = useCallback(() => {
@@ -2246,6 +2684,17 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         if ((e.ctrlKey || e.metaKey) && (e.key === "y" || e.key === "Y")) {
           e.preventDefault();
           handleRedo();
+          return;
+        }
+        if ((e.ctrlKey || e.metaKey) && (e.key === "f" || e.key === "F")) {
+          e.preventDefault();
+          toggleRailPopover("search");
+          setTimeout(() => {
+            if (searchInputRef.current) {
+              searchInputRef.current.focus();
+              searchInputRef.current.select();
+            }
+          }, 100);
           return;
         }
 
@@ -3128,7 +3577,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
               </div>
 
               {/* Navigation Tabs List */}
-              <nav role="tablist" aria-label="Reader tools" className="w-full flex flex-col gap-1.5">
+              <nav role="tablist" aria-label="Reader tools" className="w-full flex flex-col gap-1.5 overflow-y-auto max-h-[calc(100vh-210px)] admin-tab-scroller pr-0.5">
                 {/* 1. THEME SELECTOR */}
                 <div className="relative w-full">
                   <button
@@ -3260,7 +3709,100 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   </div>
                 )}
 
-                {/* 4. VOICE READER */}
+                {/* 3. WORD SEARCH */}
+                <div className="relative w-full">
+                  <button
+                    type="button"
+                    onClick={(e) => toggleRailPopover("search", e)}
+                    title="Word Search (Find words in page or book • Ctrl+F)"
+                    className={`group relative flex items-center gap-3 w-full rounded-2xl transition-all duration-200 cursor-pointer focus:outline-none ${
+                      railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
+                    } ${
+                      activeRailPopover === "search" || searchQuery.trim().length > 0
+                        ? "bg-white/95 text-[#111214] shadow-[0_8px_20px_-6px_rgba(15,23,42,0.18)] ring-1 ring-black/10 scale-[1.02]"
+                        : isDarkDesk
+                          ? "text-zinc-300 hover:bg-white/10 hover:text-white"
+                          : "text-zinc-700 hover:bg-white/60 hover:text-[#111214]"
+                    }`}
+                  >
+                    {(activeRailPopover === "search" || searchQuery.trim().length > 0) && (
+                      <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-[#111214]" />
+                    )}
+                    <span className="shrink-0 transition-transform duration-200 group-hover:scale-110">
+                      <ReaderToolIcon3D id="search" active={activeRailPopover === "search" || searchQuery.trim().length > 0} size={22} />
+                    </span>
+                    {railExpanded ? (
+                      <>
+                        <span className={`text-xs font-bold truncate ${
+                          activeRailPopover === "search" || searchQuery.trim().length > 0
+                            ? "text-[#111214]"
+                            : isDarkDesk ? "text-white/90" : "text-[#111214]"
+                        }`}>Word Search</span>
+                        {pageMatches.length > 0 ? (
+                          <span className="ml-auto text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-400 text-black shadow-xs">
+                            {pageMatches.length}
+                          </span>
+                        ) : (
+                          <span className="ml-auto text-[9px] font-mono opacity-50">
+                            Ctrl+F
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {pageMatches.length > 0 && (
+                          <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-amber-400 text-black text-[9px] font-black flex items-center justify-center shadow-xs">
+                            {pageMatches.length}
+                          </span>
+                        )}
+                        <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#111214] text-white text-xs font-semibold shadow-xl border border-white/15">
+                          Word Search (Ctrl+F) {pageMatches.length > 0 ? `• ${pageMatches.length} matches` : ""}
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* 4. JUMP & BOOKMARKS */}
+                <div className="relative w-full">
+                  <button
+                    type="button"
+                    onClick={(e) => toggleRailPopover("pageJump", e)}
+                    title={`Jump & Bookmarks (${currentBookPageLabel})`}
+                    className={`group relative flex items-center gap-3 w-full rounded-2xl transition-all duration-200 cursor-pointer focus:outline-none ${
+                      railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
+                    } ${
+                      activeRailPopover === "pageJump"
+                        ? "bg-white/95 text-[#111214] shadow-[0_8px_20px_-6px_rgba(15,23,42,0.18)] ring-1 ring-black/10 scale-[1.02]"
+                        : isDarkDesk
+                          ? "text-zinc-300 hover:bg-white/10 hover:text-white"
+                          : "text-zinc-700 hover:bg-white/60 hover:text-[#111214]"
+                    }`}
+                  >
+                    {activeRailPopover === "pageJump" && (
+                      <span aria-hidden="true" className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-[#111214]" />
+                    )}
+                    <span className="shrink-0 transition-transform duration-200 group-hover:scale-110">
+                      <ReaderToolIcon3D id="pageJump" active={activeRailPopover === "pageJump"} size={22} />
+                    </span>
+                    {railExpanded ? (
+                      <>
+                        <span className={`text-xs font-bold truncate ${
+                          activeRailPopover === "pageJump" ? "text-[#111214]" : isDarkDesk ? "text-white/90" : "text-[#111214]"
+                        }`}>Jump & Bookmarks</span>
+                        <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/15 text-inherit truncate max-w-[68px]">
+                          {currentBookPageNumber > 0 ? `p.${currentBookPageNumber}` : "TOC"}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#111214] text-white text-xs font-semibold shadow-xl border border-white/15">
+                        Jump & Bookmarks ({currentBookPageLabel})
+                      </span>
+                    )}
+                  </button>
+                </div>
+
+                {/* 5. VOICE READER */}
                 <div className="relative w-full">
                   <button
                     type="button"
@@ -3824,6 +4366,498 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                 </div>
               )}
 
+              {/* 3. Word Search Flyout Popover */}
+              {activeRailPopover === "search" && (
+                <div
+                  className={`w-72 sm:w-80 rounded-2xl p-3.5 shadow-2xl backdrop-blur-2xl text-xs space-y-3 ${
+                    isDarkDesk ? "bg-slate-900 border border-white/20 text-white" : "bg-white border border-slate-200 text-zinc-900"
+                  }`}
+                  style={{ backgroundColor: isDarkDesk ? "rgba(15, 23, 42, 0.98)" : "rgba(255, 255, 255, 0.98)" }}
+                >
+                  {/* Popover Header */}
+                  <div className={`flex items-center justify-between pb-2 border-b font-bold ${
+                    isDarkDesk ? "border-white/10 text-amber-300" : "border-slate-100 text-zinc-900"
+                  }`}>
+                    <span className="flex items-center gap-1.5">
+                      <Search size={14} className="text-amber-500" />
+                      <span>Find in Document</span>
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {pageMatches.length > 0 && (
+                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-400 text-black">
+                          {activeMatchIndex + 1}/{pageMatches.length}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setActiveRailPopover(null)}
+                        className="p-1 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 text-zinc-400 hover:text-zinc-600 dark:hover:text-white cursor-pointer"
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Search Input Box */}
+                  <div className="relative flex items-center">
+                    <Search size={14} className="absolute left-2.5 text-zinc-400 pointer-events-none" />
+                    <input
+                      ref={searchInputRef}
+                      type="search"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (e.shiftKey) goToPrevMatch();
+                          else goToNextMatch();
+                        } else if (e.key === "Escape") {
+                          setActiveRailPopover(null);
+                        }
+                      }}
+                      placeholder="Search word or phrase…"
+                      className={`w-full pl-8 pr-16 py-2 rounded-xl text-xs font-medium outline-none transition-all ${
+                        isDarkDesk
+                          ? "bg-white/10 border border-white/15 text-white placeholder:text-zinc-500 focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                          : "bg-slate-100 border border-slate-200 text-zinc-900 placeholder:text-zinc-400 focus:border-amber-400 focus:bg-white focus:ring-1 focus:ring-amber-400"
+                      }`}
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery("")}
+                        className="absolute right-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-white p-1 cursor-pointer"
+                        title="Clear search"
+                      >
+                        <X size={12} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Search Scope Switch: This Page vs Entire Book */}
+                  <div className="grid grid-cols-2 gap-1 p-0.5 rounded-xl bg-black/5 dark:bg-white/10">
+                    <button
+                      type="button"
+                      onClick={() => setSearchScope("page")}
+                      className={`py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                        searchScope === "page"
+                          ? "bg-amber-400 text-black shadow-xs"
+                          : isDarkDesk ? "text-zinc-300 hover:text-white" : "text-zinc-600 hover:text-black"
+                      }`}
+                    >
+                      This Page ({pageMatches.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchScope("book");
+                        handleSearchEntireBook();
+                      }}
+                      className={`py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                        searchScope === "book"
+                          ? "bg-amber-400 text-black shadow-xs"
+                          : isDarkDesk ? "text-zinc-300 hover:text-white" : "text-zinc-600 hover:text-black"
+                      }`}
+                    >
+                      Entire Book {bookSearchResults.length > 0 ? `(${bookSearchResults.length}p)` : ""}
+                    </button>
+                  </div>
+
+                  {/* Controls for Current Page Scope */}
+                  {searchScope === "page" && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">
+                          {pageMatches.length > 0 ? (
+                            <span className="font-bold text-amber-500 dark:text-amber-400">
+                              Match {activeMatchIndex + 1} of {pageMatches.length}
+                            </span>
+                          ) : searchQuery.trim() ? (
+                            <span>No matches on page {currentPageDisplay}</span>
+                          ) : (
+                            <span>Enter a word to highlight on page</span>
+                          )}
+                        </span>
+
+                        {/* Prev / Next Match Buttons */}
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={goToPrevMatch}
+                            disabled={pageMatches.length <= 1}
+                            title="Previous match (Shift+Enter)"
+                            className="p-1 rounded-lg border border-black/10 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                          >
+                            <ChevronLeft size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={goToNextMatch}
+                            disabled={pageMatches.length <= 1}
+                            title="Next match (Enter)"
+                            className="p-1 rounded-lg border border-black/10 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                          >
+                            <ChevronRight size={14} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Options Toggles: Match Case & Whole Word */}
+                      <div className="flex items-center gap-3 pt-1 border-t border-black/5 dark:border-white/10 text-[10px]">
+                        <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={matchCase}
+                            onChange={(e) => setMatchCase(e.target.checked)}
+                            className="accent-amber-500 rounded"
+                          />
+                          <span>Match Case (Aa)</span>
+                        </label>
+                        <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={wholeWord}
+                            onChange={(e) => setWholeWord(e.target.checked)}
+                            className="accent-amber-500 rounded"
+                          />
+                          <span>Whole Word</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Results List for Entire Book Scope */}
+                  {searchScope === "book" && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
+                          {isSearchingBook ? "Scanning all pages…" : `${bookSearchResults.reduce((acc, r) => acc + r.count, 0)} matches across ${bookSearchResults.length} pages`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleSearchEntireBook}
+                          disabled={isSearchingBook}
+                          className="text-[10px] text-amber-500 hover:underline font-bold cursor-pointer"
+                        >
+                          {isSearchingBook ? "Scanning…" : "Re-scan"}
+                        </button>
+                      </div>
+
+                      <div className="max-h-48 overflow-y-auto space-y-1.5 admin-tab-scroller pr-1">
+                        {bookSearchResults.map((res) => (
+                          <button
+                            key={res.pageNumber}
+                            type="button"
+                            onClick={() => {
+                              goToGlobalPage(res.pageNumber);
+                              setSearchScope("page");
+                            }}
+                            className={`w-full text-left p-2 rounded-xl transition-all cursor-pointer ${
+                              res.pageNumber === currentPageDisplay
+                                ? "bg-amber-400/20 border border-amber-400 text-amber-950 dark:text-amber-200"
+                                : isDarkDesk ? "hover:bg-white/10 bg-white/5 text-zinc-200" : "hover:bg-slate-100 bg-slate-50 text-zinc-800"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between text-[11px] font-bold mb-0.5">
+                              <span>PDF Page {res.pageNumber}</span>
+                              <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-400/20 text-amber-600 dark:text-amber-400 font-black">
+                                {res.count} match{res.count > 1 ? "es" : ""}
+                              </span>
+                            </div>
+                            <p className="text-[10px] opacity-80 line-clamp-2 leading-relaxed">
+                              {res.snippet}
+                            </p>
+                          </button>
+                        ))}
+                        {!isSearchingBook && bookSearchResults.length === 0 && searchQuery.trim() && (
+                          <div className="text-center py-4 text-[11px] opacity-60">
+                            No occurrences of "{searchQuery}" found in the book.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 4. Jump & Bookmarks Flyout Popover */}
+              {activeRailPopover === "pageJump" && (
+                <div
+                  className={`w-80 sm:w-96 rounded-2xl p-3.5 shadow-2xl backdrop-blur-2xl text-xs space-y-3 ${
+                    isDarkDesk ? "bg-slate-900 border border-white/20 text-white" : "bg-white border border-slate-200 text-zinc-900"
+                  }`}
+                  style={{ backgroundColor: isDarkDesk ? "rgba(15, 23, 42, 0.98)" : "rgba(255, 255, 255, 0.98)" }}
+                >
+                  {/* Popover Header */}
+                  <div className={`flex items-center justify-between pb-2 border-b font-bold ${
+                    isDarkDesk ? "border-white/10 text-amber-300" : "border-slate-100 text-zinc-900"
+                  }`}>
+                    <div>
+                      <div className="font-extrabold flex items-center gap-1.5 text-xs sm:text-sm">
+                        <BookMarked size={15} className="text-amber-400" />
+                        <span>Book Navigator & Jump</span>
+                      </div>
+                      <div className="text-[10px] opacity-75 mt-0.5">
+                        At PDF Page {pdfPageNumber} • {currentBookPageLabel}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveRailPopover(null)}
+                      className="p-1 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 text-zinc-400 hover:text-zinc-600 dark:hover:text-white cursor-pointer"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+
+                  {/* Navigator Sub-Tabs */}
+                  <div className="grid grid-cols-3 gap-1 p-0.5 rounded-xl bg-black/5 dark:bg-white/10 text-[11px] font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setBookNavTab("toc")}
+                      className={`py-1 rounded-lg transition-all cursor-pointer truncate ${
+                        bookNavTab === "toc"
+                          ? "bg-amber-400 text-black shadow-xs"
+                          : isDarkDesk ? "text-zinc-300 hover:text-white" : "text-zinc-600 hover:text-black"
+                      }`}
+                    >
+                      TOC Bookmarks
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBookNavTab("jump")}
+                      className={`py-1 rounded-lg transition-all cursor-pointer truncate ${
+                        bookNavTab === "jump"
+                          ? "bg-amber-400 text-black shadow-xs"
+                          : isDarkDesk ? "text-zinc-300 hover:text-white" : "text-zinc-600 hover:text-black"
+                      }`}
+                    >
+                      Jump Page
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBookNavTab("myBookmarks")}
+                      className={`py-1 rounded-lg transition-all cursor-pointer truncate ${
+                        bookNavTab === "myBookmarks"
+                          ? "bg-amber-400 text-black shadow-xs"
+                          : isDarkDesk ? "text-zinc-300 hover:text-white" : "text-zinc-600 hover:text-black"
+                      }`}
+                    >
+                      My Bookmarks ({userBookmarks.length})
+                    </button>
+                  </div>
+
+                  {/* Tab 1: Publisher TOC & Embedded Bookmarks */}
+                  {bookNavTab === "toc" && (
+                    <div className="space-y-2">
+                      <div className="text-[10px] uppercase font-bold tracking-wider opacity-70 flex items-center justify-between">
+                        <span>Chapters & Sections</span>
+                        <span>{documentBookmarks.length} bookmarked sections</span>
+                      </div>
+
+                      <div className="max-h-56 overflow-y-auto space-y-1 admin-tab-scroller pr-1">
+                        {documentBookmarks.length > 0 ? (
+                          documentBookmarks.map((bm, idx) => {
+                            const isCurrent = bm.pageNumber && Math.abs(bm.pageNumber - pdfPageNumber) <= 1;
+                            return (
+                              <button
+                                key={`${bm.title}_${idx}`}
+                                type="button"
+                                onClick={() => {
+                                  if (bm.pageNumber) {
+                                    goToGlobalPage(bm.pageNumber);
+                                    setActiveRailPopover(null);
+                                  }
+                                }}
+                                className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-all cursor-pointer ${
+                                  isCurrent
+                                    ? "bg-amber-400/25 border border-amber-400 text-amber-950 dark:text-amber-200 font-bold"
+                                    : isDarkDesk ? "hover:bg-white/10 text-zinc-200" : "hover:bg-slate-100 text-zinc-800"
+                                }`}
+                              >
+                                <span className="truncate pr-2">{bm.title}</span>
+                                {bm.pageNumber && (
+                                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-black/10 dark:bg-white/15 shrink-0">
+                                    p. {bm.pageNumber}
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })
+                        ) : (
+                          <div className="py-6 px-3 text-center text-[11px] opacity-70 leading-relaxed border border-dashed rounded-xl border-black/10 dark:border-white/10">
+                            No embedded bookmarks in this PDF. Use <strong>Jump Page</strong> to calibrate book pages or save your own bookmarks!
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tab 2: PDF Page vs Book Page Jump & Offset Calibration */}
+                  {bookNavTab === "jump" && (
+                    <div className="space-y-3">
+                      {/* Section A: Jump to Book (Printed) Page */}
+                      <div className="p-2.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 space-y-2">
+                        <div className="flex items-center justify-between font-bold">
+                          <span className="text-[11px]">Jump to Printed Book Page</span>
+                          <span className="text-[10px] text-amber-500 font-bold">{currentBookPageLabel}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            value={targetBookPageInput}
+                            onChange={(e) => setTargetBookPageInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleJumpToBookPage();
+                            }}
+                            placeholder={`Book Page # (e.g. 15)`}
+                            className={`flex-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold outline-none border transition-all ${
+                              isDarkDesk ? "bg-white/10 border-white/15 text-white" : "bg-white border-slate-200 text-black"
+                            }`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleJumpToBookPage()}
+                            className="px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs shadow-xs transition-all cursor-pointer"
+                          >
+                            Jump
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Section B: Jump to Raw PDF Page */}
+                      <div className="p-2.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 space-y-2">
+                        <div className="flex items-center justify-between font-bold">
+                          <span className="text-[11px]">Jump to Raw PDF Page</span>
+                          <span className="text-[10px] text-zinc-400">Total: {totalPages || numPdfPages}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            min="1"
+                            max={totalPages || numPdfPages || 1}
+                            value={targetPdfPageInput}
+                            onChange={(e) => setTargetPdfPageInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleJumpToPdfPage();
+                            }}
+                            placeholder={`1 to ${totalPages || numPdfPages || 1}`}
+                            className={`flex-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold outline-none border transition-all ${
+                              isDarkDesk ? "bg-white/10 border-white/15 text-white" : "bg-white border-slate-200 text-black"
+                            }`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleJumpToPdfPage()}
+                            className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-white/20 hover:bg-slate-300 text-zinc-900 dark:text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+                          >
+                            Go
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Section C: Book Page Offset Calibrator */}
+                      <div className="pt-2 border-t border-black/10 dark:border-white/10 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">
+                            Calibrate Book Page 1
+                          </span>
+                          <span className="text-[10px] font-mono opacity-80">
+                            Offset: {bookPageOffset > 0 ? `+${bookPageOffset}` : bookPageOffset}p
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handleCalibrateBookPage1}
+                          className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-amber-400/20 hover:bg-amber-400/35 border border-amber-400/40 text-amber-950 dark:text-amber-200 font-bold text-xs transition-all cursor-pointer"
+                        >
+                          {calibratedSuccess ? (
+                            <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                              <Check size={14} /> Calibrated! PDF Page {pdfPageNumber} = Book Page 1
+                            </span>
+                          ) : (
+                            <span>Set Current Page (PDF {pdfPageNumber}) as Book Page 1</span>
+                          )}
+                        </button>
+
+                        {bookPageOffset !== 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setBookPageOffset(0)}
+                            className="w-full text-center text-[10px] opacity-60 hover:opacity-100 hover:underline cursor-pointer"
+                          >
+                            Reset page offset to 0
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tab 3: Personal Saved Bookmarks */}
+                  {bookNavTab === "myBookmarks" && (
+                    <div className="space-y-2.5">
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={newBookmarkTitle}
+                          onChange={(e) => setNewBookmarkTitle(e.target.value)}
+                          placeholder={`Label (e.g. Page ${pdfPageNumber} Formulas)`}
+                          className={`flex-1 px-2.5 py-1.5 rounded-lg text-xs outline-none border ${
+                            isDarkDesk ? "bg-white/10 border-white/15 text-white" : "bg-white border-slate-200 text-black"
+                          }`}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddUserBookmark}
+                          className="px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs transition-all cursor-pointer shrink-0"
+                        >
+                          + Add
+                        </button>
+                      </div>
+
+                      <div className="max-h-48 overflow-y-auto space-y-1.5 admin-tab-scroller pr-1">
+                        {userBookmarks.map((bm) => (
+                          <div
+                            key={bm.id}
+                            className={`flex items-center justify-between p-2 rounded-xl transition-all ${
+                              bm.pageNumber === pdfPageNumber
+                                ? "bg-amber-400/20 border border-amber-400"
+                                : isDarkDesk ? "bg-white/5 hover:bg-white/10" : "bg-slate-50 hover:bg-slate-100"
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                goToGlobalPage(bm.pageNumber);
+                                setActiveRailPopover(null);
+                              }}
+                              className="flex-1 text-left min-w-0 pr-2 cursor-pointer"
+                            >
+                              <div className="font-bold text-xs truncate">{bm.title}</div>
+                              <div className="text-[10px] opacity-60">PDF Page {bm.pageNumber} {bm.bookPageLabel ? `(${bm.bookPageLabel})` : ""}</div>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteUserBookmark(bm.id)}
+                              className="p-1 rounded hover:bg-rose-500/20 text-rose-500 transition-colors cursor-pointer"
+                              title="Remove bookmark"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        ))}
+                        {userBookmarks.length === 0 && (
+                          <div className="py-6 text-center text-[11px] opacity-60">
+                            No saved bookmarks yet. Bookmark key pages to quickly return to them!
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* 4. Highlighter Color Palette Flyout */}
               {activeRailPopover === "highlighter" && (
                 <div
@@ -4086,11 +5120,33 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
               <Document
                 file={documentSource || activeDocumentUrl}
                 options={pdfDocumentOptions}
-                onLoadSuccess={(pdf) => {
+                onLoadSuccess={async (pdf) => {
                   setNumPdfPages(pdf.numPages);
                   pdfDocRef.current = pdf;
                   setDocumentLoadState("success");
                   setDocumentErrorDetails(null);
+
+                  try {
+                    const rawOutline = await pdf.getOutline();
+                    if (rawOutline && rawOutline.length > 0) {
+                      const parsed = await parsePdfOutline(pdf, rawOutline);
+                      setPdfBookmarks(parsed);
+                    } else {
+                      setPdfBookmarks([]);
+                    }
+                  } catch (e) {
+                    console.warn("Could not load PDF outline:", e);
+                    setPdfBookmarks([]);
+                  }
+
+                  try {
+                    const labels = await pdf.getPageLabels();
+                    if (Array.isArray(labels) && labels.length === pdf.numPages) {
+                      setPdfPageLabels(labels);
+                    }
+                  } catch (e) {
+                    setPdfPageLabels(null);
+                  }
                 }}
                 onLoadError={handleDocumentError}
                 loading={
@@ -4150,6 +5206,28 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
               {Array.isArray(book.pages) ? book.pages[page] : "This book has no content pages yet."}
             </div>
           )}
+
+          {/* SEARCH WORD MATCH HIGHLIGHT OVERLAYS ON THIS PAGE */}
+          {pageMatches.map((m, idx) => {
+            const isActive = idx === activeMatchIndex;
+            return (
+              <div
+                key={m.id}
+                id={isActive ? "active-search-match" : undefined}
+                className={`absolute z-25 pointer-events-none rounded transition-all duration-150 ${
+                  isActive
+                    ? "bg-amber-400/70 border-2 border-amber-600 shadow-[0_0_18px_rgba(245,158,11,0.95)] ring-2 ring-amber-400 scale-[1.03]"
+                    : "bg-yellow-300/40 border border-yellow-500/60"
+                }`}
+                style={{
+                  left: `${m.leftPct}%`,
+                  top: `${m.topPct}%`,
+                  width: `${m.widthPct}%`,
+                  height: `${m.heightPct}%`,
+                }}
+              />
+            );
+          })}
 
           {/* RENDER HIGHLIGHTS ON THIS PAGE (STUDENT PROFILES ONLY) */}
           {isStudentProfile && highlights
@@ -4903,8 +5981,15 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
               title={`Drag to scrub page (1 to ${totalPages || 1})`}
             />
           </div>
-          <span className="text-xs font-bold text-amber-300 whitespace-nowrap shrink-0">
-            {currentPageDisplay} <span className="text-white/50 font-normal">of</span> {totalPages || 1}
+          <span className="text-xs font-bold text-amber-300 whitespace-nowrap shrink-0 flex items-center gap-1.5">
+            <span>{currentPageDisplay}</span>
+            <span className="text-white/50 font-normal">of</span>
+            <span>{totalPages || 1}</span>
+            {currentBookPageLabel && (
+              <span className="hidden md:inline-flex items-center text-[10px] font-semibold text-amber-200/90 bg-amber-400/15 border border-amber-400/25 px-2 py-0.2 rounded-md">
+                {currentBookPageLabel}
+              </span>
+            )}
           </span>
         </div>
 

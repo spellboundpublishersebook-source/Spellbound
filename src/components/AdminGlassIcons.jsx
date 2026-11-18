@@ -552,6 +552,58 @@ export function ReaderToolIcon3D({ id, active = false, size = 22 }) {
         </svg>
       );
 
+    case "search":
+      return (
+        <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ opacity: opacityRest }} aria-hidden="true">
+          <defs>
+            <linearGradient id={`${uid}_lens`} x1="4" y1="4" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#38BDF8" />
+              <stop offset="50%" stopColor="#0284C7" />
+              <stop offset="100%" stopColor="#0369A1" />
+            </linearGradient>
+            <linearGradient id={`${uid}_rim`} x1="2" y1="2" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#E0F2FE" />
+              <stop offset="100%" stopColor="#0284C7" />
+            </linearGradient>
+          </defs>
+          {/* Magnifier lens outer rim */}
+          <circle cx="14" cy="14" r="9.5" fill={`url(#${uid}_lens)`} stroke={`url(#${uid}_rim)`} strokeWidth="2.2" />
+          {/* Glass glare */}
+          <path d="M8 11.5C8.3 8.5 11 6.5 14.5 6.5C12 7.5 9.5 9.5 9 12.5L8 11.5Z" fill="#ffffff" fillOpacity="0.8" />
+          {/* Document text lines inside lens */}
+          <rect x="9.5" y="11" width="9" height="1.6" rx="0.8" fill="#ffffff" fillOpacity="0.9" />
+          <rect x="9.5" y="14" width="7" height="1.6" rx="0.8" fill="#FDE047" />
+          <rect x="9.5" y="17" width="8" height="1.4" rx="0.7" fill="#ffffff" fillOpacity="0.75" />
+          {/* Golden handle with glossy grip */}
+          <path d="M21 21L28.5 28.5" stroke="#1E293B" strokeWidth="4.5" strokeLinecap="round" />
+          <path d="M21 21L28.5 28.5" stroke="#F59E0B" strokeWidth="2.6" strokeLinecap="round" />
+          <circle cx="27" cy="27" r="1.2" fill="#FDE047" />
+        </svg>
+      );
+
+    case "pageJump":
+      return (
+        <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ opacity: opacityRest }} aria-hidden="true">
+          <defs>
+            <linearGradient id={`${uid}_bk`} x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#A855F7" />
+              <stop offset="50%" stopColor="#7E22CE" />
+              <stop offset="100%" stopColor="#581C87" />
+            </linearGradient>
+          </defs>
+          {/* Book cover base */}
+          <rect x="5" y="5" width="22" height="23" rx="4.5" fill={`url(#${uid}_bk)`} stroke="#C084FC" strokeWidth="1.2" />
+          {/* Book pages sliver edge */}
+          <rect x="23.5" y="7.5" width="2" height="18" rx="1" fill="#F8FAFC" />
+          {/* Hanging bookmark ribbon */}
+          <path d="M12 5V17L14.5 15L17 17V5H12Z" fill="#FBBF24" stroke="#D97706" strokeWidth="0.8" />
+          {/* Page number badge */}
+          <rect x="8" y="18" width="13" height="6.5" rx="2" fill="#1E1B4B" fillOpacity="0.85" />
+          {/* Hashtag / page indicator */}
+          <text x="14.5" y="23" textAnchor="middle" fill="#38BDF8" fontSize="6.5" fontWeight="bold" fontFamily="monospace">#p</text>
+        </svg>
+      );
+
     case "zoomSection":
     default:
       return (
