@@ -981,7 +981,30 @@ export default function App() {
         } catch (_) {}
       }
 
-      if (!licenseId || !deptId) return;
+      if (!licenseId || !deptId) {
+        // Individual reader / trial user: sync to Supabase 'readers' table if matching record exists
+        try {
+          const r = readers.find(x => x.id === studentId || x.loginId === studentId);
+          if (r) {
+            const prevCustom = r.customizations || {};
+            const updatedCustom = {
+              ...prevCustom,
+              ...customizations.global,
+              books: { ...(prevCustom.books || {}), [bookId]: customizations.book },
+              readingProgress: customizations.progress ? {
+                ...(prevCustom.readingProgress || {}),
+                [bookId]: customizations.progress
+              } : (prevCustom.readingProgress || {})
+            };
+            supabase.from('readers').update({ customizations: updatedCustom }).eq('id', r.id).then(({ error }) => {
+              if (!error) {
+                setReaders(prev => prev.map(item => item.id === r.id ? { ...item, customizations: updatedCustom } : item));
+              }
+            });
+          }
+        } catch (_) {}
+        return;
+      }
 
       const targetLic = licenses.find(l => l.id === licenseId);
       if (!targetLic) return;

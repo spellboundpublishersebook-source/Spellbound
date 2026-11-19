@@ -639,6 +639,51 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   const effectivePageWidth = Math.round(responsiveWidth * pageZoom);
   const isMobileDesk = responsiveWidth < 640;
 
+  // ==========================================
+  // PAGE VIEW MODE: SINGLE vs DOUBLE PAGE (SPREAD)
+  // ==========================================
+  const [pageViewMode, setPageViewModeState] = useState(() => {
+    try {
+      const dbMode = session?.currentStudent?.customizations?.pageViewMode;
+      if (dbMode === "single" || dbMode === "double") return dbMode;
+
+      const userKey = (session?.type === "student" ? session?.studentId : session?.id) || "guest";
+      const saved = localStorage.getItem(`reader_page_view_mode_${userKey}`);
+      if (saved === "single" || saved === "double") return saved;
+      const globalSaved = localStorage.getItem("reader_page_view_mode_global");
+      if (globalSaved === "single" || globalSaved === "double") return globalSaved;
+
+      return "single";
+    } catch (_) {
+      return "single";
+    }
+  });
+
+  const [windowWidth, setWindowWidth] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1200));
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  const doublePageWidth = useMemo(() => {
+    const avail = windowWidth;
+    if (avail < 640) {
+      return Math.max(260, Math.floor((avail - 24) / 2));
+    } else if (avail < 1024) {
+      return Math.min(460, Math.floor((avail - 140) / 2));
+    } else if (avail < 1440) {
+      return Math.min(540, Math.floor((avail - 240) / 2));
+    } else {
+      return Math.min(620, Math.floor((avail - 300) / 2));
+    }
+  }, [windowWidth]);
+
+  const effectiveDoublePageWidth = Math.round(doublePageWidth * pageZoom);
+  const effectiveDoubleTotalWidth = effectiveDoublePageWidth * 2;
+
 
   // ==========================================
   // STUDENT CUSTOMIZATION STATES
@@ -1272,7 +1317,12 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
         if (typeof parsed.brightness === "number") setBrightness(parsed.brightness);
         if (typeof parsed.warmLight === "number") setWarmLight(parsed.warmLight);
         if (typeof parsed.lineFocus === "boolean") setLineFocus(parsed.lineFocus);
+        if (parsed.pageViewMode === "single" || parsed.pageViewMode === "double") setPageViewModeState(parsed.pageViewMode);
       } else {
+        const dbGlobal = session?.currentStudent?.customizations;
+        if (dbGlobal?.pageViewMode === "single" || dbGlobal?.pageViewMode === "double") {
+          setPageViewModeState(dbGlobal.pageViewMode);
+        }
         const dbBookCustom = session?.currentStudent?.customizations?.books?.[book.id];
         if (dbBookCustom) {
           setHighlights(Array.isArray(dbBookCustom.highlights) ? dbBookCustom.highlights : []);
@@ -1445,8 +1495,11 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
   }, [currentPageDisplay]);
 
   const isNextDisabled = useMemo(() => {
+    if (pageViewMode === "double") {
+      return currentPageDisplay >= totalPages || currentPageDisplay + 1 >= totalPages;
+    }
     return currentPageDisplay >= totalPages;
-  }, [currentPageDisplay, totalPages]);
+  }, [pageViewMode, currentPageDisplay, totalPages]);
 
   // Resume page on mount (ONLY ONCE per book load, and ONLY for Student accounts with personal progress)
   useEffect(() => {
@@ -1559,9 +1612,50 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
     } catch (_) {}
   }, [currentPageDisplay, activeEpubSectionId, totalPages, book.id, studentKey, session?.type]);
 
-  // Save customizations & reading progress (debounced, strictly isolated to active student)
+  // Toggle and persist Single vs Double Page View mode
+  const handleTogglePageViewMode = useCallback((mode) => {
+    const newMode = mode === "double" ? "double" : "single";
+    setPageViewModeState(newMode);
+
+    const userKey = studentKey || session?.studentId || session?.id || "guest";
+    try {
+      localStorage.setItem(`reader_page_view_mode_${userKey}`, newMode);
+      localStorage.setItem("reader_page_view_mode_global", newMode);
+    } catch (_) {}
+
+    // Immediately persist to database
+    if (onSaveStudentCustomizations) {
+      const pct = Math.min(100, Math.max(1, Math.round((currentPageDisplay / Math.max(totalPages || 1, 1)) * 100)));
+      onSaveStudentCustomizations(
+        session?.institutionId || session?.id,
+        session?.deptId,
+        userKey,
+        book.id,
+        {
+          global: {
+            theme: themeKey,
+            brightness,
+            warmLight,
+            lineFocus,
+            pageViewMode: newMode
+          },
+          book: { highlights, stickyNotes, bookmarks },
+          progress: {
+            page: currentPageDisplay,
+            totalPages: totalPages || 1,
+            percent: pct,
+            sectionId: activeEpubSectionId,
+            lastReadAt: new Date().toISOString()
+          }
+        }
+      );
+    }
+  }, [studentKey, session, book.id, onSaveStudentCustomizations, currentPageDisplay, totalPages, activeEpubSectionId, themeKey, brightness, warmLight, lineFocus, highlights, stickyNotes, bookmarks]);
+
+  // Save customizations & reading progress (debounced, saved to database and localStorage)
   useEffect(() => {
-    if (!isStudentProfile || !studentKey) return;
+    const userKey = studentKey || session?.studentId || session?.id;
+    if (!userKey) return;
     const timer = setTimeout(() => {
       try {
         const payload = {
@@ -1571,18 +1665,19 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
           theme: themeKey,
           brightness,
           warmLight,
-          lineFocus
+          lineFocus,
+          pageViewMode
         };
-        localStorage.setItem(`reader_notes_${studentKey}_${book.id}`, JSON.stringify(payload));
+        localStorage.setItem(`reader_notes_${userKey}_${book.id}`, JSON.stringify(payload));
         if (onSaveStudentCustomizations) {
           const pct = Math.min(100, Math.max(1, Math.round((currentPageDisplay / Math.max(totalPages || 1, 1)) * 100)));
           onSaveStudentCustomizations(
             session?.institutionId || session?.id,
             session?.deptId,
-            studentKey,
+            userKey,
             book.id,
             {
-              global: { theme: themeKey, brightness, warmLight, lineFocus },
+              global: { theme: themeKey, brightness, warmLight, lineFocus, pageViewMode },
               book: { highlights, stickyNotes, bookmarks },
               progress: {
                 page: currentPageDisplay,
@@ -1597,7 +1692,7 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
       } catch (_) {}
     }, 500);
     return () => clearTimeout(timer);
-  }, [highlights, stickyNotes, bookmarks, themeKey, brightness, warmLight, lineFocus, studentKey, book.id, onSaveStudentCustomizations, session, currentPageDisplay, totalPages, activeEpubSectionId, isStudentProfile]);
+  }, [highlights, stickyNotes, bookmarks, themeKey, brightness, warmLight, lineFocus, pageViewMode, studentKey, book.id, onSaveStudentCustomizations, session, currentPageDisplay, totalPages, activeEpubSectionId]);
 
   // Reset section zoom state when changing page or book
   useEffect(() => {
@@ -2069,15 +2164,26 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
 
   const next = useCallback(() => {
     if (!checkPaceLimit()) return;
-    if (currentPageDisplay >= totalPages) return;
-    goToGlobalPage(currentPageDisplay + 1);
-  }, [checkPaceLimit, currentPageDisplay, totalPages, goToGlobalPage]);
+    if (pageViewMode === "double") {
+      if (currentPageDisplay >= totalPages) return;
+      const step = (currentPageDisplay + 1 >= totalPages) ? 1 : 2;
+      goToGlobalPage(Math.min(totalPages, currentPageDisplay + step));
+    } else {
+      if (currentPageDisplay >= totalPages) return;
+      goToGlobalPage(currentPageDisplay + 1);
+    }
+  }, [checkPaceLimit, currentPageDisplay, totalPages, goToGlobalPage, pageViewMode]);
 
   const prev = useCallback(() => {
     if (!checkPaceLimit()) return;
-    if (currentPageDisplay <= 1) return;
-    goToGlobalPage(currentPageDisplay - 1);
-  }, [checkPaceLimit, currentPageDisplay, goToGlobalPage]);
+    if (pageViewMode === "double") {
+      if (currentPageDisplay <= 1) return;
+      goToGlobalPage(Math.max(1, currentPageDisplay - 2));
+    } else {
+      if (currentPageDisplay <= 1) return;
+      goToGlobalPage(currentPageDisplay - 1);
+    }
+  }, [checkPaceLimit, currentPageDisplay, goToGlobalPage, pageViewMode]);
 
   const documentBookmarks = useMemo(() => {
     if (isEpub && Array.isArray(epubSections) && epubSections.length > 0) {
@@ -3528,6 +3634,36 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             )}
           </button>
 
+          {/* Single Page vs Double Page View Mode */}
+          <div className="inline-flex items-center bg-black/40 border border-white/20 p-0.5 rounded-xl shadow-inner backdrop-blur-md">
+            <button
+              type="button"
+              onClick={() => handleTogglePageViewMode("single")}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                pageViewMode === "single"
+                  ? "bg-gradient-to-r from-amber-400 to-yellow-300 text-black shadow-xs font-extrabold"
+                  : "text-white/70 hover:text-white"
+              }`}
+              title="Single Page Mode (1 page at a time)"
+            >
+              <FileText size={13} strokeWidth={2.4} />
+              <span className="hidden md:inline">Single</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTogglePageViewMode("double")}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                pageViewMode === "double"
+                  ? "bg-gradient-to-r from-amber-400 to-yellow-300 text-black shadow-xs font-extrabold"
+                  : "text-white/70 hover:text-white"
+              }`}
+              title="Double Page Mode (2 pages side-by-side book spread)"
+            >
+              <BookOpen size={13} strokeWidth={2.4} />
+              <span className="hidden md:inline">Double</span>
+            </button>
+          </div>
+
           {/* Mobile & Desktop Page Zoom Control */}
           <button
             type="button"
@@ -3898,6 +4034,44 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                     ) : (
                       <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#111214] text-white text-xs font-semibold shadow-xl border border-white/15">
                         Jump & Bookmarks ({currentBookPageLabel})
+                      </span>
+                    )}
+                  </button>
+                </div>
+
+                {/* 5. PAGE SPREAD: SINGLE vs DOUBLE */}
+                <div className="relative w-full">
+                  <button
+                    type="button"
+                    onClick={() => handleTogglePageViewMode(pageViewMode === "single" ? "double" : "single")}
+                    title={`Page View: Currently ${pageViewMode === "double" ? "2-Page Book Spread" : "1-Page Single View"} (Click to switch)`}
+                    className={`group relative flex items-center gap-3 w-full rounded-2xl transition-all duration-200 cursor-pointer focus:outline-none ${
+                      railExpanded ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
+                    } ${
+                      pageViewMode === "double"
+                        ? "bg-white/95 text-[#111214] shadow-[0_8px_20px_-6px_rgba(15,23,42,0.18)] ring-1 ring-black/10 scale-[1.02]"
+                        : isDarkDesk
+                          ? "text-zinc-300 hover:bg-white/10 hover:text-white"
+                          : "text-zinc-700 hover:bg-white/60 hover:text-[#111214]"
+                    }`}
+                  >
+                    <span className="shrink-0 transition-transform duration-200 group-hover:scale-110">
+                      <ReaderToolIcon3D id="pageMode" active={pageViewMode === "double"} size={22} />
+                    </span>
+                    {railExpanded ? (
+                      <>
+                        <span className={`text-xs font-bold truncate ${
+                          pageViewMode === "double" ? "text-[#111214]" : isDarkDesk ? "text-white/90" : "text-[#111214]"
+                        }`}>Page Spread</span>
+                        <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                          pageViewMode === "double" ? "bg-amber-400 text-black font-extrabold" : "bg-black/10 dark:bg-white/15 text-inherit"
+                        }`}>
+                          {pageViewMode === "double" ? "2-Page" : "1-Page"}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute left-full ml-3 z-50 whitespace-nowrap px-3 py-1.5 rounded-xl bg-[#111214] text-white text-xs font-semibold shadow-xl border border-white/15">
+                        {pageViewMode === "double" ? "Switch to 1-Page Single View" : "Switch to 2-Page Book Spread"}
                       </span>
                     )}
                   </button>
@@ -5181,7 +5355,9 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             backgroundColor: currentTheme.pageBg,
             minHeight: isMobileDesk ? 380 : 520,
             width: "100%",
-            maxWidth: pageZoom > 1 ? `${effectivePageWidth}px` : (isMobileDesk ? "100%" : `${BASE_PDF_WIDTH + 80}px`),
+            maxWidth: pageZoom > 1
+              ? (pageViewMode === "double" ? `${effectiveDoubleTotalWidth + (isMobileDesk ? 16 : 40)}px` : `${effectivePageWidth}px`)
+              : (isMobileDesk ? "100%" : (pageViewMode === "double" ? `${Math.min(windowWidth - 40, effectiveDoubleTotalWidth + 40)}px` : `${BASE_PDF_WIDTH + 80}px`)),
             overflow: "visible", // CRITICAL: Allows sticky notes in margins & edges to stay completely unclipped
             ...fontBody,
             color: currentTheme.textColor,
@@ -5317,17 +5493,73 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
                   </div>
                 }
               >
-                <Page
-                  pageNumber={pdfPageNumber}
-                  renderTextLayer={false}
-                  renderAnnotationLayer={false}
-                  width={effectivePageWidth}
-                  loading={
-                    <div className="flex items-center justify-center min-h-[380px] sm:min-h-[480px] w-full">
-                      <BookLoader size="sm" message={`Rendering page ${pdfPageNumber}...`} />
+                {pageViewMode === "double" ? (
+                  <div className="flex flex-row items-stretch justify-center relative shadow-2xl rounded-xl overflow-hidden border border-black/15 dark:border-white/10 bg-white">
+                    {/* LEFT PAGE */}
+                    <div className="relative flex flex-col items-center border-r border-slate-300/80 dark:border-zinc-700/80 shadow-[inset_-14px_0_18px_-8px_rgba(0,0,0,0.18)]">
+                      <Page
+                        pageNumber={pdfPageNumber}
+                        renderTextLayer={false}
+                        renderAnnotationLayer={false}
+                        width={effectiveDoublePageWidth}
+                        loading={
+                          <div className="flex items-center justify-center min-h-[380px] sm:min-h-[480px]" style={{ width: effectiveDoublePageWidth }}>
+                            <BookLoader size="sm" message={`Rendering p. ${pdfPageNumber}...`} />
+                          </div>
+                        }
+                      />
+                      {/* Spine crease shadow overlay for left page (darkening along the spine on the right edge) */}
+                      <div className="absolute inset-y-0 right-0 w-8 pointer-events-none bg-gradient-to-l from-black/20 via-black/5 to-transparent" />
+                      {/* Bottom page badge */}
+                      <div className="absolute bottom-2 left-3 px-2 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[10px] font-mono text-white/90 pointer-events-none">
+                        {pdfPageNumber}
+                      </div>
                     </div>
-                  }
-                />
+
+                    {/* RIGHT PAGE */}
+                    {pdfPageNumber + 1 <= (numPdfPages || totalPages) ? (
+                      <div className="relative flex flex-col items-center shadow-[inset_14px_0_18px_-8px_rgba(0,0,0,0.18)]">
+                        <Page
+                          pageNumber={pdfPageNumber + 1}
+                          renderTextLayer={false}
+                          renderAnnotationLayer={false}
+                          width={effectiveDoublePageWidth}
+                          loading={
+                            <div className="flex items-center justify-center min-h-[380px] sm:min-h-[480px]" style={{ width: effectiveDoublePageWidth }}>
+                              <BookLoader size="sm" message={`Rendering p. ${pdfPageNumber + 1}...`} />
+                            </div>
+                          }
+                        />
+                        {/* Spine crease shadow overlay for right page (darkening along the spine on the left edge) */}
+                        <div className="absolute inset-y-0 left-0 w-8 pointer-events-none bg-gradient-to-r from-black/20 via-black/5 to-transparent" />
+                        {/* Bottom page badge */}
+                        <div className="absolute bottom-2 right-3 px-2 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[10px] font-mono text-white/90 pointer-events-none">
+                          {pdfPageNumber + 1}
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className="relative flex flex-col items-center justify-center bg-slate-50 dark:bg-zinc-900 border-l border-dashed border-slate-300 dark:border-zinc-700 p-6 text-center shadow-[inset_14px_0_18px_-8px_rgba(0,0,0,0.1)]"
+                        style={{ width: effectiveDoublePageWidth, minHeight: 380 }}
+                      >
+                        <span className="text-3xl mb-2 opacity-50">📖</span>
+                        <p className="text-xs font-bold text-slate-500">End of Book</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Page
+                    pageNumber={pdfPageNumber}
+                    renderTextLayer={false}
+                    renderAnnotationLayer={false}
+                    width={effectivePageWidth}
+                    loading={
+                      <div className="flex items-center justify-center min-h-[380px] sm:min-h-[480px] w-full">
+                        <BookLoader size="sm" message={`Rendering page ${pdfPageNumber}...`} />
+                      </div>
+                    }
+                  />
+                )}
               </Document>
             </div>
           ) : (
@@ -6119,12 +6351,18 @@ export default function SecureReader({ book, session, onBack, onSaveStudentCusto
             className="text-xs font-bold text-amber-300 whitespace-nowrap shrink-0 flex items-center gap-1.5 p-1 px-2 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
             title="Click to toggle Book / PDF page jump & calibrate offset"
           >
-            <span>{currentPageDisplay}</span>
+            <span>
+              {pageViewMode === "double" && currentPageDisplay + 1 <= totalPages
+                ? `${currentPageDisplay}–${currentPageDisplay + 1}`
+                : currentPageDisplay}
+            </span>
             <span className="text-white/50 font-normal">of</span>
             <span>{totalPages || 1}</span>
             {currentBookPageLabel && (
               <span className="hidden sm:inline-flex items-center text-[10px] font-semibold text-amber-200/90 bg-amber-400/15 border border-amber-400/25 px-2 py-0.2 rounded-md">
-                {currentBookPageLabel}
+                {pageViewMode === "double" && currentBookPageNumber > 0 && currentPageDisplay + 1 <= totalPages
+                  ? `Book pp. ${currentBookPageNumber}–${currentBookPageNumber + 1}`
+                  : currentBookPageLabel}
               </span>
             )}
           </button>

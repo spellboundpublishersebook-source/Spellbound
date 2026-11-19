@@ -604,6 +604,40 @@ export function ReaderToolIcon3D({ id, active = false, size = 22 }) {
         </svg>
       );
 
+    case "pageMode":
+      return (
+        <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ opacity: opacityRest }} aria-hidden="true">
+          <defs>
+            <linearGradient id={`${uid}_p1`} x1="3" y1="6" x2="15" y2="26" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#60A5FA" />
+              <stop offset="100%" stopColor="#2563EB" />
+            </linearGradient>
+            <linearGradient id={`${uid}_p2`} x1="17" y1="6" x2="29" y2="26" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#93C5FD" />
+              <stop offset="100%" stopColor="#3B82F6" />
+            </linearGradient>
+            <linearGradient id={`${uid}_sp`} x1="15" y1="5" x2="17" y2="27" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#F59E0B" />
+              <stop offset="100%" stopColor="#B45309" />
+            </linearGradient>
+          </defs>
+          {/* Left page */}
+          <path d="M4 8C4 6.9 4.9 6 6 6H15V26H6C4.9 26 4 25.1 4 24V8Z" fill={`url(#${uid}_p1)`} />
+          {/* Right page */}
+          <path d="M17 6H26C27.1 6 28 6.9 28 8V24C28 25.1 27.1 26 26 26H17V6Z" fill={`url(#${uid}_p2)`} />
+          {/* Center spine */}
+          <rect x="14.8" y="5.5" width="2.4" height="21" rx="1.2" fill={`url(#${uid}_sp)`} />
+          {/* Page text lines left */}
+          <line x1="7" y1="10" x2="12" y2="10" stroke="#ffffff" strokeWidth="1.2" strokeLinecap="round" strokeOpacity="0.85" />
+          <line x1="7" y1="14" x2="12" y2="14" stroke="#ffffff" strokeWidth="1.2" strokeLinecap="round" strokeOpacity="0.85" />
+          <line x1="7" y1="18" x2="11" y2="18" stroke="#ffffff" strokeWidth="1.2" strokeLinecap="round" strokeOpacity="0.85" />
+          {/* Page text lines right */}
+          <line x1="20" y1="10" x2="25" y2="10" stroke="#ffffff" strokeWidth="1.2" strokeLinecap="round" strokeOpacity="0.85" />
+          <line x1="20" y1="14" x2="25" y2="14" stroke="#ffffff" strokeWidth="1.2" strokeLinecap="round" strokeOpacity="0.85" />
+          <line x1="20" y1="18" x2="24" y2="18" stroke="#ffffff" strokeWidth="1.2" strokeLinecap="round" strokeOpacity="0.85" />
+        </svg>
+      );
+
     case "zoomSection":
     default:
       return (
