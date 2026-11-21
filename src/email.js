@@ -4,7 +4,14 @@ const EMAILJS_SERVICE_ID = 'service_3sx3vic';
 const EMAILJS_TEMPLATE_ID = 'template_cncozac';
 const EMAILJS_PUBLIC_KEY = 't6Ru_4hkxK4YfZl20';
 
-export const COMPANY_LOGO_URL = 'https://hmhbbwldajchdxjeidni.supabase.co/storage/v1/object/public/covers/spellbound_logo.png';
+export const COMPANY_LOGO_URL = 'https://cdn.jsdelivr.net/gh/spellboundpublishersebook-source/Spellbound@main/public/logo.png';
+
+export function getWebsiteUrl() {
+  if (typeof window !== 'undefined' && window.location && window.location.origin) {
+    return window.location.origin;
+  }
+  return 'https://spellboundpublishers.com';
+}
 
 /**
  * Renders a responsive, cross-client HTML email template with company logo,
@@ -13,6 +20,10 @@ export const COMPANY_LOGO_URL = 'https://hmhbbwldajchdxjeidni.supabase.co/storag
 export function renderEmailHtml(rawSubject, rawBody, vars = {}) {
   let subject = rawSubject || "Notification from SpellBound";
   let body = rawBody || "";
+
+  const websiteUrl = vars.websiteUrl || vars.portalUrl || getWebsiteUrl();
+  vars.websiteUrl = websiteUrl;
+  vars.portalUrl = websiteUrl;
 
   // 1. Normalize linebreaks (handling literal \r\n, \n, or escaped string literals from JSON/DB)
   body = body
@@ -52,15 +63,26 @@ export function renderEmailHtml(rawSubject, rawBody, vars = {}) {
       }).join('');
 
       return `
-        <div style="background-color: #fafafa; border: 1px solid #e5e7eb; border-left: 4px solid #DC2626; border-radius: 6px; padding: 14px 18px; margin: 18px 0;">
+        <div style="background-color: #fafafa; border: 1px solid #e5e7eb; border-left: 4px solid #DC2626; border-radius: 8px; padding: 16px 20px; margin: 20px 0;">
           <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #DC2626; margin-bottom: 8px;">Access Credentials</div>
           ${formattedLines}
+          <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #e5e7eb;">
+            <a href="${websiteUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #F5F23B; color: #111214; font-weight: 800; font-size: 13px; text-decoration: none; padding: 10px 20px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.15); box-shadow: 0 2px 5px rgba(0,0,0,0.08);">
+              👉 Click Here to Open Reader &amp; Sign In
+            </a>
+            <div style="margin-top: 8px; font-size: 12px; color: #4b5563;">
+              Website Portal: <a href="${websiteUrl}" target="_blank" rel="noopener noreferrer" style="color: #2563EB; font-weight: 600; text-decoration: underline; word-break: break-all;">${websiteUrl}</a>
+            </div>
+          </div>
         </div>
       `;
     }
 
-    // Standard paragraph: preserve single line breaks
-    const formattedText = p.replace(/\n/g, '<br/>');
+    // Standard paragraph: preserve single line breaks and make URLs clickable
+    const formattedText = p.replace(/\n/g, '<br/>').replace(
+      /(https?:\/\/[^\s<]+)/g,
+      '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: #2563EB; font-weight: 600; text-decoration: underline;">$1</a>'
+    );
     return `<p style="margin: 0 0 16px 0; color: #374151; font-size: 15px; line-height: 1.65;">${formattedText}</p>`;
   }).join('');
 
@@ -149,6 +171,8 @@ function getTemplateMessage(templates, id, defaultSubject, defaultBody, vars) {
 async function send(email, to_name, subject, htmlBody, plainText) {
   console.log("📧 Sending email to:", email, "| Subject:", subject);
   
+  const websiteUrl = getWebsiteUrl();
+
   // Pass both HTML and Plain Text options so the EmailJS template renders cleanly
   // whether configured with {{{message}}} (HTML unescaped) or text variables.
   const templateParams = {
@@ -165,6 +189,9 @@ async function send(email, to_name, subject, htmlBody, plainText) {
     text_message: plainText,        // For templates using {{text_message}}
     content: htmlBody,
     logo_url: COMPANY_LOGO_URL,
+    website_url: websiteUrl,
+    portal_url: websiteUrl,
+    portal_link: websiteUrl,
     company_name: "SpellBound (Publishers & Distributors)"
   };
 
@@ -179,12 +206,13 @@ async function send(email, to_name, subject, htmlBody, plainText) {
 }
 
 export const sendTrialApprovalEmail = async (templates, trialRequest, generatedPassword, expirationDate) => {
+  const websiteUrl = getWebsiteUrl();
   const { subject, html, text } = getTemplateMessage(
     templates,
     'trial_approved',
     "Your 30-Day Trial is Approved! 🎉",
-    `Hello {{name}},\n\nYour trial request for SpellBound (Publishers and Distributors) has been approved!\n\nHere are your login details:\nLogin ID: {{id}}\nPassword: {{password}}\n\nThis trial gives you full access for 30 days and will expire on {{endDate}}.\n\nEnjoy reading!\n- The SpellBound (Publishers and Distributors) Team`,
-    { name: trialRequest.name, id: trialRequest.id, password: generatedPassword, endDate: expirationDate }
+    `Hello {{name}},\n\nYour trial request for SpellBound (Publishers and Distributors) has been approved!\n\nWebsite / Reader Portal:\n{{websiteUrl}}\n\nHere are your login details:\nLogin ID: {{id}}\nPassword: {{password}}\n\nThis trial gives you full access for 30 days and will expire on {{endDate}}.\n\nEnjoy reading!\n- The SpellBound (Publishers and Distributors) Team`,
+    { name: trialRequest.name, id: trialRequest.id, password: generatedPassword, endDate: expirationDate, websiteUrl }
   );
   try {
     await send(trialRequest.email, trialRequest.name, subject, html, text);
@@ -195,12 +223,13 @@ export const sendTrialApprovalEmail = async (templates, trialRequest, generatedP
 };
 
 export const sendTrialRejectionEmail = async (templates, trialRequest) => {
+  const websiteUrl = getWebsiteUrl();
   const { subject, html, text } = getTemplateMessage(
     templates,
     'trial_rejected',
     "Update on your Trial Request",
-    `Hello {{name}},\n\nThank you for your interest in SpellBound (Publishers and Distributors). Unfortunately, we are unable to approve your trial request at this time.\n\nIf you believe this was a mistake or you are representing an institution, please reply to this email to get in touch with our team.\n\nBest regards,\n- The SpellBound (Publishers and Distributors) Team`,
-    { name: trialRequest.name }
+    `Hello {{name}},\n\nThank you for your interest in SpellBound (Publishers and Distributors). Unfortunately, we are unable to approve your trial request at this time.\n\nWebsite:\n{{websiteUrl}}\n\nIf you believe this was a mistake or you are representing an institution, please reply to this email to get in touch with our team.\n\nBest regards,\n- The SpellBound (Publishers and Distributors) Team`,
+    { name: trialRequest.name, websiteUrl }
   );
   try {
     await send(trialRequest.email, trialRequest.name, subject, html, text);
@@ -211,12 +240,13 @@ export const sendTrialRejectionEmail = async (templates, trialRequest) => {
 };
 
 export const sendInstitutionLicenseEmail = async (templates, email, name, licenseId, password, startDate, endDate) => {
+  const websiteUrl = getWebsiteUrl();
   const { subject, html, text } = getTemplateMessage(
     templates,
     'institution_created',
     "Your Institution Access Details - SpellBound (Publishers and Distributors)",
-    `Hello {{name}},\n\nYour institution has been successfully registered on SpellBound (Publishers and Distributors).\n\nHere are your official access details:\nInstitution ID (Login): {{id}}\nPassword: {{password}}\n\nPurchasing Date: {{startDate}}\nExpiration Date: {{endDate}}\n\nYour members can use these credentials to read the books in your purchased catalog.\n\nBest regards,\n- The SpellBound (Publishers and Distributors) Team`,
-    { name, id: licenseId, password, startDate, endDate }
+    `Hello {{name}},\n\nYour institution has been successfully registered on SpellBound (Publishers and Distributors).\n\nWebsite / Reader Portal:\n{{websiteUrl}}\n\nHere are your official access details:\nInstitution ID (Login): {{id}}\nPassword: {{password}}\n\nPurchasing Date: {{startDate}}\nExpiration Date: {{endDate}}\n\nYour members can use these credentials to sign in and read the books in your purchased catalog at {{websiteUrl}}.\n\nBest regards,\n- The SpellBound (Publishers and Distributors) Team`,
+    { name, id: licenseId, password, startDate, endDate, websiteUrl }
   );
   try {
     await send(email, name, subject, html, text);
@@ -227,12 +257,13 @@ export const sendInstitutionLicenseEmail = async (templates, email, name, licens
 };
 
 export const sendIndividualReaderEmail = async (templates, email, name, loginId, password, startDate, endDate) => {
+  const websiteUrl = getWebsiteUrl();
   const { subject, html, text } = getTemplateMessage(
     templates,
     'individual_created',
     "Your Reading Access Details - SpellBound (Publishers and Distributors)",
-    `Hello {{name}},\n\nYour individual reading access for SpellBound (Publishers and Distributors) is active!\n\nHere are your official access details:\nLogin ID: {{id}}\nPassword: {{password}}\n\nStart Date: {{startDate}}\nExpiration Date: {{endDate}}\n\nYou can use these credentials to read your authorized catalog of books.\n\nBest regards,\n- The SpellBound (Publishers and Distributors) Team`,
-    { name, id: loginId, password, startDate, endDate }
+    `Hello {{name}},\n\nYour individual reading access for SpellBound (Publishers and Distributors) is active!\n\nWebsite / Reader Portal:\n{{websiteUrl}}\n\nHere are your official access details:\nLogin ID: {{id}}\nPassword: {{password}}\n\nStart Date: {{startDate}}\nExpiration Date: {{endDate}}\n\nYou can use these credentials to sign in and read your authorized catalog of books at {{websiteUrl}}.\n\nBest regards,\n- The SpellBound (Publishers and Distributors) Team`,
+    { name, id: loginId, password, startDate, endDate, websiteUrl }
   );
   try {
     await send(email, name, subject, html, text);

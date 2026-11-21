@@ -3,7 +3,7 @@ import React, { useState, useMemo, useRef } from "react";
 import { Plus, Trash2, Check, X, Users, UploadCloud, Gift, Search, BookOpen, Settings, LayoutTemplate, Mail, AlertTriangle, Key, Activity, Eye, EyeOff, Edit3, ArrowUpRight, SlidersHorizontal, PanelLeft, Building2, Copy, CheckCircle2, ChevronDown, ChevronUp, GraduationCap, Download, FileSpreadsheet } from "lucide-react";
 import { palette, fontDisplay, getGenres, setGenres as saveGenres, getPubTypes, setPubTypes as savePubTypes, getPublishers, setPublishers as savePublishers, getCustomHeadings, setCustomHeadings as saveCustomHeadings, getHomepageConfig, setHomepageConfig, getPages, setPages } from "../theme";
 import { downloadCoverImage } from "../utils/downloadCover";
-import { downloadCollegeDepartmentsXlsx, downloadCollegeDepartmentsCsv, downloadAllCollegesDepartmentsXlsx } from "../utils/excelExport";
+import { downloadCollegeDepartmentsXlsx, downloadCollegeDepartmentsCsv, downloadAllCollegesDepartmentsXlsx, downloadAllStudentsXlsx, downloadDeptStudentsXlsx } from "../utils/excelExport";
 import { addMonths, today, daysUntil, genCredentialId, genPassword } from "../data/mockData";
 import { renderEmailHtml, COMPANY_LOGO_URL } from "../email";
 import Button from "../components/Button";
@@ -811,6 +811,27 @@ function InstitutionsTab({
 
   return (
     <div className="space-y-4">
+      {/* SECRET ADMIN DIRECT ACCESS LINK */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3 px-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-xs shadow-xs">
+        <div className="flex items-center gap-2 text-zinc-800 flex-wrap">
+          <Key size={14} className="text-amber-600 shrink-0" />
+          <span className="font-semibold text-zinc-900">Secret Admin Direct Access Link:</span>
+          <span className="text-zinc-600">Public Admin Login button is now hidden from visitors. Access directly via:</span>
+          <code className="px-2 py-0.5 rounded-md bg-white font-mono font-bold text-amber-900 border border-amber-300/80 shadow-2xs">
+            {typeof window !== "undefined" ? `${window.location.origin}/#login-admin` : "#login-admin"}
+          </code>
+        </div>
+        <button
+          type="button"
+          onClick={() => handleCopyText(typeof window !== "undefined" ? `${window.location.origin}/#login-admin` : "#login-admin", "admin_direct_link")}
+          className="px-3.5 py-1.5 rounded-full bg-amber-400 hover:bg-amber-300 text-black text-xs font-bold shadow-xs cursor-pointer inline-flex items-center gap-1.5 shrink-0 transition-transform active:scale-95"
+          title="Copy secret admin direct link"
+        >
+          {copiedKey === "admin_direct_link" ? <Check size={12} className="text-black" /> : <Copy size={12} />}
+          <span>{copiedKey === "admin_direct_link" ? "Copied Link!" : "Copy Admin Link"}</span>
+        </button>
+      </div>
+
       {/* GLASS SEARCH / FILTER TOOLBAR */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[240px]">
@@ -850,6 +871,15 @@ function InstitutionsTab({
             title="Download Excel spreadsheet (.xlsx) with all colleges and department credentials"
           >
             <FileSpreadsheet size={15} strokeWidth={2.2} /> Export All Depts (Excel)
+          </button>
+
+          <button
+            type="button"
+            onClick={() => downloadAllStudentsXlsx(licenses)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-95"
+            title="Download Excel spreadsheet (.xlsx) with all registered student details, roll numbers, phone numbers, and credentials"
+          >
+            <GraduationCap size={15} strokeWidth={2.2} /> Export All Students (Excel)
           </button>
 
           <button
@@ -1485,9 +1515,21 @@ function InstitutionsTab({
                                 <GraduationCap size={14} className="text-blue-700" />
                                 <span>Registered Students ({studentList.length})</span>
                               </div>
-                              <span className="text-[10px] text-zinc-500 font-medium">
-                                Student ID & password access for this department
-                              </span>
+                              <div className="flex items-center gap-2">
+                                {studentList.length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => downloadDeptStudentsXlsx(managingDeptLicense, dept)}
+                                    className="px-2.5 py-1 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-bold border border-blue-200 inline-flex items-center gap-1 transition-colors cursor-pointer"
+                                    title="Export this department's student details to Excel"
+                                  >
+                                    <FileSpreadsheet size={12} /> Export Excel
+                                  </button>
+                                )}
+                                <span className="text-[10px] text-zinc-500 font-medium hidden sm:inline">
+                                  Student ID & password access for this department
+                                </span>
+                              </div>
                             </div>
 
                             <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-2.5">
@@ -1529,6 +1571,24 @@ function InstitutionsTab({
                                         >
                                           {isCopiedStuId ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
                                         </button>
+                                      </div>
+                                    </div>
+
+                                    {/* Student Phone */}
+                                    <div className="flex items-center justify-between text-[11px] bg-white px-2 py-1 rounded-md border border-black/5">
+                                      <span className="text-zinc-500 font-semibold">Phone:</span>
+                                      <div className="flex items-center gap-1">
+                                        <span className="font-mono font-bold text-zinc-800">{stu.phone || "—"}</span>
+                                        {stu.phone && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleCopyText(stu.phone, `stuphone_${stuKey}`)}
+                                            className="p-0.5 rounded hover:bg-slate-100 text-zinc-500 hover:text-black cursor-pointer"
+                                            title="Copy Phone Number"
+                                          >
+                                            {copiedKey === `stuphone_${stuKey}` ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                                          </button>
+                                        )}
                                       </div>
                                     </div>
 

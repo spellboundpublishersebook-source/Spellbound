@@ -4,7 +4,7 @@ import { LogOut, Menu, X, Home, LayoutDashboard, FlaskConical, ShieldCheck, User
 import { fontDisplay, fontBody } from "../theme";
 import AnimatedSweepButton from "./AnimatedSweepButton";
 
-export default function Header({ session, view, onNavigate, onLogout }) {
+export default function Header({ session, view, onNavigate, onLogout, showAdminLogin = false }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const close = () => setMenuOpen(false);
@@ -124,13 +124,15 @@ export default function Header({ session, view, onNavigate, onLogout }) {
                       >
                         Sign In / Institution Login
                       </AnimatedSweepButton>
-                      <AnimatedSweepButton
-                        onClick={() => { onNavigate("login-admin"); close(); }}
-                        variant="yellow-outline"
-                        className="w-full font-bold py-2 rounded-lg text-sm"
-                      >
-                        Admin Login
-                      </AnimatedSweepButton>
+                      {showAdminLogin && (
+                        <AnimatedSweepButton
+                          onClick={() => { onNavigate("login-admin"); close(); }}
+                          variant="yellow-outline"
+                          className="w-full font-bold py-2 rounded-lg text-sm"
+                        >
+                          Admin Login
+                        </AnimatedSweepButton>
+                      )}
                     </div>
                   </>
                 )}
@@ -273,13 +275,15 @@ function NavLinks({ session, view, onNavigate, onLogout }) {
             isActive={isTrialActive}
             onClick={() => onNavigate("trial")}
           />
-          <AnimatedSweepButton
-            onClick={() => onNavigate("login-admin")}
-            variant="yellow-outline"
-            className="font-bold text-sm px-4 py-2 rounded-md"
-          >
-            Admin Login
-          </AnimatedSweepButton>
+          {showAdminLogin && (
+            <AnimatedSweepButton
+              onClick={() => onNavigate("login-admin")}
+              variant="yellow-outline"
+              className="font-bold text-sm px-4 py-2 rounded-md"
+            >
+              Admin Login
+            </AnimatedSweepButton>
+          )}
           <AnimatedSweepButton
             onClick={() => onNavigate("login-reader")}
             variant="yellow"

@@ -204,6 +204,7 @@ export default function ReaderDashboard({
   const [selectedDeptId, setSelectedDeptId] = useState(session.deptId || (session.departments && session.departments[0]?.id) || "");
   const [newStudentName, setNewStudentName] = useState("");
   const [newStudentRoll, setNewStudentRoll] = useState("");
+  const [newStudentPhone, setNewStudentPhone] = useState("");
   const [newStudentPw, setNewStudentPw] = useState("");
   const [switchStudentId, setSwitchStudentId] = useState("");
   const [switchStudentPw, setSwitchStudentPw] = useState("");
@@ -235,6 +236,7 @@ export default function ReaderDashboard({
     const res = await onCreateStudentProfile(targetLicId, targetDeptId, {
       name: newStudentName.trim(),
       studentId: newStudentRoll.trim(),
+      phone: newStudentPhone.trim(),
       password: newStudentPw.trim()
     });
     setIsCreatingStudent(false);
@@ -243,6 +245,7 @@ export default function ReaderDashboard({
       setShowStudentModal(false);
       setNewStudentName("");
       setNewStudentRoll("");
+      setNewStudentPhone("");
       setNewStudentPw("");
     } else {
       setStudentError(res?.message || "Failed to create student profile.");
@@ -1630,6 +1633,17 @@ export default function ReaderDashboard({
                     placeholder="e.g. CSE-2024-042"
                     value={newStudentRoll}
                     onChange={(e) => setNewStudentRoll(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-black/15 text-xs font-medium text-[#111214] outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 uppercase mb-1">Phone Number</label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. +91 98765 43210"
+                    value={newStudentPhone}
+                    onChange={(e) => setNewStudentPhone(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-black/15 text-xs font-medium text-[#111214] outline-none focus:border-amber-400"
                   />
                 </div>

@@ -32,9 +32,35 @@ function useGoogleFonts() {
 export default function App() {
   useGoogleFonts();
 
+  // ── Secret Admin Link Detection ─────────────────────────────────────────
+  const [isAdminUnlocked, setIsAdminUnlocked] = useState(() => {
+    try {
+      if (typeof window === "undefined") return false;
+      const h = window.location.hash || "";
+      const s = window.location.search || "";
+      const p = window.location.pathname || "";
+      const isDirectAdminUrl =
+        h.includes("admin") ||
+        s.includes("admin") ||
+        p.includes("/admin");
+
+      if (isDirectAdminUrl) {
+        sessionStorage.setItem("athenaeum_admin_unlocked", "1");
+        return true;
+      }
+      return sessionStorage.getItem("athenaeum_admin_unlocked") === "1";
+    } catch (_) {
+      return false;
+    }
+  });
+
   // ── Hash-based routing so refresh/back keeps the correct page ──────────
   function parseHash() {
     const raw = window.location.hash.replace(/^#/, "") || "catalog";
+    if (raw === "admin" || raw === "login-admin") {
+      try { sessionStorage.setItem("athenaeum_admin_unlocked", "1"); } catch (_) {}
+      return { v: "login-admin", bookId: null };
+    }
     if (raw.startsWith("page:")) return { v: raw, bookId: null };
     const [v, bookId] = raw.split(":");
     return { v, bookId: bookId || null };
@@ -65,6 +91,10 @@ export default function App() {
   useEffect(() => {
     function onHashChange() {
       const { v, bookId } = parseHash();
+      if (v === "login-admin" || window.location.hash.includes("admin")) {
+        setIsAdminUnlocked(true);
+        try { sessionStorage.setItem("athenaeum_admin_unlocked", "1"); } catch (_) {}
+      }
       setView(v);
       setOpenBookId(bookId);
     }
@@ -861,6 +891,7 @@ export default function App() {
         id: `stu_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         studentId: studentIdClean,
         name: (studentData.name || "").trim(),
+        phone: (studentData.phone || "").trim(),
         password: (studentData.password || "").trim(),
         createdAt: new Date().toISOString(),
         customizations: {}
@@ -1013,8 +1044,6 @@ export default function App() {
       if (deptIdx === -1) return;
 
       const dept = { ...depts[deptIdx] };
-      // Increment readsCount tracking if opening or reading
-      dept.readsCount = (dept.readsCount || 0) + 1;
 
       if (Array.isArray(dept.students)) {
         dept.students = dept.students.map(s => {
@@ -1761,7 +1790,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen w-full max-w-full admin-glass-backdrop relative">
-      <Header session={session} view={view} onNavigate={navigate} onLogout={handleLogout} />
+      <Header
+        session={session}
+        view={view}
+        onNavigate={navigate}
+        onLogout={handleLogout}
+        showAdminLogin={isAdminUnlocked || session?.role === "admin"}
+      />
 
       {view === "catalog" && <CatalogPage books={availableBooks} onNavigate={navigate} />}
       {view === "authors" && <AuthorsPage books={availableBooks} featuredAuthors={featuredAuthors} onNavigate={navigate} />}
@@ -1778,6 +1813,21 @@ export default function App() {
             session={session}
             books={availableBooks}
             onOpenBook={(id, pageNum) => {
+              if (session?.institutionId && session?.deptId) {
+                try {
+                  const targetLic = licenses.find(l => l.id === session.institutionId);
+                  if (targetLic && Array.isArray(targetLic.departments)) {
+                    const depts = [...targetLic.departments];
+                    const dIdx = depts.findIndex(d => d.id === session.deptId);
+                    if (dIdx !== -1) {
+                      depts[dIdx] = { ...depts[dIdx], readsCount: (depts[dIdx].readsCount || 0) + 1 };
+                      supabase.from('licenses').update({ departments: depts }).eq('id', session.institutionId).then(() => {
+                        setLicenses(prev => prev.map(l => l.id === session.institutionId ? { ...l, departments: depts } : l));
+                      });
+                    }
+                  }
+                } catch (_) {}
+              }
               if (pageNum) {
                 navigate("reading", id, pageNum);
               } else {
