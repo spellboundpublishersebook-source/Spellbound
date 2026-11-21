@@ -770,6 +770,11 @@ export default function App() {
 
   function handleLogout() {
     setSession(null);
+    try {
+      localStorage.removeItem("athenaeum_session");
+    } catch (_) {}
+    setOpenBookId(null);
+    setInitialReaderPage(null);
     navigate("catalog");
   }
 

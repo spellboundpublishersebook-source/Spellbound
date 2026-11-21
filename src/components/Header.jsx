@@ -75,7 +75,7 @@ export default function Header({ session, view, onNavigate, onLogout, showAdminL
 
           {/* DESKTOP NAV (Only visible on large desktop screens >= 1024px) */}
           <div className="hidden lg:flex items-center gap-5">
-            <NavLinks session={session} view={view} onNavigate={onNavigate} onLogout={onLogout} />
+            <NavLinks session={session} view={view} onNavigate={onNavigate} onLogout={onLogout} showAdminLogin={showAdminLogin} />
           </div>
 
           {/* MOBILE / TABLET RIGHT SIDE: 3-line Hamburger Menu Toggle */}
@@ -233,7 +233,7 @@ function AnimatedNavItem({ label, icon: Icon, isActive, onClick }) {
   );
 }
 
-function NavLinks({ session, view, onNavigate, onLogout }) {
+function NavLinks({ session, view, onNavigate, onLogout, showAdminLogin = false }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef(null);
 
